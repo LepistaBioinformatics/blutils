@@ -1,7 +1,10 @@
-use crate::domain::dtos::blast_result::{BlastQueryResult, BlastResultRow};
+use crate::domain::dtos::blast_result::{
+    BlastQueryResult, BlastResultRow, TaxonomyElement, TaxonomyFieldEnum,
+    ValidTaxonomicRanksEnum,
+};
 
 use clean_base::utils::errors::{execution_err, MappedErrors};
-use log::{error, info, warn};
+use log::{debug, error, warn};
 use polars::prelude::{CsvReader, DataFrame, DataType, Schema};
 use polars_io::prelude::*;
 use polars_lazy::prelude::*;
@@ -75,6 +78,8 @@ pub(super) fn build_consensus_identities(
         Ok(res) => res,
     };
 
+    warn!("consensus: {:?}", consensus);
+
     // ? ----------------------------------------------------------------------
     // ? Calculate consensus identities
     // ? ----------------------------------------------------------------------
@@ -82,33 +87,114 @@ pub(super) fn build_consensus_identities(
     Ok(true)
 }
 
+#[derive(Debug)]
+pub enum ConsensusResult {
+    NoConsensusFound(String),
+    Success(HashMap<String, TaxonomyElement>),
+}
+
 fn find_consensus_identities(
     joined_df: LazyFrame,
-) -> Result<bool, MappedErrors> {
+) -> Result<Vec<ConsensusResult>, MappedErrors> {
     let query_results = match fold_results_by_query(joined_df) {
         Err(err) => return Err(err),
         Ok(res) => res,
     };
 
-    warn!("query_results: {:?}", query_results);
-
     query_results
-        .into_par_iter()
-        .map(|result| {
-            find_single_query_consensus(result.results);
-            true
+        .into_iter()
+        .filter_map(|result| match result.results {
+            None => None,
+            Some(res) => match find_single_query_consensus(result.query, res) {
+                Err(err) => {
+                    panic!("Unexpected error on parse blast results: {err}")
+                }
+                Ok(res) => Some(Ok(res)),
+            },
         })
-        .collect::<Vec<bool>>();
-
-    Ok(true)
+        .collect()
 }
 
 fn find_single_query_consensus(
+    query: String,
     result: Vec<BlastResultRow>,
-) -> Result<(), MappedErrors> {
-    warn!("result: {:?}", result);
+) -> Result<ConsensusResult, MappedErrors> {
+    // ? -----------------------------------------------------------------------
+    // ? Group results by bit-score
+    // ? -----------------------------------------------------------------------
 
-    Ok(())
+    let grouped_results = result.to_owned().into_iter().fold(
+        HashMap::<i64, Vec<BlastResultRow>>::new(),
+        |mut init, result| {
+            init.entry(result.bit_score)
+                .or_insert_with(Vec::new)
+                .push(result);
+
+            init
+        },
+    );
+
+    // ? -----------------------------------------------------------------------
+    // ? Evaluate results by bit-score
+    // ? -----------------------------------------------------------------------
+
+    let mut sorted_keys = grouped_results.keys().cloned().collect::<Vec<i64>>();
+    sorted_keys.sort_by(|a, b| b.cmp(a));
+
+    for score in sorted_keys.to_owned().into_iter() {
+        let score_results = result
+            .to_owned()
+            .into_iter()
+            .filter(|i| i.bit_score == score)
+            .map(|mut i| i.parse_taxonomy())
+            .collect::<Vec<BlastResultRow>>();
+        //
+        // Early return case no results found.
+        //
+        if score_results.len() == 0 {
+            return Ok(ConsensusResult::NoConsensusFound(query));
+        }
+        //
+        // Fetch the lower taxonomic rank case only one record returned.
+        //
+        if score_results.len() == 1 {
+            for rank in ValidTaxonomicRanksEnum::ordered_iter() {
+                match score_results[0].taxonomy.to_owned() {
+                    TaxonomyFieldEnum::Parser(taxonomies) => {
+                        match taxonomies.into_iter().find(|i| &i.rank == rank) {
+                            None => {
+                                return Ok(ConsensusResult::NoConsensusFound(
+                                    query,
+                                ))
+                            }
+                            Some(res) => {
+                                let mut result = HashMap::new();
+                                result.insert(query, res);
+
+                                return Ok(ConsensusResult::Success(result));
+                            }
+                        }
+                    }
+                    _ => panic!("Unable to parse taxonomy."),
+                };
+            }
+
+            return Ok(ConsensusResult::NoConsensusFound(query));
+        }
+        //
+        // Fetch the lower taxonomic rank case only one record returned.
+        //
+        if score_results.len() > 1 {
+            // TODO
+            //
+            // Do implement.
+            error!(
+                "The consensus check for more than one record found on rank."
+            );
+        }
+    }
+
+    Ok(ConsensusResult::NoConsensusFound(query))
 }
 
 /// Group results by query
@@ -180,7 +266,7 @@ fn fold_results_by_query(
                 s_end,
                 e_value,
                 bit_score,
-                taxonomy,
+                taxonomy: TaxonomyFieldEnum::Literal(taxonomy),
             },
         );
     }
@@ -189,7 +275,10 @@ fn fold_results_by_query(
         .into_iter()
         .map(|(k, v)| BlastQueryResult {
             query: k,
-            results: v,
+            results: match v.len() {
+                0 => None,
+                _ => Some(v),
+            },
         })
         .collect::<Vec<BlastQueryResult>>())
 }

@@ -1,13 +1,24 @@
+use self::ValidTaxonomicRanksEnum::*;
+use std::slice::Iter;
 use std::str::FromStr;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ValidTaxonomicRanksEnum {
     Domain,
+    Phylum,
     Class,
     Order,
     Family,
     Genus,
     Species,
+}
+
+impl ValidTaxonomicRanksEnum {
+    pub fn ordered_iter() -> Iter<'static, ValidTaxonomicRanksEnum> {
+        static TAXONOMIES: [ValidTaxonomicRanksEnum; 7] =
+            [Species, Genus, Family, Order, Class, Phylum, Domain];
+        TAXONOMIES.iter()
+    }
 }
 
 impl FromStr for ValidTaxonomicRanksEnum {
@@ -16,6 +27,7 @@ impl FromStr for ValidTaxonomicRanksEnum {
     fn from_str(input: &str) -> Result<ValidTaxonomicRanksEnum, Self::Err> {
         match input {
             "d" | "Domain" | "domain" => Ok(ValidTaxonomicRanksEnum::Domain),
+            "p" | "Phylum" | "phylum" => Ok(ValidTaxonomicRanksEnum::Domain),
             "c" | "Class" | "class" => Ok(ValidTaxonomicRanksEnum::Class),
             "o" | "Order" | "order" => Ok(ValidTaxonomicRanksEnum::Order),
             "f" | "Family" | "family" => Ok(ValidTaxonomicRanksEnum::Family),
@@ -105,9 +117,9 @@ impl BlastResultRow {
                             Ok(res) => res,
                         },
                         taxid: match splitted_tax[1].to_owned().parse::<i64>() {
-                            Err(err) => panic!(
-                                "Unexpected error on parse taxonomy: {err}"
-                            ),
+                            Err(err) => {
+                                panic!("Unexpected error on parse taxid: {err}")
+                            }
                             Ok(res) => res,
                         },
                     }

@@ -4,7 +4,9 @@
         "dataframe",
         "fasta",
         "formatcp",
+        "inttype",
         "perc",
+        "repr",
         "seqs",
         "structopt"
     ]
