@@ -7,14 +7,14 @@ use crate::domain::dtos::{
     },
 };
 
+use super::filter_rank_by_identity;
+
 use clean_base::utils::errors::{execution_err, MappedErrors};
 use log::{error, warn};
 use polars::prelude::{CsvReader, DataFrame, DataType, Schema};
 use polars_io::prelude::*;
 use polars_lazy::prelude::*;
 use std::{collections::HashMap, path::Path};
-
-use super::filter_rank_by_identity;
 
 /// BUild consensus identities from BlastN output.
 ///
@@ -182,7 +182,7 @@ fn find_single_query_consensus(
             return Ok(ConsensusResult::NoConsensusFound(no_consensus));
         }
         //
-        // Fetch the lower taxonomic rank case only one record returned.
+        // Fetch the lower taxonomic rank case more than one record returned.
         //
         if score_results.len() > 1 {
             // TODO

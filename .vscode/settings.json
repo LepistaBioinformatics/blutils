@@ -8,6 +8,7 @@
         "perc",
         "repr",
         "seqs",
-        "structopt"
+        "structopt",
+        "taxdump"
     ]
 }
