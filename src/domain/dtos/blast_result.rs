@@ -141,14 +141,28 @@ pub struct BlastQueryResult {
     pub results: Option<Vec<BlastResultRow>>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct BlastQueryPublicResult {
+#[derive(Clone, Debug, Serialize)]
+pub struct BlastQueryConsensusResult {
     pub query: String,
     pub taxon: TaxonomyElement,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Serialize)]
+pub struct BlastQueryNoConsensusResult {
+    pub query: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
 pub enum ConsensusResult {
-    NoConsensusFound(String),
-    Success(BlastQueryPublicResult),
+    /// No consensus option
+    ///
+    /// This option should be used when the consensus checking process not found
+    /// an appropriate taxonomy.
+    NoConsensusFound(BlastQueryNoConsensusResult),
+
+    /// Consensus option
+    ///
+    /// This option should be used when the consensus checking process found an
+    /// appropriate taxonomy.
+    ConsensusFound(BlastQueryConsensusResult),
 }

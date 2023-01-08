@@ -1,57 +1,27 @@
 extern crate blul;
+mod cmds;
 
-use blul::{
-    adapters::proc::execute_step::ExecuteStepProcRepository,
-    domain::dtos::blast_builder::BlastBuilder,
-    use_cases::run_blast_and_build_consensus,
-};
-use std::env::set_var;
-use structopt::StructOpt;
+use clap::Parser;
+use cmds::blast;
 
-#[derive(Debug, StructOpt)]
-struct Cli {
-    query: String,
-    subject: String,
-    tax_file: String,
-    out_dir: String,
-
-    #[structopt(short = "f", long = "force-overwrite")]
-    overwrite: bool,
-
-    #[structopt(short = "t")]
-    threads: Option<usize>,
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+enum Cli {
+    Blast(blast::Arguments),
 }
 
 fn main() {
-    // Build logger
-    set_var("RUST_LOG", "debug");
     env_logger::init();
 
-    // Build cli arguments
-    let args = Cli::from_args();
+    let args = Cli::parse();
 
-    // Initialize Execution repository
-    let repo = ExecuteStepProcRepository {};
-
-    // Create configuration DTO
-    let config = BlastBuilder::create(&args.subject);
-
-    // Set the default number of threads
-    let threads = match args.threads {
-        Some(n) => n,
-        None => 1,
+    match args {
+        Cli::Blast(sub_args) => {
+            match sub_args.run_blast {
+                blast::Commands::RunWithConsensus(args) => {
+                    blast::run_blast_and_build_consensus_cmd(args)
+                }
+            };
+        }
     };
-
-    // Run Blast
-    let blast_output = run_blast_and_build_consensus(
-        &args.query,
-        &args.tax_file,
-        &args.out_dir,
-        config,
-        &repo,
-        &args.overwrite,
-        threads,
-    );
-
-    println!("{:?}", blast_output);
 }

@@ -1,6 +1,7 @@
 use crate::domain::dtos::blast_result::{
-    BlastQueryPublicResult, BlastQueryResult, BlastResultRow, ConsensusResult,
-    TaxonomyFieldEnum, ValidTaxonomicRanksEnum,
+    BlastQueryConsensusResult, BlastQueryNoConsensusResult, BlastQueryResult,
+    BlastResultRow, ConsensusResult, TaxonomyFieldEnum,
+    ValidTaxonomicRanksEnum,
 };
 
 use clean_base::utils::errors::{execution_err, MappedErrors};
@@ -113,6 +114,10 @@ fn find_single_query_consensus(
     let mut sorted_keys = grouped_results.keys().cloned().collect::<Vec<i64>>();
     sorted_keys.sort_by(|a, b| b.cmp(a));
 
+    let no_consensus = BlastQueryNoConsensusResult {
+        query: query.to_owned(),
+    };
+
     for score in sorted_keys.to_owned().into_iter() {
         let score_results = result
             .to_owned()
@@ -124,7 +129,7 @@ fn find_single_query_consensus(
         // Early return case no results found.
         //
         if score_results.len() == 0 {
-            return Ok(ConsensusResult::NoConsensusFound(query));
+            return Ok(ConsensusResult::NoConsensusFound(no_consensus));
         }
         //
         // Fetch the lower taxonomic rank case only one record returned.
@@ -136,12 +141,12 @@ fn find_single_query_consensus(
                         match taxonomies.into_iter().find(|i| &i.rank == rank) {
                             None => {
                                 return Ok(ConsensusResult::NoConsensusFound(
-                                    query,
+                                    no_consensus,
                                 ))
                             }
                             Some(res) => {
-                                return Ok(ConsensusResult::Success(
-                                    BlastQueryPublicResult {
+                                return Ok(ConsensusResult::ConsensusFound(
+                                    BlastQueryConsensusResult {
                                         query,
                                         taxon: res,
                                     },
@@ -153,7 +158,7 @@ fn find_single_query_consensus(
                 };
             }
 
-            return Ok(ConsensusResult::NoConsensusFound(query));
+            return Ok(ConsensusResult::NoConsensusFound(no_consensus));
         }
         //
         // Fetch the lower taxonomic rank case only one record returned.
@@ -168,7 +173,9 @@ fn find_single_query_consensus(
         }
     }
 
-    Ok(ConsensusResult::NoConsensusFound(query))
+    Ok(ConsensusResult::NoConsensusFound(
+        BlastQueryNoConsensusResult { query },
+    ))
 }
 
 /// Group results by query
