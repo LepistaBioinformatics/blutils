@@ -1,6 +1,6 @@
 use crate::domain::dtos::blast_result::{
-    BlastQueryResult, BlastResultRow, ConsensusResult, TaxonomyFieldEnum,
-    ValidTaxonomicRanksEnum,
+    BlastQueryPublicResult, BlastQueryResult, BlastResultRow, ConsensusResult,
+    TaxonomyFieldEnum, ValidTaxonomicRanksEnum,
 };
 
 use clean_base::utils::errors::{execution_err, MappedErrors};
@@ -17,7 +17,7 @@ use std::{collections::HashMap, path::Path};
 pub(crate) fn build_consensus_identities(
     blast_output: &Path,
     taxonomies_file: &Path,
-) -> Result<bool, MappedErrors> {
+) -> Result<Vec<ConsensusResult>, MappedErrors> {
     // ? ----------------------------------------------------------------------
     // ? Load blast output as lazy
     // ? ----------------------------------------------------------------------
@@ -64,31 +64,10 @@ pub(crate) fn build_consensus_identities(
         col("query"),
     );
 
-    let consensus = match find_consensus_identities(joined_df) {
-        Err(err) => {
-            return Err(execution_err(
-                format!(
-                "Unexpected error detected on read `taxonomies_file`: {err}",
-            ),
-                None,
-                None,
-            ))
-        }
-        Ok(res) => res,
-    };
-
-    warn!("consensus: {:?}", consensus);
-
     // ? ----------------------------------------------------------------------
-    // ? Calculate consensus identities
+    // ? Build consensus vector
     // ? ----------------------------------------------------------------------
 
-    Ok(true)
-}
-
-fn find_consensus_identities(
-    joined_df: LazyFrame,
-) -> Result<Vec<ConsensusResult>, MappedErrors> {
     let query_results = match fold_results_by_query(joined_df) {
         Err(err) => return Err(err),
         Ok(res) => res,
@@ -161,10 +140,12 @@ fn find_single_query_consensus(
                                 ))
                             }
                             Some(res) => {
-                                let mut result = HashMap::new();
-                                result.insert(query, res);
-
-                                return Ok(ConsensusResult::Success(result));
+                                return Ok(ConsensusResult::Success(
+                                    BlastQueryPublicResult {
+                                        query,
+                                        taxon: res,
+                                    },
+                                ));
                             }
                         }
                     }

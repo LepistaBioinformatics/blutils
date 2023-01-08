@@ -1,9 +1,10 @@
+use serde::Serialize;
+
 use self::ValidTaxonomicRanksEnum::*;
-use std::collections::HashMap;
 use std::slice::Iter;
 use std::str::FromStr;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum ValidTaxonomicRanksEnum {
     Domain,
     Phylum,
@@ -39,7 +40,7 @@ impl FromStr for ValidTaxonomicRanksEnum {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct TaxonomyElement {
     pub rank: ValidTaxonomicRanksEnum,
     pub taxid: i64,
@@ -140,8 +141,14 @@ pub struct BlastQueryResult {
     pub results: Option<Vec<BlastResultRow>>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct BlastQueryPublicResult {
+    pub query: String,
+    pub taxon: TaxonomyElement,
+}
+
 #[derive(Debug)]
 pub enum ConsensusResult {
     NoConsensusFound(String),
-    Success(HashMap<String, TaxonomyElement>),
+    Success(BlastQueryPublicResult),
 }

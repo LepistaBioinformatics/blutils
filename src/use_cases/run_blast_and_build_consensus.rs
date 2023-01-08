@@ -1,11 +1,13 @@
 use super::{build_consensus_identities, run_parallel_blast};
 use crate::domain::{
-    dtos::blast_builder::BlastBuilder, entities::execute_step::ExecuteStep,
+    dtos::{blast_builder::BlastBuilder, blast_result::ConsensusResult},
+    entities::execute_step::ExecuteStep,
 };
 
-use clean_base::utils::errors::MappedErrors;
+use clean_base::utils::errors::{use_case_err, MappedErrors};
 use std::path::Path;
 
+/// Run parallel blast and build taxonomies consensus
 pub fn run_blast_and_build_consensus(
     input_sequences: &str,
     input_taxonomies: &str,
@@ -14,7 +16,7 @@ pub fn run_blast_and_build_consensus(
     blast_execution_repo: &dyn ExecuteStep,
     overwrite: &bool,
     threads: usize,
-) -> Result<bool, MappedErrors> {
+) -> Result<Vec<ConsensusResult>, MappedErrors> {
     // ? ----------------------------------------------------------------------
     // ? Execute parallel blast
     // ? ----------------------------------------------------------------------
@@ -27,7 +29,13 @@ pub fn run_blast_and_build_consensus(
         overwrite,
         threads,
     ) {
-        Err(err) => return Err(err),
+        Err(err) => {
+            return Err(use_case_err(
+                String::from("Unexpected error on run parallel blast"),
+                None,
+                Some(err),
+            ))
+        }
         Ok(res) => res,
     };
 
@@ -39,9 +47,13 @@ pub fn run_blast_and_build_consensus(
         output_file.as_path(),
         Path::new(input_taxonomies),
     ) {
-        Err(err) => return Err(err),
-        Ok(_) => (),
-    };
-
-    Ok(true)
+        Err(err) => {
+            return Err(use_case_err(
+                String::from("Unexpected error on build consensus taxonomy"),
+                None,
+                Some(err),
+            ))
+        }
+        Ok(res) => Ok(res),
+    }
 }
