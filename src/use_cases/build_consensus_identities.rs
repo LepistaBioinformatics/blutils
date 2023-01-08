@@ -1,7 +1,10 @@
-use crate::domain::dtos::blast_result::{
-    BlastQueryConsensusResult, BlastQueryNoConsensusResult, BlastQueryResult,
-    BlastResultRow, ConsensusResult, TaxonomyFieldEnum,
-    ValidTaxonomicRanksEnum,
+use crate::domain::dtos::{
+    blast_builder::BlastBuilder,
+    blast_result::{
+        BlastQueryConsensusResult, BlastQueryNoConsensusResult,
+        BlastQueryResult, BlastResultRow, ConsensusResult, TaxonomyFieldEnum,
+        ValidTaxonomicRanksEnum,
+    },
 };
 
 use clean_base::utils::errors::{execution_err, MappedErrors};
@@ -11,6 +14,8 @@ use polars_io::prelude::*;
 use polars_lazy::prelude::*;
 use std::{collections::HashMap, path::Path};
 
+use super::filter_rank_by_identity;
+
 /// BUild consensus identities from BlastN output.
 ///
 /// Join the `blast` output with reference `taxonomies` file and calculate
@@ -18,6 +23,7 @@ use std::{collections::HashMap, path::Path};
 pub(crate) fn build_consensus_identities(
     blast_output: &Path,
     taxonomies_file: &Path,
+    config: BlastBuilder,
 ) -> Result<Vec<ConsensusResult>, MappedErrors> {
     // ? ----------------------------------------------------------------------
     // ? Load blast output as lazy
@@ -78,12 +84,18 @@ pub(crate) fn build_consensus_identities(
         .into_iter()
         .filter_map(|result| match result.results {
             None => None,
-            Some(res) => match find_single_query_consensus(result.query, res) {
-                Err(err) => {
-                    panic!("Unexpected error on parse blast results: {err}")
+            Some(res) => {
+                match find_single_query_consensus(
+                    result.query,
+                    res,
+                    config.to_owned(),
+                ) {
+                    Err(err) => {
+                        panic!("Unexpected error on parse blast results: {err}")
+                    }
+                    Ok(res) => Some(Ok(res)),
                 }
-                Ok(res) => Some(Ok(res)),
-            },
+            }
         })
         .collect()
 }
@@ -91,6 +103,7 @@ pub(crate) fn build_consensus_identities(
 fn find_single_query_consensus(
     query: String,
     result: Vec<BlastResultRow>,
+    config: BlastBuilder,
 ) -> Result<ConsensusResult, MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Group results by bit-score
@@ -144,7 +157,15 @@ fn find_single_query_consensus(
                                     no_consensus,
                                 ))
                             }
-                            Some(res) => {
+                            Some(mut res) => {
+                                res.rank = match filter_rank_by_identity(
+                                    config.taxon,
+                                    score_results[0].perc_identity,
+                                ) {
+                                    Err(err) => panic!("{err}"),
+                                    Ok(res) => res,
+                                };
+
                                 return Ok(ConsensusResult::ConsensusFound(
                                     BlastQueryConsensusResult {
                                         query,
@@ -173,9 +194,11 @@ fn find_single_query_consensus(
         }
     }
 
-    Ok(ConsensusResult::NoConsensusFound(
-        BlastQueryNoConsensusResult { query },
-    ))
+    // Execute the default option
+    //
+    // If consensus identity not found in the previous steps, assumes by default
+    // a no consensus option.
+    Ok(ConsensusResult::NoConsensusFound(no_consensus))
 }
 
 /// Group results by query

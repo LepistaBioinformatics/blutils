@@ -1,11 +1,12 @@
-use serde::Serialize;
-
 use self::ValidTaxonomicRanksEnum::*;
+
+use serde::Serialize;
 use std::slice::Iter;
 use std::str::FromStr;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum ValidTaxonomicRanksEnum {
+    Undefined,
     Domain,
     Phylum,
     Class,
@@ -17,8 +18,9 @@ pub enum ValidTaxonomicRanksEnum {
 
 impl ValidTaxonomicRanksEnum {
     pub fn ordered_iter() -> Iter<'static, ValidTaxonomicRanksEnum> {
-        static TAXONOMIES: [ValidTaxonomicRanksEnum; 7] =
-            [Species, Genus, Family, Order, Class, Phylum, Domain];
+        static TAXONOMIES: [ValidTaxonomicRanksEnum; 8] = [
+            Species, Genus, Family, Order, Class, Phylum, Domain, Undefined,
+        ];
         TAXONOMIES.iter()
     }
 }
@@ -28,8 +30,11 @@ impl FromStr for ValidTaxonomicRanksEnum {
 
     fn from_str(input: &str) -> Result<ValidTaxonomicRanksEnum, Self::Err> {
         match input {
+            "u" | "Undefined" | "undefined" => {
+                Ok(ValidTaxonomicRanksEnum::Undefined)
+            }
             "d" | "Domain" | "domain" => Ok(ValidTaxonomicRanksEnum::Domain),
-            "p" | "Phylum" | "phylum" => Ok(ValidTaxonomicRanksEnum::Domain),
+            "p" | "Phylum" | "phylum" => Ok(ValidTaxonomicRanksEnum::Phylum),
             "c" | "Class" | "class" => Ok(ValidTaxonomicRanksEnum::Class),
             "o" | "Order" | "order" => Ok(ValidTaxonomicRanksEnum::Order),
             "f" | "Family" | "family" => Ok(ValidTaxonomicRanksEnum::Family),
@@ -44,6 +49,7 @@ impl FromStr for ValidTaxonomicRanksEnum {
 pub struct TaxonomyElement {
     pub rank: ValidTaxonomicRanksEnum,
     pub taxid: i64,
+    pub perc_identity: f64,
 }
 
 #[derive(Clone, Debug)]
@@ -124,6 +130,7 @@ impl BlastResultRow {
                             }
                             Ok(res) => res,
                         },
+                        perc_identity: self.perc_identity,
                     }
                 })
                 .collect();

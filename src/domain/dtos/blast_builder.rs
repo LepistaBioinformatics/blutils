@@ -1,4 +1,6 @@
 use md5;
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 // ? --------------------------------------------------------------------------
 // ? Wrapper for Query Sequences
@@ -32,10 +34,30 @@ impl QuerySequence {
 // ? Wrapper for Blast Builder
 // ? --------------------------------------------------------------------------
 
+#[derive(Clone, Debug, Serialize, Deserialize, clap::ValueEnum)]
+pub enum Taxon {
+    Fungi,
+    Bacteria,
+    Eukaryotes,
+}
+
+impl FromStr for Taxon {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<Taxon, Self::Err> {
+        match input {
+            "f" | "Fungi" | "fungi" => Ok(Taxon::Fungi),
+            "b" | "Bacteria" | "bacteria" => Ok(Taxon::Bacteria),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct BlastBuilder {
     // ? IO related parameters
     pub subject_reads: String,
+    pub taxon: Taxon,
 
     // ? BlastN configuration related parameters
     pub out_format: &'static str,
@@ -48,9 +70,10 @@ pub struct BlastBuilder {
 }
 
 impl BlastBuilder {
-    pub fn create(subject_reads: &str) -> Self {
+    pub fn create(subject_reads: &str, taxon: Taxon) -> Self {
         BlastBuilder {
             subject_reads: subject_reads.to_string(),
+            taxon,
             out_format: "6",
             max_target_seqs: "100",
             perc_identity: "0.8",

@@ -24,7 +24,7 @@ pub fn run_blast_and_build_consensus(
     let output_file = match run_parallel_blast(
         input_sequences,
         out_dir,
-        blast_config,
+        blast_config.to_owned(),
         blast_execution_repo,
         overwrite,
         threads,
@@ -46,6 +46,7 @@ pub fn run_blast_and_build_consensus(
     match build_consensus_identities(
         output_file.as_path(),
         Path::new(input_taxonomies),
+        blast_config,
     ) {
         Err(err) => {
             return Err(use_case_err(

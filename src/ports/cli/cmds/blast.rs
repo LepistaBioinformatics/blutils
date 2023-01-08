@@ -7,7 +7,7 @@ use std::{
 use blul::{
     adapters::proc::execute_step::ExecuteStepProcRepository,
     domain::dtos::{
-        blast_builder::BlastBuilder,
+        blast_builder::{BlastBuilder, Taxon},
         blast_result::{
             BlastQueryConsensusResult, BlastQueryNoConsensusResult,
             ConsensusResult,
@@ -35,6 +35,9 @@ pub(crate) struct RunBlastAndBuildConsensusArguments {
     tax_file: String,
     out_dir: String,
 
+    #[arg(long)]
+    taxon: Taxon,
+
     /// Case true, overwrite the output file if exists. Otherwise dispatch an
     /// error if the output file exists.
     #[arg(short, long, default_value = "false")]
@@ -51,7 +54,7 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
     let repo = ExecuteStepProcRepository {};
 
     // Create configuration DTO
-    let config = BlastBuilder::create(&args.subject);
+    let config = BlastBuilder::create(&args.subject, args.taxon);
 
     // Set the default number of threads
     let threads = match args.threads {
