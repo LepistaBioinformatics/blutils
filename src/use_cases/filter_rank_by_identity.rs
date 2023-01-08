@@ -1,9 +1,9 @@
-use clean_base::utils::errors::MappedErrors;
-
 use crate::domain::dtos::{
     blast_builder::Taxon::{self, *},
     blast_result::ValidTaxonomicRanksEnum,
 };
+
+use clean_base::utils::errors::MappedErrors;
 
 /// Filter taxonomic rank by sequences identity percentage
 ///
