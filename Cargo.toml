@@ -8,7 +8,7 @@ authors = ["Samuel Galvão Elias <sgelias@outlook.com>"]
 repository = "https://github.com/sgelias/blutils"
 readme = "./README.md"
 keywords = ["blast", "bioinformativs", "DNA", "similarity-analysis", "NCBI"]
-categories = ["command-line-interface", "command-line-utilities"]
+categories = ["science", "command-line-interface", "command-line-utilities"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
