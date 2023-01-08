@@ -1,4 +1,5 @@
 use self::ValidTaxonomicRanksEnum::*;
+use std::collections::HashMap;
 use std::slice::Iter;
 use std::str::FromStr;
 
@@ -137,4 +138,10 @@ impl BlastResultRow {
 pub struct BlastQueryResult {
     pub query: String,
     pub results: Option<Vec<BlastResultRow>>,
+}
+
+#[derive(Debug)]
+pub enum ConsensusResult {
+    NoConsensusFound(String),
+    Success(HashMap<String, TaxonomyElement>),
 }

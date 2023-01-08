@@ -1,21 +1,20 @@
 use crate::domain::dtos::blast_result::{
-    BlastQueryResult, BlastResultRow, TaxonomyElement, TaxonomyFieldEnum,
+    BlastQueryResult, BlastResultRow, ConsensusResult, TaxonomyFieldEnum,
     ValidTaxonomicRanksEnum,
 };
 
 use clean_base::utils::errors::{execution_err, MappedErrors};
-use log::{debug, error, warn};
+use log::{error, warn};
 use polars::prelude::{CsvReader, DataFrame, DataType, Schema};
 use polars_io::prelude::*;
 use polars_lazy::prelude::*;
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::{collections::HashMap, path::Path};
 
 /// BUild consensus identities from BlastN output.
 ///
 /// Join the `blast` output with reference `taxonomies` file and calculate
 /// consensus taxonomies based on the `subjects` frequencies and concordance.
-pub(super) fn build_consensus_identities(
+pub(crate) fn build_consensus_identities(
     blast_output: &Path,
     taxonomies_file: &Path,
 ) -> Result<bool, MappedErrors> {
@@ -85,12 +84,6 @@ pub(super) fn build_consensus_identities(
     // ? ----------------------------------------------------------------------
 
     Ok(true)
-}
-
-#[derive(Debug)]
-pub enum ConsensusResult {
-    NoConsensusFound(String),
-    Success(HashMap<String, TaxonomyElement>),
 }
 
 fn find_consensus_identities(
@@ -188,7 +181,7 @@ fn find_single_query_consensus(
             // TODO
             //
             // Do implement.
-            error!(
+            panic!(
                 "The consensus check for more than one record found on rank."
             );
         }
