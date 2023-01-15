@@ -1,0 +1,108 @@
+<mxfile host="65bd71144e">
+    <diagram id="GGdAQFGiEUIdidFBAe7d" name="Page-1">
+        <mxGraphModel dx="2490" dy="2120" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1100" pageHeight="850" background="none" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="15" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;" parent="1" source="6" target="10" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=30;sketch=1;" parent="1" source="6" target="11" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=30;sketch=1;" parent="1" source="6" target="12" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="&lt;font style=&quot;font-size: 30px&quot;&gt;Chunk Sequences&lt;/font&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="610" y="255" width="260" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="33" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" parent="1" source="10" target="32" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="Chunk 1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=30;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="1084" y="106" width="224" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="36" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=30;sketch=1;" parent="1" source="11" target="32" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="Chunk 2" style="rounded=1;whiteSpace=wrap;html=1;fontSize=30;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="1079" y="291" width="224" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="35" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;entryX=0;entryY=0.5;entryDx=0;entryDy=0;sketch=1;" parent="1" source="12" target="32" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1499.695652173913" y="327.6521739130435" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="12" value="Chunk N" style="rounded=1;whiteSpace=wrap;html=1;fontSize=30;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="1084" y="476" width="224" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="48" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" parent="1" source="44" target="47" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="44" value="&lt;span style=&quot;font-size: 30px&quot;&gt;Persist results to Blast.out file&lt;/span&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="1930" y="255" width="298" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="45" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" parent="1" source="32" target="44" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="32" value="" style="rounded=1;whiteSpace=wrap;html=1;fontSize=30;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="1511" y="163" width="327" height="333.5" as="geometry"/>
+                </mxCell>
+                <mxCell id="37" value="" style="pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=default;fillColor=#434445;aspect=fixed;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.vvd.cpu;fontSize=30;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="1571.25" y="276" width="90" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="38" value="Blast Thread Pool" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=30;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="1537" y="162" width="271" height="66" as="geometry"/>
+                </mxCell>
+                <mxCell id="39" value="" style="pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=default;fillColor=#434445;aspect=fixed;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.vvd.cpu;fontSize=30;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="1682.75" y="276" width="90" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="40" value="" style="pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=default;fillColor=#434445;aspect=fixed;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.vvd.cpu;fontSize=30;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="1571.25" y="381" width="90" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="41" value="" style="pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=default;fillColor=#434445;aspect=fixed;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.vvd.cpu;fontSize=30;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="1682.75" y="381" width="90" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="46" value="&lt;font style=&quot;font-size: 16px&quot;&gt;Results persisted to memory&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=30;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="1537" y="192" width="271" height="66" as="geometry"/>
+                </mxCell>
+                <mxCell id="47" value="&lt;font style=&quot;font-size: 30px&quot;&gt;END&lt;/font&gt;" style="html=1;dashed=0;whitespace=wrap;shape=mxgraph.dfd.start;fontSize=16;strokeColor=default;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="2299" y="298.5" width="166" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="66" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" parent="1" source="49" target="55" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="49" value="&lt;font style=&quot;font-size: 30px&quot;&gt;START&lt;/font&gt;" style="html=1;dashed=0;whitespace=wrap;shape=mxgraph.dfd.start;fontSize=16;strokeColor=default;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="-229" y="298.25" width="166" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="64" value="" style="group;sketch=1;" parent="1" vertex="1" connectable="0">
+                    <mxGeometry x="43" y="34" width="459" height="663" as="geometry"/>
+                </mxCell>
+                <mxCell id="55" value="" style="whiteSpace=wrap;html=1;shape=mxgraph.basic.document;fontSize=30;strokeColor=default;sketch=1;" parent="64" vertex="1">
+                    <mxGeometry y="8" width="459" height="576" as="geometry"/>
+                </mxCell>
+                <mxCell id="56" value="&lt;h1&gt;&amp;gt;Seq 1&lt;/h1&gt;&lt;p&gt;GATGAACGCTGGCGGCGTGCTTAACACATGCAAGTC&lt;/p&gt;&lt;p&gt;GAACGATGAAGCCCAGCTTGCTGGGTGGATTAGTGG&lt;/p&gt;&lt;p&gt;CGAACGGGTGA...&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;sketch=1;" parent="64" vertex="1">
+                    <mxGeometry x="17" y="56" width="330" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="57" value="&lt;h1&gt;&amp;gt;Seq 2&lt;/h1&gt;&lt;p&gt;GATGAACGCTGGCGGCGTGCTTAACACATGCAAGTC&lt;/p&gt;&lt;p&gt;GAACGATGAAGCCCAGCTTGCTGGGTGGATTAGTGG&lt;/p&gt;&lt;p&gt;CGAACGGGTGA...&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;sketch=1;" parent="64" vertex="1">
+                    <mxGeometry x="17" y="186" width="330" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="58" value="&lt;h1&gt;&amp;gt;Seq 3&lt;/h1&gt;&lt;p&gt;GATGAACGCTGGCGGCGTGCTTAACACATGCAAGTC&lt;/p&gt;&lt;p&gt;GAACGATGAAGCCCAGCTTGCTGGGTGGATTAGTGG&lt;/p&gt;&lt;p&gt;CGAACGGGTGA...&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;sketch=1;" parent="64" vertex="1">
+                    <mxGeometry x="17" y="316" width="330" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="59" value="&lt;h1&gt;&amp;gt;Seq N&lt;/h1&gt;&lt;p&gt;GATGAACGCTGGCGGCGTGCTTAACACATGCAAGTC&lt;/p&gt;&lt;p&gt;GAACGATGAAGCCCAGCTTGCTGGGTGGATTAGTGG&lt;/p&gt;&lt;p&gt;CGAACGGGTGA...&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;sketch=1;" parent="64" vertex="1">
+                    <mxGeometry x="17" y="446" width="330" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="60" value="&lt;font style=&quot;font-size: 16px&quot;&gt;./input.fna&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=30;sketch=1;" parent="64" vertex="1">
+                    <mxGeometry width="96" height="42" as="geometry"/>
+                </mxCell>
+                <mxCell id="65" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" parent="1" source="55" target="6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="68" value="Parallel Blast Execution Steps" style="swimlane;fontSize=30;strokeColor=default;startSize=73;sketch=1;" parent="1" vertex="1">
+                    <mxGeometry x="-264" y="-105" width="2777" height="779" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

@@ -1,0 +1,209 @@
+<mxfile host="65bd71144e">
+    <diagram id="3wc5m4ROibXqK1JfOHbD" name="Page-1">
+        <mxGraphModel dx="5380" dy="3840" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1100" pageHeight="850" background="#ffffff" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="70" value="Consensus Generation Steps" style="swimlane;fontSize=30;startSize=61;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="-864" y="-4" width="3672" height="2151" as="geometry"/>
+                </mxCell>
+                <mxCell id="62" value="" style="rounded=1;whiteSpace=wrap;html=1;fontSize=30;arcSize=4;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="-757" y="780" width="3457" height="1289" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=30;sketch=1;" edge="1" parent="1" source="2" target="4">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="&lt;font style=&quot;font-size: 30px&quot;&gt;Blast.out&lt;/font&gt;" style="whiteSpace=wrap;html=1;shape=mxgraph.basic.document;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="-29" y="107" width="180" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" edge="1" parent="1" source="3" target="4">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="&lt;font style=&quot;font-size: 30px&quot;&gt;Taonomies&lt;/font&gt;" style="whiteSpace=wrap;html=1;shape=mxgraph.basic.document;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="-29" y="347" width="180" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" edge="1" parent="1" source="4" target="11">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="Join files by Subject" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=30;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="301" y="257" width="270" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;fontSize=30;sketch=1;" edge="1" parent="1" source="8" target="2">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;fontSize=30;sketch=1;" edge="1" parent="1" source="8" target="3">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="&lt;font style=&quot;font-size: 30px&quot;&gt;START&lt;/font&gt;" style="html=1;dashed=0;whitespace=wrap;shape=mxgraph.dfd.start;fontSize=16;strokeColor=default;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="-343" y="280.5" width="166" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="15" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" edge="1" parent="1" source="11" target="14">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="Fold multiline Blast results by query sequences" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=30;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="640" y="217.5" width="343" height="189" as="geometry"/>
+                </mxCell>
+                <mxCell id="28" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" edge="1" parent="1" source="21" target="27">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="21" value="&lt;font style=&quot;font-size: 30px&quot;&gt;START&lt;/font&gt;" style="html=1;dashed=0;whitespace=wrap;shape=mxgraph.dfd.start;fontSize=16;strokeColor=default;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="-667" y="1062" width="166" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="24" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" edge="1" parent="1" source="22" target="23">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="25" value="NO" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=30;sketch=1;" vertex="1" connectable="0" parent="24">
+                    <mxGeometry x="-0.0664" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="42" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" edge="1" parent="1" source="22" target="35">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="22" value="Score has match sequences?" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.decision;whiteSpace=wrap;fontSize=30;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="278.58000000000004" y="963" width="239.42" height="261" as="geometry"/>
+                </mxCell>
+                <mxCell id="72" style="edgeStyle=orthogonalEdgeStyle;sketch=1;html=1;entryX=0.5;entryY=0.5;entryDx=0;entryDy=-31.499999999999996;entryPerimeter=0;fontSize=30;" edge="1" parent="1" source="23" target="71">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="23" value="&lt;font style=&quot;font-size: 30px&quot;&gt;NO_CONSENSUS&lt;/font&gt;" style="html=1;dashed=0;whitespace=wrap;shape=mxgraph.dfd.start;fontSize=16;strokeColor=default;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="237" y="1422" width="322.57" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="30" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" edge="1" parent="1" source="27" target="29">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="27" value="Fold results by bit-score" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=30;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="-428" y="1038.5" width="270" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="32" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" edge="1" parent="1" source="29" target="22">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="29" value="Descending sort results by bit-score" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=30;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="-80" y="1038.5" width="270" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="33" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;sketch=1;" edge="1" source="35" target="37" parent="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="726.230769230769" y="1432" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="41" value="NO" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=30;sketch=1;" vertex="1" connectable="0" parent="33">
+                    <mxGeometry x="-0.5469" y="1" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="46" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" edge="1" parent="1" source="35" target="45">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="59" value="YES" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=30;sketch=1;" vertex="1" connectable="0" parent="46">
+                    <mxGeometry x="0.0473" y="-1" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="35" value="Score has more than one match sequence?" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.decision;whiteSpace=wrap;fontSize=30;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="606.5799999999999" y="963" width="239.42" height="261" as="geometry"/>
+                </mxCell>
+                <mxCell id="44" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" edge="1" parent="1" source="37" target="43">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="37" value="Filter rank by Perc. Identity&amp;nbsp;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=30;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="1482.29" y="1537" width="270" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="74" style="edgeStyle=orthogonalEdgeStyle;sketch=1;html=1;entryX=0.5;entryY=0.5;entryDx=0;entryDy=-31.5;entryPerimeter=0;fontSize=30;" edge="1" parent="1" source="43" target="73">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="43" value="&lt;font style=&quot;font-size: 30px&quot;&gt;CONSENSUS&lt;/font&gt;" style="html=1;dashed=0;whitespace=wrap;shape=mxgraph.dfd.start;fontSize=16;strokeColor=default;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="1456" y="1745.5" width="322.57" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="48" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=30;sketch=1;" edge="1" parent="1" source="45" target="47">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="45" value="Find multi-taxa consensus" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=30;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="1092" y="1038.5" width="270" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="50" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=30;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;sketch=1;" edge="1" parent="1" source="47" target="49">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="51" value="CAUTIOUS" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=30;sketch=1;" vertex="1" connectable="0" parent="50">
+                    <mxGeometry x="0.2178" y="-2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="53" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=30;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;sketch=1;" edge="1" parent="1" source="47" target="52">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="54" value="RELAXED" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=30;sketch=1;" vertex="1" connectable="0" parent="53">
+                    <mxGeometry x="0.253" y="-1" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="47" value="What strategy to use?" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.decision;whiteSpace=wrap;fontSize=30;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="1461" y="982" width="204.56" height="223" as="geometry"/>
+                </mxCell>
+                <mxCell id="56" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=30;sketch=1;" edge="1" parent="1" source="49" target="55">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="49" value="Get the shortest taxonomic path" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=30;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="1828" y="853" width="329" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="57" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontSize=30;sketch=1;" edge="1" parent="1" source="52" target="55">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="52" value="Get the longest taxonomic path" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=30;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="1828" y="1229" width="323" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="58" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=30;exitX=1;exitY=0.5;exitDx=0;exitDy=0;sketch=1;" edge="1" parent="1" source="55" target="37">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="2495" y="1100" as="sourcePoint"/>
+                        <mxPoint x="1622.289999999999" y="1762" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="2602" y="1100"/>
+                            <mxPoint x="2602" y="1592"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="55" value="Find for the latest matching taxon" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=30;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="2158" y="1045" width="329" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="60" value="" style="group;sketch=1;" vertex="1" connectable="0" parent="1">
+                    <mxGeometry x="-695" y="810" width="412" height="81" as="geometry"/>
+                </mxCell>
+                <mxCell id="19" value="Blast Consensus Algorithm" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=30;sketch=1;" vertex="1" parent="60">
+                    <mxGeometry width="412" height="81" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" value="" style="endArrow=none;html=1;fontSize=30;entryX=1;entryY=1;entryDx=0;entryDy=0;exitX=0;exitY=1;exitDx=0;exitDy=0;sketch=1;" edge="1" parent="60" source="19" target="19">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="11" y="120" as="sourcePoint"/>
+                        <mxPoint x="61" y="70" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="64" value="" style="group;sketch=1;" vertex="1" connectable="0" parent="1">
+                    <mxGeometry x="1081" y="226.5" width="428" height="171" as="geometry"/>
+                </mxCell>
+                <mxCell id="14" value="Parallel finding consensus&lt;br&gt;&amp;nbsp;&lt;span style=&quot;font-family: &amp;#34;helvetica&amp;#34; ; font-size: 16px&quot;&gt;(Blast Consensus Algorithm)&lt;/span&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=30;sketch=1;" vertex="1" parent="64">
+                    <mxGeometry width="428" height="171" as="geometry"/>
+                </mxCell>
+                <mxCell id="68" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=16;sketch=1;" edge="1" parent="1" source="65" target="67">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="65" value="Persist output to blutils.consensus.json" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=30;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="1600" y="236.75" width="418" height="150.5" as="geometry"/>
+                </mxCell>
+                <mxCell id="66" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=16;sketch=1;" edge="1" parent="1" source="14" target="65">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="67" value="&lt;font style=&quot;font-size: 30px&quot;&gt;STOP&lt;/font&gt;" style="html=1;dashed=0;whitespace=wrap;shape=mxgraph.dfd.start;fontSize=16;strokeColor=default;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="2123" y="280" width="166" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="69" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=16;sketch=1;" edge="1" parent="1" source="14" target="62">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="71" value="&lt;font style=&quot;font-size: 30px&quot;&gt;STOP&lt;/font&gt;" style="html=1;dashed=0;whitespace=wrap;shape=mxgraph.dfd.start;fontSize=16;strokeColor=default;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="315.29" y="1592" width="166" height="63" as="geometry"/>
+                </mxCell>
+                <mxCell id="73" value="&lt;font style=&quot;font-size: 30px&quot;&gt;STOP&lt;/font&gt;" style="html=1;dashed=0;whitespace=wrap;shape=mxgraph.dfd.start;fontSize=16;strokeColor=default;sketch=1;" vertex="1" parent="1">
+                    <mxGeometry x="1534.28" y="1913" width="166" height="63" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

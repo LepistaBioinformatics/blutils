@@ -13,6 +13,7 @@ use log::{error, warn};
 use polars::prelude::{CsvReader, DataFrame, DataType, Schema};
 use polars_io::prelude::*;
 use polars_lazy::prelude::*;
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path};
 
@@ -107,7 +108,7 @@ pub(crate) fn build_consensus_identities(
     query_results.append(&mut remaining_query_results);
 
     query_results
-        .into_iter()
+        .into_par_iter()
         .map(|result| {
             if result.results.to_owned().is_none() {
                 return Ok(ConsensusResult::NoConsensusFound(

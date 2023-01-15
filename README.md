@@ -21,10 +21,16 @@ that dependencies could be evoked directly from terminal.
 
 Blast execution try to reaches the full available CPU saturation. At the default
 multithread blast execution mode, the full saturation is not reached. To run
-Blast through `Blutils` it is possible.
+Blast through `Blutils` it is possible. All the steps taken during this process
+can be seen in the image below.
+
+![Parallel Blast](./arc/parallel-blast.png)
 
 ## Consensus generation
 
 Different from consensus generations from [QIIME
 2](https://docs.qiime2.org/2022.11/), the `Blutils` consensus algorithm performs
-a data pre-filtering based on bit-score.
+a data pre-filtering based on Blast results for bit-score and perc-identity,
+seems the algorithm described in the image below.
+
+![Consensus Generation](./arc/consensus-generation.png)
