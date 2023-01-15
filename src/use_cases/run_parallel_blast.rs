@@ -94,7 +94,10 @@ pub(crate) fn run_parallel_blast(
     }
 
     let output_file = out_dir_path.join("blast.out");
-    info!("Output file could be found in {:?}", output_file);
+    info!("");
+    info!("Blast output file:");
+    info!("\t{:?}", output_file);
+    info!("");
 
     if output_file.exists() {
         if !overwrite {
@@ -108,7 +111,7 @@ pub(crate) fn run_parallel_blast(
 
         match remove_file(output_file.clone()) {
             Err(err) => panic!("Could not remove file given {}", err),
-            Ok(_) => warn!("Output file overwritten: {:?}", output_file),
+            Ok(_) => warn!("Output file overwritten!"),
         };
     };
 

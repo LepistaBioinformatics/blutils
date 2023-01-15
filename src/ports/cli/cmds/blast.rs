@@ -1,15 +1,6 @@
-use std::{
-    fs::File,
-    io::Write,
-    path::{Path, PathBuf},
-};
-
 use blul::{
     adapters::proc::execute_step::ExecuteStepProcRepository,
-    domain::dtos::{
-        blast_builder::{BlastBuilder, Taxon},
-        blast_result::{BlastQueryConsensusResult, ConsensusResult},
-    },
+    domain::dtos::blast_builder::{BlastBuilder, Taxon},
     use_cases::{run_blast_and_build_consensus, ConsensusStrategy},
 };
 use clap::Parser;
@@ -62,8 +53,7 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
         None => 1,
     };
 
-    // Run Blast
-    let blast_output = match run_blast_and_build_consensus(
+    match run_blast_and_build_consensus(
         &args.query,
         &args.tax_file,
         &args.out_dir,
@@ -72,49 +62,6 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
         &args.force_overwrite,
         threads,
         args.strategy,
-    ) {
-        Err(err) => panic!("{err}"),
-        Ok(res) => res,
-    };
-
-    write_json_output(
-        blast_output.to_owned(),
-        Path::new(&args.out_dir).to_path_buf(),
-    )
-}
-
-fn write_json_output(results: Vec<ConsensusResult>, out_dir: PathBuf) {
-    let mut file = match File::create(out_dir.join("blutils.consensus.json")) {
-        Err(err) => panic!("{err}"),
-        Ok(res) => res,
-    };
-
-    let consensus_type_results = results.iter().fold(
-        Vec::<BlastQueryConsensusResult>::new(),
-        |mut init, record| {
-            match record {
-                ConsensusResult::NoConsensusFound(res) => {
-                    init.push(BlastQueryConsensusResult {
-                        query: res.query.to_owned(),
-                        taxon: None,
-                    });
-                }
-                ConsensusResult::ConsensusFound(res) => {
-                    init.push(BlastQueryConsensusResult {
-                        query: res.query.to_owned(),
-                        taxon: res.taxon.to_owned(),
-                    })
-                }
-            };
-
-            init
-        },
-    );
-
-    match file.write_all(
-        serde_json::to_string_pretty(&consensus_type_results)
-            .unwrap()
-            .as_bytes(),
     ) {
         Err(err) => panic!("{err}"),
         Ok(_) => (),

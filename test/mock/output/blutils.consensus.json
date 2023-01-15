@@ -1,0 +1,22 @@
+[
+  {
+    "query": "NR114924.257984.Bac",
+    "taxon": {
+      "rank": "class",
+      "taxid": 1760,
+      "percIdentity": 100.0
+    }
+  },
+  {
+    "query": "NR025123.135626.Bac",
+    "taxon": {
+      "rank": "species",
+      "taxid": 135626,
+      "percIdentity": 100.0
+    }
+  },
+  {
+    "query": "INVALID_SEQUENCE",
+    "taxon": null
+  }
+]
