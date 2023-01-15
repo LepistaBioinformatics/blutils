@@ -24,7 +24,7 @@ multithread blast execution mode, the full saturation is not reached. To run
 Blast through `Blutils` it is possible. All the steps taken during this process
 can be seen in the image below.
 
-![Parallel Blast](./arc/parallel-blast.png)
+![Parallel Blast](arc/drawio/parallel-blast.png)
 
 ## Consensus generation
 
@@ -33,4 +33,4 @@ Different from consensus generations from [QIIME
 a data pre-filtering based on Blast results for bit-score and perc-identity,
 seems the algorithm described in the image below.
 
-![Consensus Generation](./arc/consensus-generation.png)
+![Consensus Generation](arc/drawio/consensus-generation.png)
