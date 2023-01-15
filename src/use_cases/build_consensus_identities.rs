@@ -1,35 +1,43 @@
+use super::{filter_rank_by_identity, run_parallel_blast::ParallelBlastOutput};
 use crate::domain::dtos::{
-    blast_builder::BlastBuilder,
+    blast_builder::{BlastBuilder, Taxon},
     blast_result::{
         BlastQueryConsensusResult, BlastQueryNoConsensusResult,
-        BlastQueryResult, BlastResultRow, ConsensusResult, TaxonomyFieldEnum,
-        ValidTaxonomicRanksEnum,
+        BlastQueryResult, BlastResultRow, ConsensusResult, TaxonomyElement,
+        TaxonomyFieldEnum, ValidTaxonomicRanksEnum,
     },
 };
-
-use super::filter_rank_by_identity;
 
 use clean_base::utils::errors::{execution_err, MappedErrors};
 use log::{error, warn};
 use polars::prelude::{CsvReader, DataFrame, DataType, Schema};
 use polars_io::prelude::*;
 use polars_lazy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path};
+
+#[derive(Clone, Debug, Serialize, Deserialize, clap::ValueEnum)]
+pub enum ConsensusStrategy {
+    Cautious,
+    Relaxed,
+}
 
 /// BUild consensus identities from BlastN output.
 ///
 /// Join the `blast` output with reference `taxonomies` file and calculate
 /// consensus taxonomies based on the `subjects` frequencies and concordance.
 pub(crate) fn build_consensus_identities(
-    blast_output: &Path,
+    blast_output: ParallelBlastOutput,
     taxonomies_file: &Path,
     config: BlastBuilder,
+    strategy: ConsensusStrategy,
 ) -> Result<Vec<ConsensusResult>, MappedErrors> {
     // ? ----------------------------------------------------------------------
     // ? Load blast output as lazy
     // ? ----------------------------------------------------------------------
 
-    let blast_output_df = match get_results_dataframe(blast_output) {
+    let blast_output_df = match get_results_dataframe(&blast_output.output_file)
+    {
         Err(err) => {
             error!("Unexpected error detected on read `blast_output`: {}", err);
 
@@ -67,34 +75,58 @@ pub(crate) fn build_consensus_identities(
 
     let joined_df = blast_output_df.lazy().left_join(
         taxonomies_df.lazy(),
-        col("query"),
-        col("query"),
+        col("subject"),
+        col("subject"),
     );
 
     // ? ----------------------------------------------------------------------
     // ? Build consensus vector
     // ? ----------------------------------------------------------------------
 
-    let query_results = match fold_results_by_query(joined_df) {
+    let mut query_results = match fold_results_by_query(joined_df) {
         Err(err) => return Err(err),
         Ok(res) => res,
     };
 
+    let mut remaining_query_results = Vec::<BlastQueryResult>::new();
+
+    let comparing_query_results = query_results
+        .iter()
+        .map(|result| result.query.to_owned())
+        .collect::<Vec<String>>();
+
+    blast_output.headers.into_iter().for_each(|header| {
+        if !comparing_query_results.contains(&header) {
+            remaining_query_results.push(BlastQueryResult {
+                query: header,
+                results: None,
+            });
+        };
+    });
+
+    query_results.append(&mut remaining_query_results);
+
     query_results
         .into_iter()
-        .filter_map(|result| match result.results {
-            None => None,
-            Some(res) => {
-                match find_single_query_consensus(
-                    result.query,
-                    res,
-                    config.to_owned(),
-                ) {
-                    Err(err) => {
-                        panic!("Unexpected error on parse blast results: {err}")
-                    }
-                    Ok(res) => Some(Ok(res)),
+        .map(|result| {
+            if result.results.to_owned().is_none() {
+                return Ok(ConsensusResult::NoConsensusFound(
+                    BlastQueryNoConsensusResult {
+                        query: result.query,
+                    },
+                ));
+            }
+
+            match find_single_query_consensus(
+                result.query,
+                result.results.unwrap(),
+                config.to_owned(),
+                strategy.to_owned(),
+            ) {
+                Err(err) => {
+                    panic!("Unexpected error on parse blast results: {err}")
                 }
+                Ok(res) => Ok(res),
             }
         })
         .collect()
@@ -104,6 +136,7 @@ fn find_single_query_consensus(
     query: String,
     result: Vec<BlastResultRow>,
     config: BlastBuilder,
+    strategy: ConsensusStrategy,
 ) -> Result<ConsensusResult, MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Group results by bit-score
@@ -148,9 +181,9 @@ fn find_single_query_consensus(
         // Fetch the lower taxonomic rank case only one record returned.
         //
         if score_results.len() == 1 {
-            for rank in ValidTaxonomicRanksEnum::ordered_iter() {
+            for rank in ValidTaxonomicRanksEnum::ordered_iter(None) {
                 match score_results[0].taxonomy.to_owned() {
-                    TaxonomyFieldEnum::Parser(taxonomies) => {
+                    TaxonomyFieldEnum::Parsed(taxonomies) => {
                         match taxonomies.into_iter().find(|i| &i.rank == rank) {
                             None => {
                                 return Ok(ConsensusResult::NoConsensusFound(
@@ -158,18 +191,21 @@ fn find_single_query_consensus(
                                 ))
                             }
                             Some(mut res) => {
-                                res.rank = match filter_rank_by_identity(
-                                    config.taxon,
+                                let rank = match filter_rank_by_identity(
+                                    config.to_owned().taxon.to_owned(),
                                     score_results[0].perc_identity,
+                                    res.rank,
                                 ) {
                                     Err(err) => panic!("{err}"),
                                     Ok(res) => res,
                                 };
 
+                                res.rank = rank;
+
                                 return Ok(ConsensusResult::ConsensusFound(
                                     BlastQueryConsensusResult {
                                         query,
-                                        taxon: res,
+                                        taxon: Some(res),
                                     },
                                 ));
                             }
@@ -185,12 +221,15 @@ fn find_single_query_consensus(
         // Fetch the lower taxonomic rank case more than one record returned.
         //
         if score_results.len() > 1 {
-            // TODO
-            //
-            // Do implement.
-            panic!(
-                "The consensus check for more than one record found on rank."
-            );
+            match find_multi_taxa_consensus(
+                score_results,
+                config.to_owned().taxon,
+                no_consensus.clone(),
+                strategy.to_owned(),
+            ) {
+                Err(err) => panic!("{err}"),
+                Ok(res) => return Ok(res),
+            };
         }
     }
 
@@ -199,6 +238,157 @@ fn find_single_query_consensus(
     // If consensus identity not found in the previous steps, assumes by default
     // a no consensus option.
     Ok(ConsensusResult::NoConsensusFound(no_consensus))
+}
+
+/// Find the consensus among Blast results with multiple output.
+///
+/// In some cases blast results returns a list if records with the same percent
+/// identity and bit-score. In this cases this logic could be applied to solve
+/// the problem.
+fn find_multi_taxa_consensus(
+    records: Vec<BlastResultRow>,
+    taxon: Taxon,
+    no_consensus_option: BlastQueryNoConsensusResult,
+    strategy: ConsensusStrategy,
+) -> Result<ConsensusResult, MappedErrors> {
+    // ? -----------------------------------------------------------------------
+    // ? Collect the reference taxonomy vector
+    //
+    // The taxonomies vector contain elements of the reference taxonomy given
+    // the selected strategy. The `Cautious` strategy selects the shortest
+    // taxonomic vector as a reference. Otherwise (`Relaxed` strategy), the
+    // longest taxonomic vector is selected.
+    //
+    // ? -----------------------------------------------------------------------
+
+    let mut sorted_records = records.to_owned();
+
+    sorted_records.sort_by(|a, b| {
+        let a_taxonomy = force_parsed_taxonomy(a.taxonomy.to_owned());
+        let b_taxonomy = force_parsed_taxonomy(b.taxonomy.to_owned());
+
+        a_taxonomy.len().cmp(&b_taxonomy.len())
+    });
+
+    let reference_taxonomy = match strategy {
+        ConsensusStrategy::Cautious => {
+            sorted_records.first().unwrap().to_owned()
+        }
+        ConsensusStrategy::Relaxed => sorted_records.last().unwrap().to_owned(),
+    };
+
+    // ? -----------------------------------------------------------------------
+    // ? Build the bi-dimensional
+    //
+    // Each position of the vector contain a vector of the `TaxonomyElement`
+    // type.
+    //
+    // ? -----------------------------------------------------------------------
+
+    let taxonomies = sorted_records
+        .into_iter()
+        .map(|i| force_parsed_taxonomy(i.taxonomy))
+        .collect::<Vec<Vec<TaxonomyElement>>>();
+
+    let lowest_taxonomy_of_higher_rank =
+        get_rank_lowest_statistics(taxonomies.first().unwrap().to_owned());
+
+    // ? -----------------------------------------------------------------------
+    // ? Initialize the final response based on high taxonomic rank
+    // ? -----------------------------------------------------------------------
+
+    let mut final_taxon = BlastQueryConsensusResult {
+        query: no_consensus_option.query.to_owned(),
+        taxon: Some(lowest_taxonomy_of_higher_rank),
+    };
+
+    // ? -----------------------------------------------------------------------
+    // ? Try to update the final response
+    // ? -----------------------------------------------------------------------
+
+    let reference_taxonomy_elements =
+        force_parsed_taxonomy(reference_taxonomy.taxonomy.to_owned());
+
+    for (index, ref_taxonomy) in reference_taxonomy_elements.iter().enumerate()
+    {
+        let mut level_taxonomies = Vec::<(ValidTaxonomicRanksEnum, i64)>::new();
+
+        for taxonomy in taxonomies.iter() {
+            if index < taxonomy.len() {
+                if !level_taxonomies.contains(&(
+                    taxonomy[index].rank.to_owned(),
+                    taxonomy[index].taxid,
+                )) {
+                    level_taxonomies.push((
+                        taxonomy[index].rank.to_owned(),
+                        taxonomy[index].taxid,
+                    ));
+                }
+            }
+        }
+
+        if level_taxonomies.len() > 1 {
+            final_taxon = build_taxon(
+                no_consensus_option.query.to_owned(),
+                taxon.to_owned(),
+                reference_taxonomy_elements[index - 1].to_owned(),
+            );
+
+            break;
+        }
+
+        final_taxon = build_taxon(
+            no_consensus_option.query.to_owned(),
+            taxon.to_owned(),
+            ref_taxonomy.to_owned(),
+        );
+    }
+
+    Ok(ConsensusResult::ConsensusFound(final_taxon))
+}
+
+fn build_taxon(
+    query: String,
+    taxon: Taxon,
+    mut element: TaxonomyElement,
+) -> BlastQueryConsensusResult {
+    let rank = match filter_rank_by_identity(
+        taxon.to_owned(),
+        element.perc_identity,
+        element.rank,
+    ) {
+        Err(err) => panic!("{err}"),
+        Ok(res) => res,
+    };
+
+    element.rank = rank;
+
+    BlastQueryConsensusResult {
+        query: query,
+        taxon: Some(element),
+    }
+}
+
+/// Get lowest Blast statistics of a single rank vector
+///
+/// Collect the lowest statistics guarantees that the worst case will be
+/// selected, avoiding over-interpretation of the results.
+fn get_rank_lowest_statistics(
+    mut rank_taxonomies: Vec<TaxonomyElement>,
+) -> TaxonomyElement {
+    rank_taxonomies
+        .sort_by(|a, b| a.perc_identity.partial_cmp(&b.perc_identity).unwrap());
+
+    rank_taxonomies.first().unwrap().to_owned()
+}
+
+fn force_parsed_taxonomy(taxonomy: TaxonomyFieldEnum) -> Vec<TaxonomyElement> {
+    match taxonomy {
+        TaxonomyFieldEnum::Literal(_) => {
+            panic!("Invalid format taxonomic field.")
+        }
+        TaxonomyFieldEnum::Parsed(res) => res,
+    }
 }
 
 /// Group results by query
@@ -311,7 +501,7 @@ fn get_results_dataframe(path: &Path) -> Result<DataFrame, MappedErrors> {
 
 fn get_taxonomies_dataframe(path: &Path) -> Result<DataFrame, MappedErrors> {
     let column_definitions = vec![
-        ("query".to_string(), DataType::Utf8),
+        ("subject".to_string(), DataType::Utf8),
         ("taxonomy".to_string(), DataType::Utf8),
     ];
 

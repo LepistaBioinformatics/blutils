@@ -1,4 +1,6 @@
-use super::{build_consensus_identities, run_parallel_blast};
+use super::{
+    build_consensus_identities, run_parallel_blast, ConsensusStrategy,
+};
 use crate::domain::{
     dtos::{blast_builder::BlastBuilder, blast_result::ConsensusResult},
     entities::execute_step::ExecuteStep,
@@ -16,12 +18,13 @@ pub fn run_blast_and_build_consensus(
     blast_execution_repo: &dyn ExecuteStep,
     overwrite: &bool,
     threads: usize,
+    strategy: ConsensusStrategy,
 ) -> Result<Vec<ConsensusResult>, MappedErrors> {
     // ? ----------------------------------------------------------------------
     // ? Execute parallel blast
     // ? ----------------------------------------------------------------------
 
-    let output_file = match run_parallel_blast(
+    let output = match run_parallel_blast(
         input_sequences,
         out_dir,
         blast_config.to_owned(),
@@ -44,9 +47,10 @@ pub fn run_blast_and_build_consensus(
     // ? ----------------------------------------------------------------------
 
     match build_consensus_identities(
-        output_file.as_path(),
+        output,
         Path::new(input_taxonomies),
         blast_config,
+        strategy,
     ) {
         Err(err) => {
             return Err(use_case_err(

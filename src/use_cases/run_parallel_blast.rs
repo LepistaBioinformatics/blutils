@@ -12,6 +12,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[derive(Debug, Clone)]
+pub struct ParallelBlastOutput {
+    pub output_file: PathBuf,
+    pub headers: Vec<String>,
+}
+
 /// Run blast in parallel mode
 ///
 /// This implementation target to saturate the host machine CPU utilization.
@@ -23,7 +29,7 @@ pub(crate) fn run_parallel_blast(
     blast_execution_repo: &dyn ExecuteStep,
     overwrite: &bool,
     threads: usize,
-) -> Result<PathBuf, MappedErrors> {
+) -> Result<ParallelBlastOutput, MappedErrors> {
     // ? ----------------------------------------------------------------------
     // ? Load blast file input
     // ? ----------------------------------------------------------------------
@@ -46,6 +52,7 @@ pub(crate) fn run_parallel_blast(
     let reader = BufReader::new(input_file);
     let mut lines = reader.lines();
     let mut source_sequences: Vec<String> = vec![];
+    let mut headers: Vec<String> = Vec::new();
 
     while let (Some(header), Some(sequence)) = (lines.next(), lines.next()) {
         if header.is_err() || sequence.is_err() {
@@ -56,8 +63,12 @@ pub(crate) fn run_parallel_blast(
             ));
         }
 
+        let header = header.unwrap();
+
+        headers.push(header.replace(">", "").to_owned());
+
         source_sequences.push(
-            format!("{}\n{}\n", header.unwrap(), sequence.unwrap())
+            format!("{}\n{}\n", header, sequence.unwrap())
                 .as_str()
                 .to_owned(),
         );
@@ -138,7 +149,10 @@ pub(crate) fn run_parallel_blast(
             };
         });
 
-    Ok(output_file)
+    Ok(ParallelBlastOutput {
+        output_file,
+        headers,
+    })
 }
 
 fn write_tmp_file(

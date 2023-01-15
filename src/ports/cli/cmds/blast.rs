@@ -8,12 +8,9 @@ use blul::{
     adapters::proc::execute_step::ExecuteStepProcRepository,
     domain::dtos::{
         blast_builder::{BlastBuilder, Taxon},
-        blast_result::{
-            BlastQueryConsensusResult, BlastQueryNoConsensusResult,
-            ConsensusResult,
-        },
+        blast_result::{BlastQueryConsensusResult, ConsensusResult},
     },
-    use_cases::run_blast_and_build_consensus,
+    use_cases::{run_blast_and_build_consensus, ConsensusStrategy},
 };
 use clap::Parser;
 
@@ -37,6 +34,9 @@ pub(crate) struct RunBlastAndBuildConsensusArguments {
 
     #[arg(long)]
     taxon: Taxon,
+
+    #[arg(long)]
+    strategy: ConsensusStrategy,
 
     /// Case true, overwrite the output file if exists. Otherwise dispatch an
     /// error if the output file exists.
@@ -71,6 +71,7 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
         &repo,
         &args.force_overwrite,
         threads,
+        args.strategy,
     ) {
         Err(err) => panic!("{err}"),
         Ok(res) => res,
@@ -83,46 +84,38 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
 }
 
 fn write_json_output(results: Vec<ConsensusResult>, out_dir: PathBuf) {
-    //
-    // Collect and persist consensus sequences
-    //
-    let match_seqs = results
-        .iter()
-        .filter_map(|i| match i {
-            ConsensusResult::ConsensusFound(res) => Some(res.to_owned()),
-            _ => None,
-        })
-        .collect::<Vec<BlastQueryConsensusResult>>();
-
-    write_json_file::<BlastQueryConsensusResult>(
-        match_seqs,
-        out_dir.join("consensus-match.json"),
-    );
-
-    //
-    // Collect and persist no-consensus sequences
-    //
-    let unmatch_seqs = results
-        .iter()
-        .filter_map(|i| match i {
-            ConsensusResult::NoConsensusFound(res) => Some(res.to_owned()),
-            _ => None,
-        })
-        .collect::<Vec<BlastQueryNoConsensusResult>>();
-
-    write_json_file::<BlastQueryNoConsensusResult>(
-        unmatch_seqs,
-        out_dir.join("consensus-unmatch.json"),
-    );
-}
-
-fn write_json_file<T: serde::ser::Serialize>(records: Vec<T>, file: PathBuf) {
-    let mut file = match File::create(file) {
+    let mut file = match File::create(out_dir.join("blutils.consensus.json")) {
         Err(err) => panic!("{err}"),
         Ok(res) => res,
     };
 
-    match file.write_all(serde_json::to_string(&records).unwrap().as_bytes()) {
+    let consensus_type_results = results.iter().fold(
+        Vec::<BlastQueryConsensusResult>::new(),
+        |mut init, record| {
+            match record {
+                ConsensusResult::NoConsensusFound(res) => {
+                    init.push(BlastQueryConsensusResult {
+                        query: res.query.to_owned(),
+                        taxon: None,
+                    });
+                }
+                ConsensusResult::ConsensusFound(res) => {
+                    init.push(BlastQueryConsensusResult {
+                        query: res.query.to_owned(),
+                        taxon: res.taxon.to_owned(),
+                    })
+                }
+            };
+
+            init
+        },
+    );
+
+    match file.write_all(
+        serde_json::to_string_pretty(&consensus_type_results)
+            .unwrap()
+            .as_bytes(),
+    ) {
         Err(err) => panic!("{err}"),
         Ok(_) => (),
     };

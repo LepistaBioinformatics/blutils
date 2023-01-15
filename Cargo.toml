@@ -31,7 +31,6 @@ name = "blul"
 path = "src/lib.rs"
 crate-type = ["staticlib", "lib"]
 
-
 [[bin]]
 name = "blu"
 path = "src/ports/cli/main.rs"

@@ -35,6 +35,7 @@ impl QuerySequence {
 // ? --------------------------------------------------------------------------
 
 #[derive(Clone, Debug, Serialize, Deserialize, clap::ValueEnum)]
+#[serde(rename_all = "camelCase")]
 pub enum Taxon {
     Fungi,
     Bacteria,
@@ -53,7 +54,8 @@ impl FromStr for Taxon {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BlastBuilder {
     // ? IO related parameters
     pub subject_reads: String,

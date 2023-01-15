@@ -1,6 +1,6 @@
 use crate::domain::dtos::{
     blast_builder::Taxon::{self, *},
-    blast_result::ValidTaxonomicRanksEnum,
+    blast_result::ValidTaxonomicRanksEnum::{self, *},
 };
 
 use clean_base::utils::errors::MappedErrors;
@@ -12,11 +12,31 @@ use clean_base::utils::errors::MappedErrors;
 pub(crate) fn filter_rank_by_identity(
     taxon: Taxon,
     perc_identity: f64,
+    current_rank: ValidTaxonomicRanksEnum,
 ) -> Result<ValidTaxonomicRanksEnum, MappedErrors> {
-    match taxon {
+    let rank = match taxon {
         Fungi => filter_fungi_identities(perc_identity),
         Bacteria => filter_bacteria_identities(perc_identity),
         Eukaryotes => filter_eukaryote_identities(perc_identity),
+    };
+
+    match rank {
+        Err(err) => return Err(err),
+        Ok(res) => {
+            let ranks = ValidTaxonomicRanksEnum::ordered_iter(Some(true));
+
+            let current_rank_index =
+                ranks.to_owned().position(|rank| rank == &current_rank);
+
+            let selected_rank_index =
+                ranks.to_owned().position(|rank| rank == &res);
+
+            if current_rank_index < selected_rank_index {
+                return Ok(current_rank);
+            }
+
+            Ok(res)
+        }
     }
 }
 
@@ -27,14 +47,14 @@ fn filter_fungi_identities(
     perc_identity: f64,
 ) -> Result<ValidTaxonomicRanksEnum, MappedErrors> {
     match perc_identity {
-        i if i >= 97.0 => return Ok(ValidTaxonomicRanksEnum::Species),
-        i if i >= 95.0 => return Ok(ValidTaxonomicRanksEnum::Genus),
-        i if i >= 90.0 => return Ok(ValidTaxonomicRanksEnum::Family),
-        i if i >= 85.0 => return Ok(ValidTaxonomicRanksEnum::Order),
-        i if i >= 80.0 => return Ok(ValidTaxonomicRanksEnum::Class),
-        i if i >= 75.0 => return Ok(ValidTaxonomicRanksEnum::Phylum),
-        i if i >= 60.0 => return Ok(ValidTaxonomicRanksEnum::Domain),
-        _ => return Ok(ValidTaxonomicRanksEnum::Undefined),
+        i if i >= 97.0 => return Ok(Species),
+        i if i >= 95.0 => return Ok(Genus),
+        i if i >= 90.0 => return Ok(Family),
+        i if i >= 85.0 => return Ok(Order),
+        i if i >= 80.0 => return Ok(Class),
+        i if i >= 75.0 => return Ok(Phylum),
+        i if i >= 60.0 => return Ok(Domain),
+        _ => return Ok(Undefined),
     };
 }
 
@@ -45,14 +65,14 @@ fn filter_bacteria_identities(
     perc_identity: f64,
 ) -> Result<ValidTaxonomicRanksEnum, MappedErrors> {
     match perc_identity {
-        i if i >= 99.0 => return Ok(ValidTaxonomicRanksEnum::Species),
-        i if i >= 97.0 => return Ok(ValidTaxonomicRanksEnum::Genus),
-        i if i >= 92.0 => return Ok(ValidTaxonomicRanksEnum::Family),
-        i if i >= 85.0 => return Ok(ValidTaxonomicRanksEnum::Order),
-        i if i >= 80.0 => return Ok(ValidTaxonomicRanksEnum::Class),
-        i if i >= 75.0 => return Ok(ValidTaxonomicRanksEnum::Phylum),
-        i if i >= 60.0 => return Ok(ValidTaxonomicRanksEnum::Domain),
-        _ => return Ok(ValidTaxonomicRanksEnum::Undefined),
+        i if i >= 99.0 => return Ok(Species),
+        i if i >= 97.0 => return Ok(Genus),
+        i if i >= 92.0 => return Ok(Family),
+        i if i >= 85.0 => return Ok(Order),
+        i if i >= 80.0 => return Ok(Class),
+        i if i >= 75.0 => return Ok(Phylum),
+        i if i >= 60.0 => return Ok(Domain),
+        _ => return Ok(Undefined),
     };
 }
 
@@ -63,13 +83,13 @@ fn filter_eukaryote_identities(
     perc_identity: f64,
 ) -> Result<ValidTaxonomicRanksEnum, MappedErrors> {
     match perc_identity {
-        i if i >= 97.0 => return Ok(ValidTaxonomicRanksEnum::Species),
-        i if i >= 95.0 => return Ok(ValidTaxonomicRanksEnum::Genus),
-        i if i >= 90.0 => return Ok(ValidTaxonomicRanksEnum::Family),
-        i if i >= 85.0 => return Ok(ValidTaxonomicRanksEnum::Order),
-        i if i >= 80.0 => return Ok(ValidTaxonomicRanksEnum::Class),
-        i if i >= 75.0 => return Ok(ValidTaxonomicRanksEnum::Phylum),
-        i if i >= 60.0 => return Ok(ValidTaxonomicRanksEnum::Domain),
-        _ => return Ok(ValidTaxonomicRanksEnum::Undefined),
+        i if i >= 97.0 => return Ok(Species),
+        i if i >= 95.0 => return Ok(Genus),
+        i if i >= 90.0 => return Ok(Family),
+        i if i >= 85.0 => return Ok(Order),
+        i if i >= 80.0 => return Ok(Class),
+        i if i >= 75.0 => return Ok(Phylum),
+        i if i >= 60.0 => return Ok(Domain),
+        _ => return Ok(Undefined),
     };
 }

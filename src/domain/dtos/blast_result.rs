@@ -5,6 +5,7 @@ use std::slice::Iter;
 use std::str::FromStr;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum ValidTaxonomicRanksEnum {
     Undefined,
     Domain,
@@ -17,10 +18,22 @@ pub enum ValidTaxonomicRanksEnum {
 }
 
 impl ValidTaxonomicRanksEnum {
-    pub fn ordered_iter() -> Iter<'static, ValidTaxonomicRanksEnum> {
+    pub fn ordered_iter(
+        rev: Option<bool>,
+    ) -> Iter<'static, ValidTaxonomicRanksEnum> {
+        let rev = rev.unwrap_or(false);
+
+        if rev {
+            static TAXONOMIES: [ValidTaxonomicRanksEnum; 7] =
+                [Domain, Phylum, Class, Order, Family, Genus, Species];
+
+            return TAXONOMIES.iter();
+        }
+
         static TAXONOMIES: [ValidTaxonomicRanksEnum; 8] = [
             Species, Genus, Family, Order, Class, Phylum, Domain, Undefined,
         ];
+
         TAXONOMIES.iter()
     }
 }
@@ -45,20 +58,23 @@ impl FromStr for ValidTaxonomicRanksEnum {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TaxonomyElement {
     pub rank: ValidTaxonomicRanksEnum,
     pub taxid: i64,
     pub perc_identity: f64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum TaxonomyFieldEnum {
     Literal(String),
-    Parser(Vec<TaxonomyElement>),
+    Parsed(Vec<TaxonomyElement>),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BlastResultRow {
     pub subject: String,
     pub perc_identity: f64,
@@ -135,31 +151,35 @@ impl BlastResultRow {
                 })
                 .collect();
 
-            self.taxonomy = TaxonomyFieldEnum::Parser(parsed_taxonomy);
+            self.taxonomy = TaxonomyFieldEnum::Parsed(parsed_taxonomy);
         };
 
         return self.to_owned();
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BlastQueryResult {
     pub query: String,
     pub results: Option<Vec<BlastResultRow>>,
 }
 
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BlastQueryConsensusResult {
     pub query: String,
-    pub taxon: TaxonomyElement,
+    pub taxon: Option<TaxonomyElement>,
 }
 
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BlastQueryNoConsensusResult {
     pub query: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum ConsensusResult {
     /// No consensus option
     ///
