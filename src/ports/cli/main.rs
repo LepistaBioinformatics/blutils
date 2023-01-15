@@ -10,7 +10,10 @@ use std::io::Write;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 enum Cli {
+    /// Execute the parallel blast and run consensus algorithm.
     Blast(blast::Arguments),
+
+    /// Check `Blutils` dependencies.
     Check(check::Arguments),
 }
 

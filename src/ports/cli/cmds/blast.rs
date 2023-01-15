@@ -13,19 +13,33 @@ pub(crate) struct Arguments {
 
 #[derive(Parser, Debug)]
 pub(crate) enum Commands {
+    /// Run blast and generate consensus identities.
     RunWithConsensus(RunBlastAndBuildConsensusArguments),
 }
 
 #[derive(Parser, Debug)]
 pub(crate) struct RunBlastAndBuildConsensusArguments {
+    /// The query sequences system file path
     query: String,
+
+    /// The reference sequences system file path
     subject: String,
+
+    /// The taxonomy system file path
     tax_file: String,
+
+    /// The output directory
     out_dir: String,
 
+    /// This option checks the higher taxon which the consensus search should be
+    /// based
     #[arg(long)]
     taxon: Taxon,
 
+    /// The strategy to be used
+    ///
+    /// cautious: Select the shortest taxonomic path to find consensus from.
+    /// relaxed: Select the longest taxonomic path to find consensus from.
     #[arg(long)]
     strategy: ConsensusStrategy,
 

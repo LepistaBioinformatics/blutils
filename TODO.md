@@ -2,8 +2,7 @@
 
 ## Project
 
-- [ ] Write an appropriate README file.
-    -  **location**: The project root.
+Nothing to do now!
 
 ## Adapters
 
@@ -14,10 +13,7 @@
 
 ## Use cases
 
-- [ ] Do implement the consensus generation when multiple `BlastResultRow`
-  records returned after filtrate blast results by bit-score.
-    - **location**: `src/use_cases/build_consensus_identities.rs` file at the
-    `find_single_query_consensus` function.
+Nothing to do now!
 
 ## Ports (CLI)
 
