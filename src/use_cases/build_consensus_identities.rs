@@ -494,7 +494,7 @@ fn get_results_dataframe(path: &Path) -> Result<DataFrame, MappedErrors> {
         ("s_start".to_string(), DataType::Int64),
         ("s_end".to_string(), DataType::Int64),
         ("e_value".to_string(), DataType::Float64),
-        ("bit_score".to_string(), DataType::Int64),
+        ("bit_score".to_string(), DataType::Float64),
     ];
 
     load_named_dataframe(path, column_definitions, vec![])
