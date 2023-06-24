@@ -12,7 +12,7 @@ categories = ["science", "command-line-interface", "command-line-utilities"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
-clean-base = "0.2.2"
+clean-base = "0.6.9"
 colored = "2.0.0"
 const_format = "0.2.26"
 env_logger = "0.10.0"

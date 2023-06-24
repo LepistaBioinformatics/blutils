@@ -1,4 +1,7 @@
-use super::{filter_rank_by_identity, run_parallel_blast::ParallelBlastOutput};
+use super::{
+    filter_rank_by_identity::filter_rank_by_identity,
+    run_parallel_blast::ParallelBlastOutput,
+};
 use crate::domain::dtos::{
     blast_builder::{BlastBuilder, Taxon},
     blast_result::{
@@ -27,7 +30,7 @@ pub enum ConsensusStrategy {
 ///
 /// Join the `blast` output with reference `taxonomies` file and calculate
 /// consensus taxonomies based on the `subjects` frequencies and concordance.
-pub(crate) fn build_consensus_identities(
+pub(super) fn build_consensus_identities(
     blast_output: ParallelBlastOutput,
     taxonomies_file: &Path,
     config: BlastBuilder,
@@ -37,38 +40,13 @@ pub(crate) fn build_consensus_identities(
     // ? Load blast output as lazy
     // ? ----------------------------------------------------------------------
 
-    let blast_output_df = match get_results_dataframe(&blast_output.output_file)
-    {
-        Err(err) => {
-            error!("Unexpected error detected on read `blast_output`: {}", err);
-
-            return Err(execution_err(
-                String::from(
-                    "Unexpected error detected on read `blast_output`",
-                ),
-                None,
-                None,
-            ));
-        }
-        Ok(res) => res,
-    };
+    let blast_output_df = get_results_dataframe(&blast_output.output_file)?;
 
     // ? ----------------------------------------------------------------------
     // ? Load taxonomies as lazy
     // ? ----------------------------------------------------------------------
 
-    let taxonomies_df = match get_taxonomies_dataframe(taxonomies_file) {
-        Err(err) => {
-            return Err(execution_err(
-                format!(
-                    "Unexpected error detected on read `taxonomies_file`: {err}",
-                ),
-                None,
-                None,
-            ));
-        }
-        Ok(res) => res,
-    };
+    let taxonomies_df = get_taxonomies_dataframe(taxonomies_file)?;
 
     // ? ----------------------------------------------------------------------
     // ? Merge files as lazy
@@ -84,10 +62,7 @@ pub(crate) fn build_consensus_identities(
     // ? Build consensus vector
     // ? ----------------------------------------------------------------------
 
-    let mut query_results = match fold_results_by_query(joined_df) {
-        Err(err) => return Err(err),
-        Ok(res) => res,
-    };
+    let mut query_results = fold_results_by_query(joined_df)?;
 
     let mut remaining_query_results = Vec::<BlastQueryResult>::new();
 
@@ -267,7 +242,6 @@ fn find_multi_taxa_consensus(
     sorted_records.sort_by(|a, b| {
         let a_taxonomy = force_parsed_taxonomy(a.taxonomy.to_owned());
         let b_taxonomy = force_parsed_taxonomy(b.taxonomy.to_owned());
-
         a_taxonomy.len().cmp(&b_taxonomy.len())
     });
 
@@ -365,7 +339,7 @@ fn build_taxon(
     element.rank = rank;
 
     BlastQueryConsensusResult {
-        query: query,
+        query,
         taxon: Some(element),
     }
 }

@@ -9,35 +9,29 @@ use clean_base::utils::errors::MappedErrors;
 ///
 /// The filtration process should be based in different identity cutoff points.
 /// This, be careful on set the taxon parameter.
-pub(crate) fn filter_rank_by_identity(
+pub(super) fn filter_rank_by_identity(
     taxon: Taxon,
     perc_identity: f64,
     current_rank: ValidTaxonomicRanksEnum,
 ) -> Result<ValidTaxonomicRanksEnum, MappedErrors> {
     let rank = match taxon {
-        Fungi => filter_fungi_identities(perc_identity),
-        Bacteria => filter_bacteria_identities(perc_identity),
-        Eukaryotes => filter_eukaryote_identities(perc_identity),
+        Fungi => filter_fungi_identities(perc_identity)?,
+        Bacteria => filter_bacteria_identities(perc_identity)?,
+        Eukaryotes => filter_eukaryote_identities(perc_identity)?,
     };
 
-    match rank {
-        Err(err) => return Err(err),
-        Ok(res) => {
-            let ranks = ValidTaxonomicRanksEnum::ordered_iter(Some(true));
+    let ranks = ValidTaxonomicRanksEnum::ordered_iter(Some(true));
 
-            let current_rank_index =
-                ranks.to_owned().position(|rank| rank == &current_rank);
+    let current_rank_index =
+        ranks.to_owned().position(|rank| rank == &current_rank);
 
-            let selected_rank_index =
-                ranks.to_owned().position(|rank| rank == &res);
+    let selected_rank_index = ranks.to_owned().position(|rank| rank == rank);
 
-            if current_rank_index < selected_rank_index {
-                return Ok(current_rank);
-            }
-
-            Ok(res)
-        }
+    if current_rank_index < selected_rank_index {
+        return Ok(current_rank);
     }
+
+    Ok(rank)
 }
 
 /// Filter fungi ranks by identity percentage

@@ -3,7 +3,7 @@ use crate::domain::{
     entities::execute_step::{ExecuteStep, ExecutionResponse},
 };
 
-use clean_base::utils::errors::{execution_err, MappedErrors};
+use clean_base::utils::errors::{factories::execution_err, MappedErrors};
 use log::{error, info, warn};
 use rayon::prelude::*;
 use std::{
@@ -22,7 +22,7 @@ pub struct ParallelBlastOutput {
 ///
 /// This implementation target to saturate the host machine CPU utilization.
 /// Simple blast usage not allows the full usage of these resource.
-pub(crate) fn run_parallel_blast(
+pub(super) fn run_parallel_blast(
     input_sequences: &str,
     out_dir: &str,
     blast_config: BlastBuilder,
@@ -35,13 +35,11 @@ pub(crate) fn run_parallel_blast(
     // ? ----------------------------------------------------------------------
 
     let input_file = match File::open(input_sequences) {
-        Err(err) => return Err(execution_err(
+        Err(err) => return execution_err(
             format!(
                 "Unexpected error on try to initialize input file connection: {err}",
-            ),
-            None,
-            None,
-        )),
+            )
+        ).as_error(),
         Ok(res) => res,
     };
 
@@ -55,12 +53,20 @@ pub(crate) fn run_parallel_blast(
     let mut headers: Vec<String> = Vec::new();
 
     while let (Some(header), Some(sequence)) = (lines.next(), lines.next()) {
-        if header.is_err() || sequence.is_err() {
-            return Err(execution_err(
-                String::from("Unexpected error on try to read query file."),
-                None,
-                None,
-            ));
+        if header.is_err() {
+            return execution_err(format!(
+                "Unexpected error on try to read sequence header of sequences file: {}",
+                header.unwrap_err(),
+            ))
+            .as_error();
+        }
+
+        if sequence.is_err() {
+            return execution_err(format!(
+                "Unexpected error on try to read nucleotide of sequences file: {}",
+                sequence.unwrap_err(),
+            ))
+            .as_error();
         }
 
         let header = header.unwrap();
@@ -172,11 +178,10 @@ fn write_tmp_file(
     {
         Err(err) => {
             error!("Unexpected error detected: {}", err);
-            return Err(execution_err(
-                String::from("Unexpected error detected on write temp file."),
-                None,
-                None,
-            ));
+            return execution_err(String::from(
+                "Unexpected error detected on write temp file.",
+            ))
+            .as_error();
         }
         Ok(_) => Ok(true),
     }

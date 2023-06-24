@@ -1,5 +1,6 @@
 use super::{
-    build_consensus_identities, run_parallel_blast, ConsensusStrategy,
+    build_consensus_identities::build_consensus_identities,
+    run_parallel_blast::run_parallel_blast, ConsensusStrategy,
 };
 use crate::domain::{
     dtos::{
@@ -9,7 +10,7 @@ use crate::domain::{
     entities::execute_step::ExecuteStep,
 };
 
-use clean_base::utils::errors::{use_case_err, MappedErrors};
+use clean_base::utils::errors::MappedErrors;
 use log::info;
 use std::{
     fs::File,
@@ -32,43 +33,25 @@ pub fn run_blast_and_build_consensus(
     // ? Execute parallel blast
     // ? ----------------------------------------------------------------------
 
-    let output = match run_parallel_blast(
+    let output = run_parallel_blast(
         input_sequences,
         out_dir,
         blast_config.to_owned(),
         blast_execution_repo,
         overwrite,
         threads,
-    ) {
-        Err(err) => {
-            return Err(use_case_err(
-                String::from("Unexpected error on run parallel blast"),
-                None,
-                Some(err),
-            ))
-        }
-        Ok(res) => res,
-    };
+    )?;
 
     // ? ----------------------------------------------------------------------
     // ? Build consensus
     // ? ----------------------------------------------------------------------
 
-    let blast_output = match build_consensus_identities(
+    let blast_output = build_consensus_identities(
         output,
         Path::new(input_taxonomies),
         blast_config,
         strategy,
-    ) {
-        Err(err) => {
-            return Err(use_case_err(
-                String::from("Unexpected error on build consensus taxonomy"),
-                None,
-                Some(err),
-            ))
-        }
-        Ok(res) => res,
-    };
+    )?;
 
     write_json_output(
         blast_output.to_owned(),

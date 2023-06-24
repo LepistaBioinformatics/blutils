@@ -1,7 +1,10 @@
 use blul::{
     adapters::proc::execute_step::ExecuteStepProcRepository,
     domain::dtos::blast_builder::{BlastBuilder, Taxon},
-    use_cases::{run_blast_and_build_consensus, ConsensusStrategy},
+    use_cases::{
+        check_host_requirements, run_blast_and_build_consensus,
+        ConsensusStrategy,
+    },
 };
 use clap::Parser;
 
@@ -56,6 +59,9 @@ pub(crate) struct RunBlastAndBuildConsensusArguments {
 pub(crate) fn run_blast_and_build_consensus_cmd(
     args: RunBlastAndBuildConsensusArguments,
 ) {
+    // Execute system checks before running the blast
+    check_host_requirements();
+
     let repo = ExecuteStepProcRepository {};
 
     // Create configuration DTO

@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub enum ValidTaxonomicRanksEnum {
+pub(crate) enum ValidTaxonomicRanksEnum {
     Undefined,
     Domain,
     Phylum,
@@ -60,7 +60,7 @@ impl FromStr for ValidTaxonomicRanksEnum {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TaxonomyElement {
+pub(crate) struct TaxonomyElement {
     pub rank: ValidTaxonomicRanksEnum,
     pub taxid: i64,
     pub perc_identity: f64,
@@ -68,14 +68,14 @@ pub struct TaxonomyElement {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub enum TaxonomyFieldEnum {
+pub(crate) enum TaxonomyFieldEnum {
     Literal(String),
     Parsed(Vec<TaxonomyElement>),
 }
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BlastResultRow {
+pub(crate) struct BlastResultRow {
     pub subject: String,
     pub perc_identity: f64,
     pub align_length: i64,
@@ -160,14 +160,14 @@ impl BlastResultRow {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BlastQueryResult {
+pub(crate) struct BlastQueryResult {
     pub query: String,
     pub results: Option<Vec<BlastResultRow>>,
 }
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BlastQueryConsensusResult {
+pub(crate) struct BlastQueryConsensusResult {
     pub query: String,
     pub taxon: Option<TaxonomyElement>,
 }
@@ -180,7 +180,7 @@ pub struct BlastQueryNoConsensusResult {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub enum ConsensusResult {
+pub(crate) enum ConsensusResult {
     /// No consensus option
     ///
     /// This option should be used when the consensus checking process not found
