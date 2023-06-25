@@ -1,5 +1,5 @@
-use blul::{
-    adapters::proc::execute_step::ExecuteStepProcRepository,
+use blul_adapters::execute_blast::ExecuteBlastnProcRepository;
+use blul_core::{
     domain::dtos::blast_builder::{BlastBuilder, Taxon},
     use_cases::{
         check_host_requirements, run_blast_and_build_consensus,
@@ -62,7 +62,7 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
     // Execute system checks before running the blast
     check_host_requirements();
 
-    let repo = ExecuteStepProcRepository {};
+    let repo = ExecuteBlastnProcRepository {};
 
     // Create configuration DTO
     let config = BlastBuilder::default(&args.subject, args.taxon);

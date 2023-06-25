@@ -1,13 +1,13 @@
-use crate::domain::{
+use blul_core::domain::{
     dtos::blast_builder::BlastBuilder,
     entities::execute_step::{ExecuteStep, ExecutionResponse},
 };
 use clean_base::utils::errors::{execution_err, MappedErrors};
 use subprocess::{Exec, Redirection};
 
-pub struct ExecuteStepProcRepository {}
+pub struct ExecuteBlastnProcRepository {}
 
-impl ExecuteStep for ExecuteStepProcRepository {
+impl ExecuteStep for ExecuteBlastnProcRepository {
     fn run(
         &self,
         query_sequences: String,

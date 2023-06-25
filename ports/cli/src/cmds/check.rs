@@ -1,4 +1,4 @@
-use blul::use_cases::check_host_requirements;
+use blul_core::use_cases::check_host_requirements;
 use clap::Parser;
 
 #[derive(Parser, Debug)]

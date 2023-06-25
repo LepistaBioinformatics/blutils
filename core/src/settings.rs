@@ -5,7 +5,7 @@ use const_format::formatcp;
 /// ? -------------------------------------------------------------------------
 
 /// This is the base project directory.
-pub const TMP_DIRECTORY: &str = ".bli/tmp";
+pub const TMP_DIRECTORY: &str = ".blutils/tmp";
 
 // Here temporary blast results are stored.
 pub const BLAST_QUERIES_DIRECTORY: &str =

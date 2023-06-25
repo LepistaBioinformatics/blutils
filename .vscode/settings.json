@@ -1,15 +1,19 @@
 {
-    "cSpell.words": [
-        "blul",
-        "Blutils",
-        "dataframe",
-        "fasta",
-        "formatcp",
-        "inttype",
-        "perc",
-        "repr",
-        "seqs",
-        "structopt",
-        "taxdump"
-    ]
+  "cSpell.words": [
+    "blul",
+    "Blutils",
+    "dataframe",
+    "fasta",
+    "formatcp",
+    "inttype",
+    "perc",
+    "repr",
+    "seqs",
+    "structopt",
+    "taxdump"
+  ],
+  "rust-analyzer.linkedProjects": [
+    "./ports/cli/Cargo.toml"
+  ],
+  "rust-analyzer.showUnlinkedFileNotification": false
 }

@@ -1,4 +1,3 @@
-extern crate blul;
 mod cmds;
 
 use clap::Parser;
