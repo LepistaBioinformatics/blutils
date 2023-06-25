@@ -1,6 +1,6 @@
 use md5;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 // ? --------------------------------------------------------------------------
 // ? Wrapper for Query Sequences
@@ -56,33 +56,81 @@ impl FromStr for Taxon {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub enum Strand {
+    Both,
+    Plus,
+    Minus,
+}
+
+impl fmt::Display for Strand {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Strand::Both => write!(f, "both"),
+            Strand::Plus => write!(f, "plus"),
+            Strand::Minus => write!(f, "minus"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BlastBuilder {
     // ? IO related parameters
     pub subject_reads: String,
     pub taxon: Taxon,
 
     // ? BlastN configuration related parameters
-    pub out_format: &'static str,
-    pub max_target_seqs: &'static str,
-    pub perc_identity: &'static str,
-    pub query_cov: &'static str,
-    pub strand: &'static str,
-    pub e_value: &'static str,
-    pub min_consensus: &'static str,
+    pub out_format: i8,
+    pub max_target_seqs: i32,
+    pub perc_identity: i32,
+    pub query_cov: i32,
+    pub strand: Strand,
+    pub e_value: f32,
+    pub min_consensus: f32,
 }
 
 impl BlastBuilder {
-    pub fn create(subject_reads: &str, taxon: Taxon) -> Self {
+    pub fn default(subject_reads: &str, taxon: Taxon) -> Self {
         BlastBuilder {
             subject_reads: subject_reads.to_string(),
             taxon,
-            out_format: "6",
-            max_target_seqs: "100",
-            perc_identity: "0.8",
-            query_cov: "0.8",
-            strand: "both",
-            e_value: "0.001",
-            min_consensus: "0.51",
+            out_format: 6,
+            max_target_seqs: 10,
+            perc_identity: 80,
+            query_cov: 80,
+            strand: Strand::Both,
+            e_value: 0.001,
+            min_consensus: 0.51,
         }
+    }
+
+    pub fn with_max_target_seqs(mut self, max_target_seqs: i32) -> Self {
+        self.max_target_seqs = max_target_seqs;
+        self
+    }
+
+    pub fn with_perc_identity(mut self, perc_identity: i32) -> Self {
+        self.perc_identity = perc_identity;
+        self
+    }
+
+    pub fn with_query_cov(mut self, query_cov: i32) -> Self {
+        self.query_cov = query_cov;
+        self
+    }
+
+    pub fn with_strand(mut self, strand: Strand) -> Self {
+        self.strand = strand;
+        self
+    }
+
+    pub fn with_e_value(mut self, e_value: f32) -> Self {
+        self.e_value = e_value;
+        self
+    }
+
+    pub fn with_min_consensus(mut self, min_consensus: f32) -> Self {
+        self.min_consensus = min_consensus;
+        self
     }
 }

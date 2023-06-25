@@ -65,7 +65,7 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
     let repo = ExecuteStepProcRepository {};
 
     // Create configuration DTO
-    let config = BlastBuilder::create(&args.subject, args.taxon);
+    let config = BlastBuilder::default(&args.subject, args.taxon);
 
     // Set the default number of threads
     let threads = match args.threads {
