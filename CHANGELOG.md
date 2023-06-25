@@ -1,3 +1,13 @@
+## v5.0.0 (2023-06-25)
+
+### BREAKING CHANGE
+
+- main
+
+### Fix
+
+- fix bug on filter taxonomies by rank
+
 ## v4.0.1 (2023-06-25)
 
 ### Fix
