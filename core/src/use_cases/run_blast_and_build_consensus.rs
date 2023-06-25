@@ -7,7 +7,7 @@ use crate::domain::{
         blast_builder::BlastBuilder,
         blast_result::{BlastQueryConsensusResult, ConsensusResult},
     },
-    entities::execute_step::ExecuteStep,
+    entities::execute_blastn::ExecuteBlastn,
 };
 
 use clean_base::utils::errors::MappedErrors;
@@ -24,7 +24,7 @@ pub fn run_blast_and_build_consensus(
     input_taxonomies: &str,
     out_dir: &str,
     blast_config: BlastBuilder,
-    blast_execution_repo: &dyn ExecuteStep,
+    blast_execution_repo: &dyn ExecuteBlastn,
     overwrite: &bool,
     threads: usize,
     strategy: ConsensusStrategy,

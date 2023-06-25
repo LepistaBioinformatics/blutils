@@ -1,6 +1,6 @@
 use crate::domain::{
     dtos::blast_builder::BlastBuilder,
-    entities::execute_step::{ExecuteStep, ExecutionResponse},
+    entities::execute_blastn::{ExecuteBlastn, ExecutionResponse},
 };
 
 use clean_base::utils::errors::{factories::execution_err, MappedErrors};
@@ -26,7 +26,7 @@ pub(super) fn run_parallel_blast(
     input_sequences: &str,
     out_dir: &str,
     blast_config: BlastBuilder,
-    blast_execution_repo: &dyn ExecuteStep,
+    blast_execution_repo: &dyn ExecuteBlastn,
     overwrite: &bool,
     threads: usize,
 ) -> Result<ParallelBlastOutput, MappedErrors> {

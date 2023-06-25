@@ -9,7 +9,7 @@ pub enum ExecutionResponse {
     Fail(String),
 }
 
-pub trait ExecuteStep: Sync + Send {
+pub trait ExecuteBlastn: Sync + Send {
     fn run(
         &self,
         query_sequences: String,
