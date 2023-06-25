@@ -1,7 +1,9 @@
 [tool.commitizen]
 version = "3.0.0"
 version_files = [
-    "Cargo.toml",
+    "core/Cargo.toml",
+    "adapters/proc/Cargo.toml",
+    "ports/cli/Cargo.toml",
 ]
 name = "cz_conventional_commits"
 tag_format = "v$version"
