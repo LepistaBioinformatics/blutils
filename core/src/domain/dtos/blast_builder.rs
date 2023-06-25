@@ -86,7 +86,6 @@ pub struct BlastBuilder {
     pub query_cov: i32,
     pub strand: Strand,
     pub e_value: f32,
-    pub min_consensus: f32,
 }
 
 impl BlastBuilder {
@@ -100,7 +99,6 @@ impl BlastBuilder {
             query_cov: 80,
             strand: Strand::Both,
             e_value: 0.001,
-            min_consensus: 0.51,
         }
     }
 
@@ -126,11 +124,6 @@ impl BlastBuilder {
 
     pub fn with_e_value(mut self, e_value: f32) -> Self {
         self.e_value = e_value;
-        self
-    }
-
-    pub fn with_min_consensus(mut self, min_consensus: f32) -> Self {
-        self.min_consensus = min_consensus;
         self
     }
 }

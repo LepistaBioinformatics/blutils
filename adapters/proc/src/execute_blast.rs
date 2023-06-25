@@ -1,13 +1,13 @@
 use blul_core::domain::{
     dtos::blast_builder::BlastBuilder,
-    entities::execute_step::{ExecuteStep, ExecutionResponse},
+    entities::execute_blastn::{ExecuteBlastn, ExecutionResponse},
 };
 use clean_base::utils::errors::{execution_err, MappedErrors};
 use subprocess::{Exec, Redirection};
 
 pub struct ExecuteBlastnProcRepository {}
 
-impl ExecuteStep for ExecuteBlastnProcRepository {
+impl ExecuteBlastn for ExecuteBlastnProcRepository {
     fn run(
         &self,
         query_sequences: String,
@@ -29,8 +29,6 @@ impl ExecuteStep for ExecuteBlastnProcRepository {
             .arg(&blast_config.strand.to_string())
             .arg("-evalue")
             .arg(&blast_config.e_value.to_string())
-            .arg("-min_consensus")
-            .arg(&blast_config.min_consensus.to_string())
             .stdout(Redirection::Pipe)
             .stderr(Redirection::Pipe)
             .capture()
