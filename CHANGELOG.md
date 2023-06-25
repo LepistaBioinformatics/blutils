@@ -1,3 +1,13 @@
+## v4.0.1 (2023-06-25)
+
+### Fix
+
+- remove the min_consensus argument which is not used
+
+### Refactor
+
+- rename blastn execution entity and adapter to match the target of the execution which is the blastn
+
 ## v4.0.0 (2023-06-25)
 
 ## v3.0.1 (2023-06-25)
