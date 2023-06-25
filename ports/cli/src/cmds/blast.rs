@@ -1,4 +1,3 @@
-use blul_adapters::execute_blast::ExecuteBlastnProcRepository;
 use blul_core::{
     domain::dtos::blast_builder::{BlastBuilder, Taxon},
     use_cases::{
@@ -6,6 +5,7 @@ use blul_core::{
         ConsensusStrategy,
     },
 };
+use blul_proc::execute_blast::ExecuteBlastnProcRepository;
 use clap::Parser;
 
 #[derive(Parser, Debug)]
