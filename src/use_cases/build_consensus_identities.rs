@@ -18,7 +18,7 @@ use polars_io::prelude::*;
 use polars_lazy::prelude::*;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, path::Path, sync::Arc};
 
 #[derive(Clone, Debug, Serialize, Deserialize, clap::ValueEnum)]
 pub enum ConsensusStrategy {
@@ -493,7 +493,7 @@ fn load_named_dataframe(
 
     // Map definitions to schema
     for (name, column_type) in &column_definitions {
-        schema.with_column(name.to_owned(), column_type.to_owned())
+        schema.with_column(name.to_owned().into(), column_type.to_owned());
     }
 
     // Collect column names
@@ -523,7 +523,7 @@ fn load_named_dataframe(
         Ok(res) => Ok(res
             .with_delimiter(b'\t')
             .has_header(false)
-            .with_schema(&schema)
+            .with_schema(Arc::new(schema))
             .with_columns(Some(columns_names))
             .finish()
             .unwrap()),
