@@ -28,11 +28,6 @@ pub(super) fn filter_rank_by_identity(
     let selected_rank_index =
         ranks.to_owned().position(|rank| rank == &selected_rank);
 
-    println!(
-        "current_rank_index: {:?}, selected_rank_index: {:?}",
-        current_rank_index, selected_rank_index
-    );
-
     if current_rank_index < selected_rank_index {
         return Ok(current_rank);
     }
