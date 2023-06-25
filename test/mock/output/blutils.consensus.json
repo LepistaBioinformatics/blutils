@@ -1,17 +1,17 @@
 [
   {
-    "query": "NR114924.257984.Bac",
+    "query": "NR025123.135626.Bac",
     "taxon": {
-      "rank": "class",
-      "taxid": 1760,
+      "rank": "family",
+      "taxid": 267890,
       "percIdentity": 100.0
     }
   },
   {
-    "query": "NR025123.135626.Bac",
+    "query": "NR114924.257984.Bac",
     "taxon": {
-      "rank": "species",
-      "taxid": 135626,
+      "rank": "class",
+      "taxid": 1760,
       "percIdentity": 100.0
     }
   },

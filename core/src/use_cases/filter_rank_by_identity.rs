@@ -14,7 +14,7 @@ pub(super) fn filter_rank_by_identity(
     perc_identity: f64,
     current_rank: ValidTaxonomicRanksEnum,
 ) -> Result<ValidTaxonomicRanksEnum, MappedErrors> {
-    let rank = match taxon {
+    let selected_rank = match taxon {
         Fungi => filter_fungi_identities(perc_identity)?,
         Bacteria => filter_bacteria_identities(perc_identity)?,
         Eukaryotes => filter_eukaryote_identities(perc_identity)?,
@@ -25,13 +25,19 @@ pub(super) fn filter_rank_by_identity(
     let current_rank_index =
         ranks.to_owned().position(|rank| rank == &current_rank);
 
-    let selected_rank_index = ranks.to_owned().position(|rank| rank == rank);
+    let selected_rank_index =
+        ranks.to_owned().position(|rank| rank == &selected_rank);
+
+    println!(
+        "current_rank_index: {:?}, selected_rank_index: {:?}",
+        current_rank_index, selected_rank_index
+    );
 
     if current_rank_index < selected_rank_index {
         return Ok(current_rank);
     }
 
-    Ok(rank)
+    Ok(selected_rank)
 }
 
 /// Filter fungi ranks by identity percentage

@@ -327,7 +327,7 @@ fn build_taxon(
     taxon: Taxon,
     mut element: TaxonomyElement,
 ) -> BlastQueryConsensusResult {
-    let rank = match filter_rank_by_identity(
+    element.rank = match filter_rank_by_identity(
         taxon.to_owned(),
         element.perc_identity,
         element.rank,
@@ -335,8 +335,6 @@ fn build_taxon(
         Err(err) => panic!("{err}"),
         Ok(res) => res,
     };
-
-    element.rank = rank;
 
     BlastQueryConsensusResult {
         query,
