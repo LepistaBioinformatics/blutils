@@ -1,6 +1,6 @@
 [package]
 name = "blutils-proc-adapter"
-version = "6.0.0"
+version = "6.1.0"
 edition = "2021"
 description = "A utility to make it easier to run and analyze Blast results"
 license = "Apache-2.0"
@@ -16,7 +16,7 @@ subprocess = "0.2"
 
 [dependencies.blutils-core]
 path = "../../core"
-version = "6.0.0"
+version = "6.1.0"
 
 [lib]
 name = "blul_proc"

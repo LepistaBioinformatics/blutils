@@ -1,3 +1,9 @@
+## v6.1.0 (2023-06-30)
+
+### Feat
+
+- upgrade cli port to include blast arguments as parameters
+
 ## v6.0.0 (2023-06-30)
 
 ### BREAKING CHANGE
