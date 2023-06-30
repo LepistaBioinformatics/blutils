@@ -160,7 +160,11 @@ fn find_single_query_consensus(
             for rank in ValidTaxonomicRanksEnum::ordered_iter(None) {
                 match score_results[0].taxonomy.to_owned() {
                     TaxonomyFieldEnum::Parsed(taxonomies) => {
-                        match taxonomies.into_iter().find(|i| &i.rank == rank) {
+                        match taxonomies
+                            .to_owned()
+                            .into_iter()
+                            .find(|i| &i.rank == rank)
+                        {
                             None => {
                                 return Ok(ConsensusResult::NoConsensusFound(
                                     no_consensus,
@@ -170,13 +174,45 @@ fn find_single_query_consensus(
                                 let rank = match filter_rank_by_identity(
                                     config.to_owned().taxon.to_owned(),
                                     score_results[0].perc_identity,
-                                    res.rank,
+                                    res.to_owned().rank,
                                 ) {
                                     Err(err) => panic!("{err}"),
-                                    Ok(res) => res,
+                                    Ok(rank) => rank,
                                 };
 
-                                res.rank = rank;
+                                if res.to_owned().rank == rank {
+                                    res.mutated = true;
+                                }
+
+                                let position =
+                                    ValidTaxonomicRanksEnum::ordered_iter(
+                                        Some(true),
+                                    )
+                                    .position(|i| i == &rank)
+                                    .unwrap();
+
+                                let filtered_taxonomy =
+                                    get_taxonomy_from_position(
+                                        position,
+                                        taxonomies.to_owned(),
+                                    );
+
+                                let lower_taxonomy = filtered_taxonomy.last();
+
+                                if lower_taxonomy.is_some() {
+                                    let lower_taxonomy =
+                                        lower_taxonomy.unwrap();
+
+                                    res.rank = lower_taxonomy.to_owned().rank;
+                                    res.taxid = lower_taxonomy.taxid;
+                                    res.taxonomy = Some(
+                                        filtered_taxonomy
+                                            .into_iter()
+                                            .map(|i| i.taxonomy_to_string())
+                                            .collect::<Vec<String>>()
+                                            .join(";"),
+                                    );
+                                }
 
                                 return Ok(ConsensusResult::ConsensusFound(
                                     BlastQueryConsensusResult {
@@ -302,11 +338,15 @@ fn find_multi_taxa_consensus(
             }
         }
 
+        let loop_reference_taxonomy_elements =
+            reference_taxonomy_elements.to_owned();
+
         if level_taxonomies.len() > 1 {
             final_taxon = build_taxon(
                 no_consensus_option.query.to_owned(),
                 taxon.to_owned(),
                 reference_taxonomy_elements[index - 1].to_owned(),
+                loop_reference_taxonomy_elements.to_owned(),
             );
 
             break;
@@ -316,6 +356,7 @@ fn find_multi_taxa_consensus(
             no_consensus_option.query.to_owned(),
             taxon.to_owned(),
             ref_taxonomy.to_owned(),
+            loop_reference_taxonomy_elements,
         );
     }
 
@@ -326,6 +367,7 @@ fn build_taxon(
     query: String,
     taxon: Taxon,
     mut element: TaxonomyElement,
+    taxonomy: Vec<TaxonomyElement>,
 ) -> BlastQueryConsensusResult {
     element.rank = match filter_rank_by_identity(
         taxon.to_owned(),
@@ -336,10 +378,87 @@ fn build_taxon(
         Ok(res) => res,
     };
 
+    let ordered_taxonomies = ValidTaxonomicRanksEnum::ordered_iter(Some(true));
+
+    let updated_taxid = taxonomy.to_owned().iter().find_map(|i| {
+        if i.rank == element.rank {
+            Some(i.taxid)
+        } else {
+            None
+        }
+    });
+
+    match updated_taxid {
+        Some(taxid) => {
+            let desired_rank_position = taxonomy
+                .to_owned()
+                .into_iter()
+                .position(|item| item.taxid == taxid);
+
+            let filtered_taxonomy = get_taxonomy_from_position(
+                desired_rank_position.unwrap(),
+                taxonomy.to_owned(),
+            );
+
+            element.mutated = true;
+            element.taxid = taxid;
+            element.taxonomy = Some(
+                filtered_taxonomy
+                    .into_iter()
+                    .map(|i| i.taxonomy_to_string())
+                    .collect::<Vec<String>>()
+                    .join(";"),
+            );
+        }
+        None => {
+            let desired_rank_position = ordered_taxonomies
+                .to_owned()
+                .position(|rank| rank == &element.rank);
+
+            let filtered_taxonomy = get_taxonomy_from_position(
+                desired_rank_position.unwrap(),
+                taxonomy.to_owned(),
+            );
+
+            let lower_taxonomy = filtered_taxonomy.last();
+
+            if lower_taxonomy.is_some() {
+                element.mutated = true;
+                element.taxid = lower_taxonomy.unwrap().taxid;
+                element.taxonomy = Some(
+                    filtered_taxonomy
+                        .into_iter()
+                        .map(|i| i.taxonomy_to_string())
+                        .collect::<Vec<String>>()
+                        .join(";"),
+                );
+            }
+        }
+    }
+
     BlastQueryConsensusResult {
         query,
         taxon: Some(element),
     }
+}
+
+fn get_taxonomy_from_position(
+    position: usize,
+    taxonomy: Vec<TaxonomyElement>,
+) -> Vec<TaxonomyElement> {
+    taxonomy
+        .into_iter()
+        .enumerate()
+        .filter_map(
+            |(index, rank)| {
+                if index <= position {
+                    Some(rank)
+                } else {
+                    None
+                }
+            },
+        )
+        .collect::<Vec<TaxonomyElement>>()
 }
 
 /// Get lowest Blast statistics of a single rank vector
