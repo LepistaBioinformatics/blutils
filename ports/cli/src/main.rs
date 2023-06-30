@@ -2,8 +2,7 @@ mod cmds;
 
 use clap::Parser;
 use cmds::{blast, check};
-use env_logger::Builder;
-use log::LevelFilter;
+use log::info;
 use std::io::Write;
 
 #[derive(Parser, Debug)]
@@ -16,13 +15,20 @@ enum Cli {
     Check(check::Arguments),
 }
 
+/// Get the command line arguments.
+fn get_arguments() {
+    let args: Vec<_> = std::env::args().collect();
+    info!("{:?}", args.join(" "));
+}
+
 fn main() {
-    Builder::new()
+    env_logger::builder()
         .format(|buf, record| {
             writeln!(buf, "[ {} ]  {}", record.level(), record.args())
         })
-        .filter(None, LevelFilter::Info)
         .init();
+
+    get_arguments();
 
     let args = Cli::parse();
 
