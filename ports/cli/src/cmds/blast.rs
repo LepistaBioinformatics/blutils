@@ -1,5 +1,5 @@
 use blul_core::{
-    domain::dtos::blast_builder::{BlastBuilder, Taxon},
+    domain::dtos::blast_builder::{BlastBuilder, Strand, Taxon},
     use_cases::{
         check_host_requirements, run_blast_and_build_consensus,
         ConsensusStrategy,
@@ -54,6 +54,30 @@ pub(crate) struct RunBlastAndBuildConsensusArguments {
     /// The number of threads to be used. Default is 1.
     #[arg(short, long)]
     threads: Option<usize>,
+
+    /// The max target sequences to be used. Default is 10.
+    #[arg(short, long)]
+    max_target_seqs: Option<i32>,
+
+    /// The percentage of identity to be used. Default is 80.
+    #[arg(short, long)]
+    perc_identity: Option<i32>,
+
+    /// The query coverage to be used. Default is 80.
+    #[arg(short, long)]
+    query_cov: Option<i32>,
+
+    /// The strand to be used. Default is both.
+    #[arg(long)]
+    strand: Option<Strand>,
+
+    /// The e-value to be used. Default is 0.001.
+    #[arg(short, long)]
+    e_value: Option<f32>,
+
+    /// The word size to be used. Default is 15.
+    #[arg(short, long)]
+    word_size: Option<i32>,
 }
 
 pub(crate) fn run_blast_and_build_consensus_cmd(
@@ -65,7 +89,31 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
     let repo = ExecuteBlastnProcRepository {};
 
     // Create configuration DTO
-    let config = BlastBuilder::default(&args.subject, args.taxon);
+    let mut config = BlastBuilder::default(&args.subject, args.taxon);
+
+    if args.max_target_seqs.is_some() {
+        config = config.with_max_target_seqs(args.max_target_seqs.unwrap());
+    }
+
+    if args.perc_identity.is_some() {
+        config = config.with_perc_identity(args.perc_identity.unwrap());
+    }
+
+    if args.query_cov.is_some() {
+        config = config.with_query_cov(args.query_cov.unwrap());
+    }
+
+    if args.strand.is_some() {
+        config = config.with_strand(args.strand.unwrap());
+    }
+
+    if args.e_value.is_some() {
+        config = config.with_e_value(args.e_value.unwrap());
+    }
+
+    if args.word_size.is_some() {
+        config = config.with_word_size(args.word_size.unwrap());
+    }
 
     // Set the default number of threads
     let threads = match args.threads {

@@ -54,7 +54,7 @@ impl FromStr for Taxon {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, clap::ValueEnum)]
 #[serde(rename_all = "camelCase")]
 pub enum Strand {
     Both,
