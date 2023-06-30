@@ -1,3 +1,15 @@
+## v6.0.0 (2023-06-30)
+
+### BREAKING CHANGE
+
+- main
+
+### Feat
+
+- include a print function to output the user arguments on cli execution
+- include taxonomy in results and review the taxid and rank information delivered to the output object
+- include options to control the word-size during blast executions
+
 ## v5.0.1 (2023-06-25)
 
 ### Refactor
