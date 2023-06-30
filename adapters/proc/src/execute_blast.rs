@@ -29,6 +29,8 @@ impl ExecuteBlastn for ExecuteBlastnProcRepository {
             .arg(&blast_config.strand.to_string())
             .arg("-evalue")
             .arg(&blast_config.e_value.to_string())
+            .arg("-word_size")
+            .arg(&blast_config.word_size.to_string())
             .stdout(Redirection::Pipe)
             .stderr(Redirection::Pipe)
             .capture()

@@ -1,5 +1,6 @@
 use self::ValidTaxonomicRanksEnum::*;
 
+use core::fmt;
 use serde::Serialize;
 use std::slice::Iter;
 use std::str::FromStr;
@@ -58,12 +59,35 @@ impl FromStr for ValidTaxonomicRanksEnum {
     }
 }
 
+impl fmt::Display for ValidTaxonomicRanksEnum {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ValidTaxonomicRanksEnum::Domain => write!(f, "d"),
+            ValidTaxonomicRanksEnum::Phylum => write!(f, "p"),
+            ValidTaxonomicRanksEnum::Class => write!(f, "c"),
+            ValidTaxonomicRanksEnum::Order => write!(f, "o"),
+            ValidTaxonomicRanksEnum::Family => write!(f, "f"),
+            ValidTaxonomicRanksEnum::Genus => write!(f, "g"),
+            ValidTaxonomicRanksEnum::Species => write!(f, "s"),
+            ValidTaxonomicRanksEnum::Undefined => write!(f, "u"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct TaxonomyElement {
     pub rank: ValidTaxonomicRanksEnum,
     pub taxid: i64,
     pub perc_identity: f64,
+    pub taxonomy: Option<String>,
+    pub mutated: bool,
+}
+
+impl TaxonomyElement {
+    pub fn taxonomy_to_string(&self) -> String {
+        format!("{}__{}", self.rank.to_string(), self.taxid.to_string())
+    }
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -124,7 +148,7 @@ impl BlastResultRow {
                     // from two, panic the program.
                     //
                     if splitted_tax.len() != 2 {
-                        panic!("Invalid taxonomy format.")
+                        panic!("Invalid taxonomy format: {:?}", splitted_tax)
                     }
                     //
                     // Then, try to parse the resulting vector into a
@@ -147,6 +171,8 @@ impl BlastResultRow {
                             Ok(res) => res,
                         },
                         perc_identity: self.perc_identity,
+                        taxonomy: None,
+                        mutated: false,
                     }
                 })
                 .collect();
