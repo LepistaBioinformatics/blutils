@@ -4,7 +4,7 @@ use crate::domain::{
 };
 
 use clean_base::utils::errors::{factories::execution_err, MappedErrors};
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use rayon::prelude::*;
 use std::{
     fs::{create_dir, remove_file, File, OpenOptions},
@@ -107,12 +107,10 @@ pub(super) fn run_parallel_blast(
 
     if output_file.exists() {
         if !overwrite {
-            error!(
+            panic!(
                 "Could not overwrite existing file {:?} when overwrite option is `false`.", 
                 output_file
             );
-
-            panic!();
         }
 
         match remove_file(output_file.clone()) {
@@ -123,11 +121,21 @@ pub(super) fn run_parallel_blast(
 
     // ? Processing sequences as chunks
 
+    let chunk_size = source_sequences.len() / threads;
+    debug!("Total Sequences: {}", source_sequences.len());
+    debug!("Chunk Size: {}", chunk_size);
+
     source_sequences
-        .chunks(5)
+        .chunks(chunk_size)
         .enumerate()
         .par_bridge()
         .for_each(|(index, chunk)| {
+            debug!(
+                "Processing chunk {} of {:?}",
+                index + 1,
+                source_sequences.len() / chunk_size
+            );
+
             let response = match pool.install(|| {
                 blast_execution_repo.run(chunk.join(""), blast_config.clone())
             }) {
@@ -139,10 +147,7 @@ pub(super) fn run_parallel_blast(
 
             match response {
                 ExecutionResponse::Fail(err) => {
-                    panic!(
-                        "Unexpected error on process chunk {}: {}",
-                        index, err
-                    );
+                    panic!("Unexpected error on process chunk {index}: {err}");
                 }
                 ExecutionResponse::Success(res) => {
                     match write_tmp_file(res, output_file.as_path()) {
