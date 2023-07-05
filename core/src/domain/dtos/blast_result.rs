@@ -10,6 +10,7 @@ use std::str::FromStr;
 pub(crate) enum ValidTaxonomicRanksEnum {
     Undefined,
     Domain,
+    Kingdom,
     Phylum,
     Class,
     Order,
@@ -25,14 +26,16 @@ impl ValidTaxonomicRanksEnum {
         let rev = rev.unwrap_or(false);
 
         if rev {
-            static TAXONOMIES: [ValidTaxonomicRanksEnum; 7] =
-                [Domain, Phylum, Class, Order, Family, Genus, Species];
+            static TAXONOMIES: [ValidTaxonomicRanksEnum; 8] = [
+                Domain, Kingdom, Phylum, Class, Order, Family, Genus, Species,
+            ];
 
             return TAXONOMIES.iter();
         }
 
-        static TAXONOMIES: [ValidTaxonomicRanksEnum; 8] = [
-            Species, Genus, Family, Order, Class, Phylum, Domain, Undefined,
+        static TAXONOMIES: [ValidTaxonomicRanksEnum; 9] = [
+            Species, Genus, Family, Order, Class, Phylum, Kingdom, Domain,
+            Undefined,
         ];
 
         TAXONOMIES.iter()
@@ -48,6 +51,7 @@ impl FromStr for ValidTaxonomicRanksEnum {
                 Ok(ValidTaxonomicRanksEnum::Undefined)
             }
             "d" | "Domain" | "domain" => Ok(ValidTaxonomicRanksEnum::Domain),
+            "k" | "Kingdom" | "kingdom" => Ok(ValidTaxonomicRanksEnum::Kingdom),
             "p" | "Phylum" | "phylum" => Ok(ValidTaxonomicRanksEnum::Phylum),
             "c" | "Class" | "class" => Ok(ValidTaxonomicRanksEnum::Class),
             "o" | "Order" | "order" => Ok(ValidTaxonomicRanksEnum::Order),
@@ -63,6 +67,7 @@ impl fmt::Display for ValidTaxonomicRanksEnum {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ValidTaxonomicRanksEnum::Domain => write!(f, "d"),
+            ValidTaxonomicRanksEnum::Kingdom => write!(f, "k"),
             ValidTaxonomicRanksEnum::Phylum => write!(f, "p"),
             ValidTaxonomicRanksEnum::Class => write!(f, "c"),
             ValidTaxonomicRanksEnum::Order => write!(f, "o"),
