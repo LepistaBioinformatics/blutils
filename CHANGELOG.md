@@ -1,3 +1,9 @@
+## v6.1.1 (2023-07-05)
+
+### Fix
+
+- include in debug message when an error is found on parse taxonomy
+
 ## v6.1.0 (2023-06-30)
 
 ### Feat
