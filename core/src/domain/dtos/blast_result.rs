@@ -160,7 +160,10 @@ impl BlastResultRow {
                             .parse::<ValidTaxonomicRanksEnum>()
                         {
                             Err(_) => {
-                                panic!("Unexpected error on parse taxonomy.")
+                                panic!(
+                                    "Unexpected error on parse taxonomy: {:?}",
+                                    splitted_tax
+                                )
                             }
                             Ok(res) => res,
                         },
