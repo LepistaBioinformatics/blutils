@@ -1,6 +1,6 @@
 [package]
 name = "blutils-core"
-version = "6.1.1"
+version = "6.1.2"
 edition = "2021"
 description = "A utility to make it easier to run and analyze Blast results"
 license = "Apache-2.0"

@@ -1,3 +1,9 @@
+## v6.1.2 (2023-07-05)
+
+### Fix
+
+- include kingdom as valida taxonomic rank
+
 ## v6.1.1 (2023-07-05)
 
 ### Fix
