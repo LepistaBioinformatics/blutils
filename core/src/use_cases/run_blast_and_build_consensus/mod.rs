@@ -1,7 +1,12 @@
-use super::{
-    build_consensus_identities::build_consensus_identities,
-    run_parallel_blast::run_parallel_blast, ConsensusStrategy,
-};
+mod build_consensus_identities;
+mod check_host_requirements;
+mod filter_rank_by_identity;
+mod run_parallel_blast;
+
+pub use build_consensus_identities::ConsensusStrategy;
+pub use check_host_requirements::check_host_requirements;
+
+use self::build_consensus_identities::build_consensus_identities;
 use crate::domain::{
     dtos::{
         blast_builder::BlastBuilder,
@@ -9,9 +14,9 @@ use crate::domain::{
     },
     entities::execute_blastn::ExecuteBlastn,
 };
-
 use clean_base::utils::errors::MappedErrors;
 use log::info;
+use run_parallel_blast::run_parallel_blast;
 use std::{
     fs::File,
     io::Write,
