@@ -1,3 +1,9 @@
+## v6.1.3 (2023-07-07)
+
+### Refactor
+
+- move the blast run to a dedicated submodule
+
 ## v6.1.2 (2023-07-05)
 
 ### Fix
