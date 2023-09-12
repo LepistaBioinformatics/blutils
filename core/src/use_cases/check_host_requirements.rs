@@ -4,7 +4,8 @@ use std::str::FromStr;
 use subprocess::{Exec, Redirection};
 
 pub fn check_host_requirements() {
-    let dependencies = vec![("ncbi-blast+", "blastn")];
+    let dependencies =
+        vec![("ncbi-blast+", "blastn"), ("ncbi-blast+", "blastdbcmd")];
 
     let mut missing = Vec::<(&str, &str)>::new();
     let mut installed = Vec::<(&str, &str)>::new();

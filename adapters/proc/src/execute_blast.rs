@@ -2,7 +2,7 @@ use blul_core::domain::{
     dtos::blast_builder::BlastBuilder,
     entities::execute_blastn::{ExecuteBlastn, ExecutionResponse},
 };
-use clean_base::utils::errors::{execution_err, MappedErrors};
+use clean_base::utils::errors::{factories::execution_err, MappedErrors};
 use subprocess::{Exec, Redirection};
 
 pub struct ExecuteBlastnProcRepository {}
@@ -36,13 +36,10 @@ impl ExecuteBlastn for ExecuteBlastnProcRepository {
             .capture()
         {
             Err(err) => {
-                return Err(execution_err(
-                    format!(
-                        "Unexpected error detected on execute blast: {err}"
-                    ),
-                    None,
-                    None,
+                return execution_err(format!(
+                    "Unexpected error detected on execute blast: {err}"
                 ))
+                .as_error()
             }
             Ok(res) => res,
         };

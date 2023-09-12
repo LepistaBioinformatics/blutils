@@ -1,14 +1,17 @@
-use crate::domain::{
-    dtos::blast_builder::BlastBuilder,
-    entities::execute_blastn::{ExecuteBlastn, ExecutionResponse},
+use crate::{
+    domain::{
+        dtos::blast_builder::BlastBuilder,
+        entities::execute_blastn::{ExecuteBlastn, ExecutionResponse},
+    },
+    use_cases::shared::write_or_append_to_file,
 };
 
 use clean_base::utils::errors::{factories::execution_err, MappedErrors};
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use rayon::prelude::*;
 use std::{
-    fs::{create_dir, remove_file, File, OpenOptions},
-    io::{BufRead, BufReader, Write},
+    fs::{create_dir, remove_file, File},
+    io::{BufRead, BufReader},
     path::{Path, PathBuf},
 };
 
@@ -150,7 +153,7 @@ pub(super) fn run_parallel_blast(
                     panic!("Unexpected error on process chunk {index}: {err}");
                 }
                 ExecutionResponse::Success(res) => {
-                    match write_tmp_file(res, output_file.as_path()) {
+                    match write_or_append_to_file(res, output_file.as_path()) {
                         Err(err) => {
                             panic!(
                                 "Unexpected error on persist chunk {}: {}",
@@ -167,27 +170,4 @@ pub(super) fn run_parallel_blast(
         output_file,
         headers,
     })
-}
-
-fn write_tmp_file(
-    content: String,
-    output_file: &Path,
-) -> Result<bool, MappedErrors> {
-    match OpenOptions::new()
-        .create(true)
-        .write(true)
-        .append(true)
-        .open(output_file)
-        .unwrap()
-        .write(content.as_bytes())
-    {
-        Err(err) => {
-            error!("Unexpected error detected: {}", err);
-            return execution_err(String::from(
-                "Unexpected error detected on write temp file.",
-            ))
-            .as_error();
-        }
-        Ok(_) => Ok(true),
-    }
 }

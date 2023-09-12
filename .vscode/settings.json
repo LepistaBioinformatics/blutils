@@ -1,5 +1,7 @@
 {
   "cSpell.words": [
+    "blastcmd",
+    "blastdbcmd",
     "blul",
     "Blutils",
     "dataframe",
@@ -12,8 +14,6 @@
     "structopt",
     "taxdump"
   ],
-  "rust-analyzer.linkedProjects": [
-    "./ports/cli/Cargo.toml"
-  ],
+  "rust-analyzer.linkedProjects": ["./ports/cli/Cargo.toml"],
   "rust-analyzer.showUnlinkedFileNotification": false
 }

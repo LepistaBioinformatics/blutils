@@ -1,10 +1,8 @@
 mod build_consensus_identities;
-mod check_host_requirements;
 mod filter_rank_by_identity;
 mod run_parallel_blast;
 
 pub use build_consensus_identities::ConsensusStrategy;
-pub use check_host_requirements::check_host_requirements;
 
 use self::build_consensus_identities::build_consensus_identities;
 use crate::domain::{
@@ -34,9 +32,9 @@ pub fn run_blast_and_build_consensus(
     threads: usize,
     strategy: ConsensusStrategy,
 ) -> Result<bool, MappedErrors> {
-    // ? ----------------------------------------------------------------------
+    // ? -----------------------------------------------------------------------
     // ? Execute parallel blast
-    // ? ----------------------------------------------------------------------
+    // ? -----------------------------------------------------------------------
 
     let output = run_parallel_blast(
         input_sequences,
@@ -47,9 +45,9 @@ pub fn run_blast_and_build_consensus(
         threads,
     )?;
 
-    // ? ----------------------------------------------------------------------
+    // ? -----------------------------------------------------------------------
     // ? Build consensus
-    // ? ----------------------------------------------------------------------
+    // ? -----------------------------------------------------------------------
 
     let blast_output = build_consensus_identities(
         output,
