@@ -1,3 +1,13 @@
+## v6.2.0 (2023-09-12)
+
+### Feat
+
+- wip - start implementation of the database generator parts
+
+### Fix
+
+- comment ref-database functionalities from the project temporary
+
 ## v6.1.3 (2023-07-07)
 
 ### Refactor
