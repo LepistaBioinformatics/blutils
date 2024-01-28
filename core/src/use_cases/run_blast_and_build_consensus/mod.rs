@@ -2,8 +2,6 @@ mod build_consensus_identities;
 mod filter_rank_by_identity;
 mod run_parallel_blast;
 
-pub use build_consensus_identities::ConsensusStrategy;
-
 use self::build_consensus_identities::build_consensus_identities;
 use crate::domain::{
     dtos::{
@@ -12,16 +10,22 @@ use crate::domain::{
     },
     entities::execute_blastn::ExecuteBlastn,
 };
-use clean_base::utils::errors::MappedErrors;
-use log::info;
+
+pub use build_consensus_identities::ConsensusStrategy;
+use mycelium_base::utils::errors::MappedErrors;
 use run_parallel_blast::run_parallel_blast;
 use std::{
     fs::File,
     io::Write,
     path::{Path, PathBuf},
 };
+use tracing::info;
 
 /// Run parallel blast and build taxonomies consensus
+#[tracing::instrument(
+    name = "Run Blast with Consensus",
+    skip(blast_execution_repo)
+)]
 pub fn run_blast_and_build_consensus(
     input_sequences: &str,
     input_taxonomies: &str,

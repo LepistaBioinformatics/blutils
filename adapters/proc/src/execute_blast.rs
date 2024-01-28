@@ -2,9 +2,10 @@ use blul_core::domain::{
     dtos::blast_builder::BlastBuilder,
     entities::execute_blastn::{ExecuteBlastn, ExecutionResponse},
 };
-use clean_base::utils::errors::{factories::execution_err, MappedErrors};
+use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use subprocess::{Exec, Redirection};
 
+#[derive(Debug)]
 pub struct ExecuteBlastnProcRepository {}
 
 impl ExecuteBlastn for ExecuteBlastnProcRepository {

@@ -1,9 +1,11 @@
 use colored::{ColoredString, Colorize};
-use log::{error, log, Level};
-use std::str::FromStr;
 use subprocess::{Exec, Redirection};
+use tracing::{debug, debug_span, error, info, warn};
 
-pub fn check_host_requirements() {
+#[tracing::instrument(name = "Checking host requirements", skip(level))]
+pub fn check_host_requirements(level: Option<&str>) {
+    debug_span!("check_host_requirements");
+
     let dependencies =
         vec![("ncbi-blast+", "blastn"), ("ncbi-blast+", "blastdbcmd")];
 
@@ -33,8 +35,9 @@ pub fn check_host_requirements() {
         installed.push(dep);
     }
 
-    print_responses("info", "AVAILABLE".green(), installed);
-    print_responses("info", "MISSING".red(), missing);
+    let logging_level = level.unwrap_or("info");
+    print_responses(logging_level, "AVAILABLE".green(), installed);
+    print_responses(logging_level, "MISSING".yellow(), missing);
 }
 
 fn print_responses(
@@ -42,9 +45,13 @@ fn print_responses(
     group: ColoredString,
     responses: Vec<(&str, &str)>,
 ) {
-    let level = Level::from_str(level).unwrap();
-
     for (name, dep) in responses {
-        log!(level, "{group}:  {dep} ({name})");
+        match level {
+            "debug" => debug!("{group}:  {dep} ({name})"),
+            "info" => info!("{group}:  {dep} ({name})"),
+            "warn" => warn!("{group}:  {dep} ({name})"),
+            "error" => error!("{group}:  {dep} ({name})"),
+            _ => info!("{group}:  {dep} ({name})"),
+        }
     }
 }

@@ -11,14 +11,14 @@ use crate::domain::dtos::{
     },
 };
 
-use clean_base::utils::errors::{execution_err, MappedErrors};
-use log::{error, warn};
+use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use polars::prelude::{CsvReader, DataFrame, DataType, Schema};
-use polars_io::prelude::*;
+use polars_io::SerReader;
 use polars_lazy::prelude::*;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path, sync::Arc};
+use tracing::{error, warn};
 
 #[derive(Clone, Debug, Serialize, Deserialize, clap::ValueEnum)]
 pub enum ConsensusStrategy {
@@ -30,6 +30,7 @@ pub enum ConsensusStrategy {
 ///
 /// Join the `blast` output with reference `taxonomies` file and calculate
 /// consensus taxonomies based on the `subjects` frequencies and concordance.
+#[tracing::instrument(name = "Build consensus identities from Blast output")]
 pub(super) fn build_consensus_identities(
     blast_output: ParallelBlastOutput,
     taxonomies_file: &Path,
@@ -574,8 +575,8 @@ fn fold_results_by_query(
 /// The results dataframe is a default tabular option of the Blast results.
 fn get_results_dataframe(path: &Path) -> Result<DataFrame, MappedErrors> {
     let column_definitions = vec![
-        ("query".to_string(), DataType::Utf8),
-        ("subject".to_string(), DataType::Utf8),
+        ("query".to_string(), DataType::String),
+        ("subject".to_string(), DataType::String),
         ("perc_identity".to_string(), DataType::Float64),
         ("align_length".to_string(), DataType::Int64),
         ("mismatches".to_string(), DataType::Int64),
@@ -593,8 +594,8 @@ fn get_results_dataframe(path: &Path) -> Result<DataFrame, MappedErrors> {
 
 fn get_taxonomies_dataframe(path: &Path) -> Result<DataFrame, MappedErrors> {
     let column_definitions = vec![
-        ("subject".to_string(), DataType::Utf8),
-        ("taxonomy".to_string(), DataType::Utf8),
+        ("subject".to_string(), DataType::String),
+        ("taxonomy".to_string(), DataType::String),
     ];
 
     load_named_dataframe(path, column_definitions, vec![])
@@ -631,16 +632,16 @@ fn load_named_dataframe(
     match CsvReader::from_path(path) {
         Err(err) => {
             error!("Unexpected error detected on read `blast_output`: {}", err);
-            return Err(execution_err(
-                String::from("Unexpected error occurred on load table."),
-                None,
-                None,
-            ));
+            return execution_err(String::from(
+                "Unexpected error occurred on load table.",
+            ))
+            .as_error();
         }
         Ok(res) => Ok(res
-            .with_delimiter(b'\t')
+            //.with_delimiter(b'\t')
+            .with_separator(b'\t')
             .has_header(false)
-            .with_schema(Arc::new(schema))
+            .with_schema(Some(Arc::new(schema)))
             .with_columns(Some(columns_names))
             .finish()
             .unwrap()),

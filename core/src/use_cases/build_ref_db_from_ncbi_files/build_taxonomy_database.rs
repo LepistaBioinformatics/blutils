@@ -1,4 +1,4 @@
-use clean_base::utils::errors::{factories::use_case_err, MappedErrors};
+use clean_base::utils::errors::{use_case_err, MappedErrors};
 use log::debug;
 use polars_core::prelude::*;
 use polars_io::prelude::*;

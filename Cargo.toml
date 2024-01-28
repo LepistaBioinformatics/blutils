@@ -1,9 +1,55 @@
+# ? ----------------------------------------------------------------------------
+# ? Workspace general configuration
+# ? ----------------------------------------------------------------------------
+
 [workspace]
 
-members = [
-    "core",
-    "ports/cli",
-    "adapters/proc",
-]
+members = ["core", "ports/cli", "adapters/proc"]
 
 resolver = "2"
+
+# ? ----------------------------------------------------------------------------
+# ? Workspace general configuration
+# ? ----------------------------------------------------------------------------
+
+[workspace.package]
+
+version = "6.2.0"
+edition = "2021"
+authors = ["Samuel Galvão Elias <sgelias@outlook.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/sgelias/blutils"
+readme = "./README.md"
+keywords = ["blast", "bioinformativs", "DNA", "similarity-analysis", "NCBI"]
+categories = ["science", "command-line-interface", "command-line-utilities"]
+
+
+# ? ----------------------------------------------------------------------------
+# ? Workspace dependencies
+# ? ----------------------------------------------------------------------------
+
+[workspace.dependencies]
+
+# ------------------------------------------------------------------------------
+#
+# External dependencies
+#
+# ------------------------------------------------------------------------------
+
+clap = { version = "4", features = ["derive"] }
+env_logger = "0.11"
+log = "0.4"
+mycelium-base = "4.9.0"
+subprocess = "0.2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3.0", features = ["json", "env-filter"] }
+
+# ------------------------------------------------------------------------------
+#
+# Internal dependencies
+#
+# ------------------------------------------------------------------------------
+
+blutils-core = { path = "core" }
+blutils-cli = { path = "ports/cli" }
+blutils-proc-adapter = { path = "adapters/proc" }

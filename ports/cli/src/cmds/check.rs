@@ -13,5 +13,5 @@ pub(crate) enum Commands {
 }
 
 pub(crate) fn check_host_requirements_cmd() {
-    check_host_requirements();
+    check_host_requirements(None);
 }

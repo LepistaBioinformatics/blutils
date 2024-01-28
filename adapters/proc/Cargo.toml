@@ -1,22 +1,24 @@
 [package]
+
 name = "blutils-proc-adapter"
 version = "6.2.0"
-edition = "2021"
 description = "A utility to make it easier to run and analyze Blast results"
-license = "Apache-2.0"
-authors = ["Samuel Galvão Elias <sgelias@outlook.com>"]
-repository = "https://github.com/sgelias/blutils"
-readme = "../../README.md"
-keywords = ["blast", "bioinformativs", "DNA", "similarity-analysis", "NCBI"]
-categories = ["science", "command-line-interface", "command-line-utilities"]
+
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
 
 [dependencies]
-clean-base = "1.0.1"
-subprocess = "0.2"
 
-[dependencies.blutils-core]
-path = "../../core"
-version = "6.2.0"
+blutils-core.workspace = true
+mycelium-base.workspace = true
+subprocess.workspace = true
+
 
 [lib]
 name = "blul_proc"

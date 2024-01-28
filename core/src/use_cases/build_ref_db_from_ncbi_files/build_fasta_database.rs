@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use clean_base::utils::errors::{factories::execution_err, MappedErrors};
+use clean_base::utils::errors::{execution_err, MappedErrors};
 use log::warn;
 use subprocess::{Exec, Redirection};
 

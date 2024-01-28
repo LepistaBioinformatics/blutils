@@ -1,7 +1,8 @@
-use clean_base::utils::errors::{factories::execution_err, MappedErrors};
-use log::error;
+use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use std::{fs::OpenOptions, io::Write, path::Path};
+use tracing::error;
 
+#[tracing::instrument(name = "Write to Blast Output File")]
 pub(crate) fn write_or_append_to_file(
     content: String,
     output_file: &Path,

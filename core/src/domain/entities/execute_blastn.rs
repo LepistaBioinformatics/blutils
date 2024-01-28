@@ -1,7 +1,8 @@
 use crate::domain::dtos::blast_builder::BlastBuilder;
 
-use clean_base::utils::errors::MappedErrors;
+use mycelium_base::utils::errors::MappedErrors;
 use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ExecutionResponse {
@@ -9,7 +10,7 @@ pub enum ExecutionResponse {
     Fail(String),
 }
 
-pub trait ExecuteBlastn: Sync + Send {
+pub trait ExecuteBlastn: Sync + Send + Debug {
     fn run(
         &self,
         query_sequences: String,

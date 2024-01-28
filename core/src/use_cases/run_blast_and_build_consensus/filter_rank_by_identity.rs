@@ -3,7 +3,7 @@ use crate::domain::dtos::{
     blast_result::ValidTaxonomicRanksEnum::{self, *},
 };
 
-use clean_base::utils::errors::MappedErrors;
+use mycelium_base::utils::errors::MappedErrors;
 
 /// Filter taxonomic rank by sequences identity percentage
 ///

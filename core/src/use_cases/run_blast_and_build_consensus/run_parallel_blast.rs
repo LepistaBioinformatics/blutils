@@ -6,14 +6,14 @@ use crate::{
     use_cases::shared::write_or_append_to_file,
 };
 
-use clean_base::utils::errors::{factories::execution_err, MappedErrors};
-use log::{debug, info, warn};
+use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use rayon::prelude::*;
 use std::{
     fs::{create_dir, remove_file, File},
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
 };
+use tracing::{debug, info, warn};
 
 #[derive(Debug, Clone)]
 pub struct ParallelBlastOutput {
@@ -25,6 +25,7 @@ pub struct ParallelBlastOutput {
 ///
 /// This implementation target to saturate the host machine CPU utilization.
 /// Simple blast usage not allows the full usage of these resource.
+#[tracing::instrument(name = "Run Parallel Blast")]
 pub(super) fn run_parallel_blast(
     input_sequences: &str,
     out_dir: &str,

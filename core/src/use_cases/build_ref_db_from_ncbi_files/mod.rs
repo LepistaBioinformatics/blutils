@@ -4,7 +4,7 @@ mod build_taxonomy_database;
 use build_fasta_database::build_fasta_database;
 use std::path::PathBuf;
 
-use clean_base::utils::errors::{factories::execution_err, MappedErrors};
+use clean_base::utils::errors::{execution_err, MappedErrors};
 
 use self::build_taxonomy_database::build_taxonomy_database;
 
