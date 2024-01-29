@@ -1,9 +1,12 @@
 use colored::{ColoredString, Colorize};
+use mycelium_base::utils::errors::{use_case_err, MappedErrors};
 use subprocess::{Exec, Redirection};
 use tracing::{debug, debug_span, error, info, warn};
 
 #[tracing::instrument(name = "Checking host requirements", skip(level))]
-pub fn check_host_requirements(level: Option<&str>) {
+pub fn check_host_requirements(
+    level: Option<&str>,
+) -> Result<(), MappedErrors> {
     debug_span!("check_host_requirements");
 
     let dependencies =
@@ -21,8 +24,10 @@ pub fn check_host_requirements(level: Option<&str>) {
             .capture()
         {
             Err(err) => {
-                error!("Unexpected error detected on check host system: {err}");
-                return;
+                return use_case_err(format!(
+                    "Unexpected error detected on check host system: {err}"
+                ))
+                .as_error();
             }
             Ok(res) => res,
         };
@@ -37,7 +42,16 @@ pub fn check_host_requirements(level: Option<&str>) {
 
     let logging_level = level.unwrap_or("info");
     print_responses(logging_level, "AVAILABLE".green(), installed);
-    print_responses(logging_level, "MISSING".yellow(), missing);
+    print_responses(logging_level, "MISSING".yellow(), missing.to_owned());
+
+    if !missing.is_empty() {
+        return use_case_err(
+            "Missing dependencies detected. Please install them before running the command again."
+            .to_string()
+        ).as_error();
+    }
+
+    Ok(())
 }
 
 fn print_responses(

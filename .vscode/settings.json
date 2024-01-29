@@ -12,7 +12,8 @@
     "repr",
     "seqs",
     "structopt",
-    "taxdump"
+    "taxdump",
+    "taxids"
   ],
   "rust-analyzer.linkedProjects": ["./core/Cargo.toml"]
 }

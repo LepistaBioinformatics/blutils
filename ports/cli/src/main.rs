@@ -1,7 +1,7 @@
 mod cmds;
 
 use clap::Parser;
-use cmds::{blast, check};
+use cmds::{blast, check, db_builder};
 use std::str::FromStr;
 use tracing::debug;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -9,7 +9,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 enum Cli {
-    //BuildDb(db_builder::BuildDatabaseArguments),
+    BuildDb(db_builder::BuildDatabaseArguments),
     /// Execute the parallel blast and run consensus algorithm.
     Blast(blast::Arguments),
 
@@ -33,8 +33,6 @@ fn main() {
                 .with_level(true)
                 // don't include targets
                 .with_target(false)
-                // include the thread ID of the current thread
-                .with_thread_ids(true)
                 .compact(),
         )
         .with_env_filter(EnvFilter::from_str(log_level.as_str()).unwrap());
@@ -48,9 +46,9 @@ fn main() {
     get_arguments();
 
     match Cli::parse() {
-        //Cli::BuildDb(sub_args) => {
-        //    db_builder::run_blast_and_build_consensus_cmd(sub_args)
-        //}
+        Cli::BuildDb(sub_args) => {
+            db_builder::run_blast_and_build_consensus_cmd(sub_args)
+        }
         Cli::Blast(blast_args) => {
             match blast_args.run_blast {
                 blast::Commands::RunWithConsensus(args) => {

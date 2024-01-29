@@ -2,7 +2,6 @@ use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use std::{fs::OpenOptions, io::Write, path::Path};
 use tracing::error;
 
-#[tracing::instrument(name = "Write to Blast Output File")]
 pub(crate) fn write_or_append_to_file(
     content: String,
     output_file: &Path,
@@ -18,7 +17,7 @@ pub(crate) fn write_or_append_to_file(
         Err(err) => {
             error!("Unexpected error detected: {}", err);
             return execution_err(String::from(
-                "Unexpected error detected on write temp file.",
+                "Unexpected error detected on write file.",
             ))
             .as_error();
         }

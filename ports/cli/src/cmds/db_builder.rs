@@ -22,6 +22,9 @@ pub(crate) struct BuildDatabaseArguments {
 
     taxdump_directory_path: PathBuf,
 
+    #[arg(short, long)]
+    ignore_taxids: Option<Vec<u64>>,
+
     /// The number of threads to be used. Default is 1.
     #[arg(short, long)]
     threads: Option<usize>,
@@ -29,7 +32,9 @@ pub(crate) struct BuildDatabaseArguments {
 
 pub(crate) fn run_blast_and_build_consensus_cmd(args: BuildDatabaseArguments) {
     // Execute system checks before running the blast
-    check_host_requirements();
+    if let Err(err) = check_host_requirements(Some("debug")) {
+        panic!("{err}");
+    }
 
     let threads = match args.threads {
         Some(n) => n,
@@ -39,6 +44,7 @@ pub(crate) fn run_blast_and_build_consensus_cmd(args: BuildDatabaseArguments) {
     match build_ref_db_from_ncbi_files(
         &args.blast_database_path,
         args.taxdump_directory_path,
+        args.ignore_taxids,
         threads,
     ) {
         Err(err) => panic!("{err}"),

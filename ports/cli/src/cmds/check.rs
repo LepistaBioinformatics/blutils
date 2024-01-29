@@ -13,5 +13,7 @@ pub(crate) enum Commands {
 }
 
 pub(crate) fn check_host_requirements_cmd() {
-    check_host_requirements(None);
+    if let Err(err) = check_host_requirements(None) {
+        panic!("{err}");
+    }
 }

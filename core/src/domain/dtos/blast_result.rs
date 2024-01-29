@@ -46,18 +46,16 @@ impl FromStr for ValidTaxonomicRanksEnum {
     type Err = ();
 
     fn from_str(input: &str) -> Result<ValidTaxonomicRanksEnum, Self::Err> {
-        match input {
-            "u" | "Undefined" | "undefined" => {
-                Ok(ValidTaxonomicRanksEnum::Undefined)
-            }
-            "d" | "Domain" | "domain" => Ok(ValidTaxonomicRanksEnum::Domain),
-            "k" | "Kingdom" | "kingdom" => Ok(ValidTaxonomicRanksEnum::Kingdom),
-            "p" | "Phylum" | "phylum" => Ok(ValidTaxonomicRanksEnum::Phylum),
-            "c" | "Class" | "class" => Ok(ValidTaxonomicRanksEnum::Class),
-            "o" | "Order" | "order" => Ok(ValidTaxonomicRanksEnum::Order),
-            "f" | "Family" | "family" => Ok(ValidTaxonomicRanksEnum::Family),
-            "g" | "Genus" | "genus" => Ok(ValidTaxonomicRanksEnum::Genus),
-            "s" | "Species" | "species" => Ok(ValidTaxonomicRanksEnum::Species),
+        match input.to_lowercase().trim() {
+            "undefined" => Ok(ValidTaxonomicRanksEnum::Undefined),
+            "domain" => Ok(ValidTaxonomicRanksEnum::Domain),
+            "kingdom" => Ok(ValidTaxonomicRanksEnum::Kingdom),
+            "phylum" => Ok(ValidTaxonomicRanksEnum::Phylum),
+            "class" => Ok(ValidTaxonomicRanksEnum::Class),
+            "order" => Ok(ValidTaxonomicRanksEnum::Order),
+            "family" => Ok(ValidTaxonomicRanksEnum::Family),
+            "genus" => Ok(ValidTaxonomicRanksEnum::Genus),
+            "species" => Ok(ValidTaxonomicRanksEnum::Species),
             _ => Err(()),
         }
     }

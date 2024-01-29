@@ -5,13 +5,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use clean_base::utils::errors::{execution_err, MappedErrors};
-use log::warn;
+use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use subprocess::{Exec, Redirection};
+use tracing::warn;
 
 pub(super) fn build_fasta_database(
     blast_database_path: &str,
-) -> Result<(PathBuf, HashSet<u64>), MappedErrors> {
+) -> Result<(PathBuf, HashSet<(String, u64)>), MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Extract sequences from blast database
     // ? -----------------------------------------------------------------------
@@ -58,7 +58,7 @@ pub(super) fn build_fasta_database(
     };
 
     let invalid_line = "null";
-    let mut tax_ids = HashSet::<u64>::new();
+    let mut tax_ids = HashSet::<(String, u64)>::new();
 
     for line in blast_response.stdout_str().lines() {
         let mut line = line.split("  ");
@@ -79,7 +79,8 @@ pub(super) fn build_fasta_database(
             continue;
         }
 
-        tax_ids.insert(taxid.parse::<u64>().unwrap_or(0));
+        tax_ids
+            .insert((accession.to_string(), taxid.parse::<u64>().unwrap_or(0)));
 
         let _ = file.write_all(
             format!(">{accession}.{taxid}\n{sequence}\n").as_bytes(),

@@ -84,7 +84,9 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
     args: RunBlastAndBuildConsensusArguments,
 ) {
     // Execute system checks before running the blast
-    check_host_requirements(Some("debug"));
+    if let Err(err) = check_host_requirements(Some("debug")) {
+        panic!("{err}");
+    }
 
     let repo = ExecuteBlastnProcRepository {};
 

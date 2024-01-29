@@ -1,24 +1,30 @@
 mod build_fasta_database;
 mod build_taxonomy_database;
 
-use build_fasta_database::build_fasta_database;
-use std::path::PathBuf;
-
-use clean_base::utils::errors::{execution_err, MappedErrors};
-
 use self::build_taxonomy_database::build_taxonomy_database;
+use build_fasta_database::build_fasta_database;
+use mycelium_base::utils::errors::{execution_err, MappedErrors};
+use std::path::PathBuf;
+use tracing::info;
 
 /// Build blutil sreference database from NCBI files
+#[tracing::instrument(name = "Build Reference DB from New TaxDump")]
 pub fn build_ref_db_from_ncbi_files(
     blast_database_path: &str,
     taxdump_directory_path: PathBuf,
+    ignore_taxids: Option<Vec<u64>>,
     threads: usize,
 ) -> Result<(), MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Build blast database
     // ? -----------------------------------------------------------------------
 
-    let (_, _) = build_fasta_database(blast_database_path)?;
+    info!("Building blast database from: {:?}", blast_database_path);
+
+    let (output_path, accessions_map) =
+        build_fasta_database(blast_database_path)?;
+
+    info!("Blast database built successfully");
 
     // ? -----------------------------------------------------------------------
     // ? Build taxonomy database from tax-ids
@@ -32,13 +38,17 @@ pub fn build_ref_db_from_ncbi_files(
         .as_error();
     }
 
-    let names = taxdump_directory_path.join("names.dmp");
-    let nodes = taxdump_directory_path.join("nodes.dmp");
-    let lineage = taxdump_directory_path.join("taxidlineage.dmp");
-    let reference_taxonomy_df =
-        build_taxonomy_database(names, nodes, lineage, threads)?;
-
-    println!("reference_taxonomy_df:\n{:?}", reference_taxonomy_df);
+    build_taxonomy_database(
+        taxdump_directory_path.join("names.dmp"),
+        taxdump_directory_path.join("nodes.dmp"),
+        taxdump_directory_path.join("taxidlineage.dmp"),
+        taxdump_directory_path.join("delnodes.dmp"),
+        taxdump_directory_path.join("merged.dmp"),
+        accessions_map,
+        ignore_taxids,
+        output_path,
+        threads,
+    )?;
 
     Ok(())
 }
