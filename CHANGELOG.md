@@ -1,3 +1,10 @@
+## v6.3.0 (2024-01-28)
+
+### Feat
+
+- wip - implements the database builder to create the initial database for blast runst
+- replace the default log from tracing and refactores the workspace to share dependencies
+
 ## v6.2.0 (2023-09-12)
 
 ### Feat

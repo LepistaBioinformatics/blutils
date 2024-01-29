@@ -1,7 +1,7 @@
 [package]
 
 name = "blutils-proc-adapter"
-version = "6.2.0"
+version = "6.3.0"
 description = "A utility to make it easier to run and analyze Blast results"
 
 edition.workspace = true
