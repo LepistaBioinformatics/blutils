@@ -4,7 +4,7 @@ mod build_taxonomy_database;
 use self::build_taxonomy_database::build_taxonomy_database;
 use build_fasta_database::build_fasta_database;
 use mycelium_base::utils::errors::{execution_err, MappedErrors};
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 use tracing::info;
 
 /// Build blutil sreference database from NCBI files
@@ -13,6 +13,7 @@ pub fn build_ref_db_from_ncbi_files(
     blast_database_path: &str,
     taxdump_directory_path: PathBuf,
     ignore_taxids: Option<Vec<u64>>,
+    replace_rank: Option<HashMap<String, String>>,
     threads: usize,
 ) -> Result<(), MappedErrors> {
     // ? -----------------------------------------------------------------------
@@ -46,6 +47,7 @@ pub fn build_ref_db_from_ncbi_files(
         taxdump_directory_path.join("merged.dmp"),
         accessions_map,
         ignore_taxids,
+        replace_rank,
         output_path,
         threads,
     )?;

@@ -10,7 +10,7 @@ use polars_ops::{
     frame::{JoinArgs, JoinType},
     prelude::DataFrameJoinOps,
 };
-use rayon::prelude::{ParallelBridge, ParallelIterator};
+//use rayon::prelude::{ParallelBridge, ParallelIterator};
 use slugify::slugify;
 use std::{
     collections::{HashMap, HashSet},
@@ -21,7 +21,7 @@ use std::{
     str::FromStr,
     sync::Mutex,
 };
-use tracing::{debug, error};
+use tracing::{debug, warn};
 
 #[derive(Debug, Clone)]
 pub(crate) struct RankedTaxidUnit {
@@ -39,6 +39,7 @@ pub(super) fn build_taxonomy_database(
     merged_path: PathBuf,
     accessions_map: HashSet<(String, u64)>,
     ignore_taxids: Option<Vec<u64>>,
+    replace_rank: Option<HashMap<String, String>>,
     output_path: PathBuf,
     threads: usize,
 ) -> Result<(), MappedErrors> {
@@ -81,22 +82,31 @@ pub(super) fn build_taxonomy_database(
     // ? Load reference data-frames
     // ? -----------------------------------------------------------------------
 
-    debug!("Loading and validating deleted nodes");
+    debug!("Loading and validating `DELETED` nodes");
     let del_nodes_vector = get_del_nodes_dataframe(del_nodes_path, threads)?;
 
-    debug!("Loading and validating merged nodes");
-    let merged_df = get_merged_dataframe(merged_path, threads)?;
+    debug!("Loading and validating `MERGED` nodes");
+    let merged_map = get_merged_dataframe(merged_path, threads)?;
 
-    debug!("Loading and validating taxonomic nodes");
+    debug!("Loading and validating `NAMES`");
+    let names_df = get_names_dataframe(names_path, threads)?;
+
+    debug!("Loading and validating `NODES`");
+
     let nodes_df = get_nodes_dataframe(nodes_path, threads)?;
 
-    debug!("Loading and validating taxonomic names");
-    let names_df = match get_names_dataframe(names_path, threads)?.join(
-        &nodes_df,
+    debug!("Loading and validating `LINEAGES`");
+
+    let lineages_df = get_lineage_dataframe(lineage_path, threads)?;
+
+    debug!("Joining `NODES` and `LINEAGES`");
+
+    let nodes_and_lineages_df = match nodes_df.join(
+        &lineages_df,
         ["tax_id"],
         ["tax_id"],
         JoinArgs {
-            how: JoinType::Left,
+            how: JoinType::Inner,
             ..Default::default()
         },
     ) {
@@ -109,17 +119,17 @@ pub(super) fn build_taxonomy_database(
         }
     };
 
-    debug!("Loading and validating taxonomic lineages");
-    let lineage_names_df = match get_lineage_dataframe(lineage_path, threads)?
-        .join(
-            &names_df,
-            ["tax_id"],
-            ["tax_id"],
-            JoinArgs {
-                how: JoinType::Left,
-                ..Default::default()
-            },
-        ) {
+    debug!("Joining `NODES` and `LINEAGES` with `NAMES`");
+
+    let nodes_and_lineages_with_names_df = match nodes_and_lineages_df.join(
+        &names_df,
+        ["tax_id"],
+        ["tax_id"],
+        JoinArgs {
+            how: JoinType::Left,
+            ..Default::default()
+        },
+    ) {
         Ok(df) => df,
         Err(err) => {
             return use_case_err(format!(
@@ -129,10 +139,12 @@ pub(super) fn build_taxonomy_database(
         }
     };
 
-    let reduced_df = match lineage_names_df.select([
+    debug!("Reducing `NODES` and `LINEAGES` with `NAMES`");
+
+    let reduced_df = match nodes_and_lineages_with_names_df.select([
         "tax_id",
-        "text_name",
         "rank",
+        "text_name",
         "lineage",
     ]) {
         Ok(df) => df,
@@ -160,8 +172,13 @@ pub(super) fn build_taxonomy_database(
 
     let mut ranked_tax_ids: HashMap<u64, RankedTaxidUnit> = HashMap::new();
     for _ in 0..binding.height() {
-        let tax_id =
-            iters[0].next().unwrap().to_string().parse::<u64>().unwrap();
+        let tax_id = iters[0]
+            .next()
+            .unwrap()
+            .to_string()
+            .trim()
+            .parse::<i32>()
+            .unwrap() as u64;
 
         let rank = iters[1]
             .next()
@@ -258,11 +275,7 @@ pub(super) fn build_taxonomy_database(
     // ? -----------------------------------------------------------------------
 
     accessions_map.into_iter().for_each(|(accession, tax_id)| {
-        let header = format!(
-            "{accession}.{tax_id}",
-            accession = accession,
-            tax_id = tax_id,
-        );
+        let header = format!("{}.{}", accession, tax_id);
 
         let ranked_tax_id = match ranked_tax_ids.get(&tax_id) {
             Some(res) => res,
@@ -273,19 +286,11 @@ pub(super) fn build_taxonomy_database(
                 //
                 if del_nodes_vector.contains(&tax_id) {
                     match write_or_append_to_file(
-                        format!(
-                            "{header}\t{ranked_names}\n",
-                            header = header,
-                            ranked_names = "deleted"
-                        ),
+                        format!("{}\t{}\n", header, "deleted"),
                         non_mapped_file_file_binding,
                     ) {
                         Ok(_) => (),
-                        Err(err) => {
-                            panic!(
-                                "Unexpected error detected on write unmapped content: {err}"
-                            );
-                        }
+                        Err(err) => panic!("{err}")
                     };
 
                     return;
@@ -295,35 +300,33 @@ pub(super) fn build_taxonomy_database(
                 // This condition is triggered when a tax_id is not found in the
                 // taxdump files and is a merged node.
                 //
-                if let Some(new_tax_id) = merged_df.get(&tax_id) {
+                if let Some(new_tax_id) = merged_map.get(&tax_id) {
                     match ranked_tax_ids.get(&new_tax_id) {
                         Some(res) => res,
                         None => {
 
                             match write_or_append_to_file(
-                                format!(
-                                    "{header}\t{ranked_names}\n",
-                                    header = header,
-                                    ranked_names = "merged"
-                                ),
+                                format!("{}\t{}\n", header, "merged"),
                                 non_mapped_file_file_binding,
                             ) {
                                 Ok(_) => (),
-                                Err(err) => {
-                                    panic!(
-                                        "Unexpected error detected on write unmapped content: {err}"
-                                    );
-                                }
+                                Err(err) => panic!("{err}")
                             };
 
                             return;
                         }
                     }
                 } else {
-                    panic!(
-                        "Unmapped tax_id detected {tax_id} in accession: {accession}",
-                        tax_id = tax_id
-                    );
+                    match write_or_append_to_file(
+                        format!("{}\t{}\n", header, "merged"
+                    ),
+                        non_mapped_file_file_binding,
+                    ) {
+                        Ok(_) => (),
+                        Err(err) => panic!("{err}")
+                    };
+
+                    return;
                 }
             }
         };
@@ -335,7 +338,7 @@ pub(super) fn build_taxonomy_database(
                     return None;
                 }
 
-                let lineage_tax_id = lineage_tax_id.parse::<u64>().unwrap();
+                let lineage_tax_id = lineage_tax_id.trim().parse::<u64>().unwrap();
 
                 if let Some(taxids) = ignore_taxids.to_owned() {
                     if taxids.contains(&lineage_tax_id) {
@@ -343,31 +346,34 @@ pub(super) fn build_taxonomy_database(
                     }
                 }
 
-                if lineage_tax_id == 201174 {
-                    println!("201174 detected");
-                }
-
                 let record = match ranked_tax_ids.get(&lineage_tax_id) {
                     Some(res) => res,
                     None => {
-                        panic!(
+                        warn!(
                             "Unmapped tax_id detected {lineage_tax_id} in lineage: {lineage}",
                             lineage = ranked_tax_id.lineage
                         );
+
+                        return None;
                     }
                 };
 
                 let valid_rank = match record.rank.parse::<ValidTaxonomicRanksEnum>() {
                     Ok(res) => res.to_string(),
                     Err(_) => {
-                        error!(
-                            "Invalid rank detected {rank} in lineage: {lineage}",
-                            rank = record.rank,
-                            lineage = ranked_tax_id.lineage
-                        );
-
-                        slugify!(record.rank.as_str(), separator = "-")
+                        slugify!(record.rank.clone().as_str(), separator = "-")
                     },
+                };
+
+                let valid_rank = match replace_rank.to_owned() {
+                    Some(replace_rank) => {
+                        if let Some(replaced_rank) = replace_rank.get(&valid_rank) {
+                            replaced_rank.to_string()
+                        } else {
+                            valid_rank
+                        }
+                    }
+                    None => valid_rank,
                 };
 
                 let ranked_name = format!(
@@ -489,19 +495,6 @@ fn get_names_dataframe(
     }
 }
 
-/// Loads lineage dataframe from taxdump
-fn get_lineage_dataframe(
-    path: PathBuf,
-    threads: usize,
-) -> Result<DataFrame, MappedErrors> {
-    let column_definitions = vec![
-        ("tax_id".to_string(), DataType::Int64),
-        ("lineage".to_string(), DataType::String),
-    ];
-
-    load_named_dataframe(path, column_definitions, threads)
-}
-
 /// Loads nodes dataframe from taxdump
 fn get_nodes_dataframe(
     path: PathBuf,
@@ -511,6 +504,19 @@ fn get_nodes_dataframe(
         ("tax_id".to_string(), DataType::Int64),
         ("parent_tax_id".to_string(), DataType::Int64),
         ("rank".to_string(), DataType::String),
+    ];
+
+    load_named_dataframe(path, column_definitions, threads)
+}
+
+/// Loads lineage dataframe from taxdump
+fn get_lineage_dataframe(
+    path: PathBuf,
+    threads: usize,
+) -> Result<DataFrame, MappedErrors> {
+    let column_definitions = vec![
+        ("tax_id".to_string(), DataType::Int64),
+        ("lineage".to_string(), DataType::String),
     ];
 
     load_named_dataframe(path, column_definitions, threads)
@@ -570,9 +576,7 @@ fn get_merged_dataframe(
         ("new_tax_id".to_string(), DataType::Int64),
     ];
 
-    let df = load_named_dataframe(path, column_definitions, threads);
-
-    match df {
+    match load_named_dataframe(path, column_definitions, threads) {
         Ok(df) => {
             let merged_nodes = match df.column("tax_id") {
                 Ok(col) => col
@@ -702,7 +706,7 @@ fn load_named_dataframe(
         Ok(file) => Mutex::new(BufWriter::new(file)),
     };
 
-    reader.lines().par_bridge().for_each(|line| {
+    reader.lines().for_each(|line| {
         let line = line
             .unwrap()
             .to_string()

@@ -25,6 +25,9 @@ pub(crate) struct BuildDatabaseArguments {
     #[arg(short, long)]
     ignore_taxids: Option<Vec<u64>>,
 
+    #[arg(short, long)]
+    replace_rank: Option<Vec<String>>,
+
     /// The number of threads to be used. Default is 1.
     #[arg(short, long)]
     threads: Option<usize>,
@@ -45,6 +48,21 @@ pub(crate) fn run_blast_and_build_consensus_cmd(args: BuildDatabaseArguments) {
         &args.blast_database_path,
         args.taxdump_directory_path,
         args.ignore_taxids,
+        match args.replace_rank {
+            Some(ranks) => {
+                let mut replace_rank = std::collections::HashMap::new();
+                for rank in ranks {
+                    let splitted: Vec<&str> = rank.split("=").collect();
+                    if splitted.len() != 2 {
+                        panic!("Invalid replace rank option: {:?}", rank);
+                    }
+                    replace_rank
+                        .insert(splitted[0].to_owned(), splitted[1].to_owned());
+                }
+                Some(replace_rank)
+            }
+            None => None,
+        },
         threads,
     ) {
         Err(err) => panic!("{err}"),
