@@ -19,7 +19,7 @@ mycelium-base.workspace = true
 subprocess.workspace = true
 
 [dependencies.blutils-core]
-version = "6.3.1"
+version = "6.3.2"
 workspace = true
 
 

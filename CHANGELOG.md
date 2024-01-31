@@ -1,3 +1,10 @@
+## v6.3.2 (2024-01-30)
+
+### Fix
+
+- fix the workspace dependency from local packages
+- fix dependencies to local package to allow publish in crate
+
 ## v6.3.1 (2024-01-30)
 
 ### Fix
