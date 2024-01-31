@@ -1,14 +1,12 @@
 use colored::{ColoredString, Colorize};
 use mycelium_base::utils::errors::{use_case_err, MappedErrors};
 use subprocess::{Exec, Redirection};
-use tracing::{debug, debug_span, error, info, warn};
+use tracing::{debug, error, info, warn};
 
 #[tracing::instrument(name = "Checking host requirements", skip(level))]
 pub fn check_host_requirements(
     level: Option<&str>,
 ) -> Result<(), MappedErrors> {
-    debug_span!("check_host_requirements");
-
     let dependencies =
         vec![("ncbi-blast+", "blastn"), ("ncbi-blast+", "blastdbcmd")];
 

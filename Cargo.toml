@@ -14,7 +14,7 @@ resolver = "2"
 
 [workspace.package]
 
-version = "6.2.0"
+version = "6.3.1"
 edition = "2021"
 authors = ["Samuel Galvão Elias <sgelias@outlook.com>"]
 license = "Apache-2.0"
@@ -51,5 +51,5 @@ tracing-subscriber = { version = "0.3.0", features = ["json", "env-filter"] }
 # ------------------------------------------------------------------------------
 
 blutils-core = { path = "core" }
-blutils-cli = { path = "ports/cli" }
-blutils-proc-adapter = { path = "adapters/proc" }
+blutils-cli = { path = "ports/cli", version = "*" }
+blutils-proc-adapter = { path = "adapters/proc", version = "*" }
