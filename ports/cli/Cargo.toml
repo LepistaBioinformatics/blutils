@@ -16,10 +16,15 @@ categories.workspace = true
 [dependencies]
 
 clap.workspace = true
-blutils-core.workspace = true
-blutils-proc-adapter.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+
+
+[dependencies.blutils-core]
+version = "6.3.1"
+
+[dependencies.blutils-proc-adapter]
+version = "6.3.1"
 
 
 [[bin]]
