@@ -20,7 +20,6 @@ subprocess.workspace = true
 
 [dependencies.blutils-core]
 version = "6.3.2"
-workspace = true
 
 
 [lib]
