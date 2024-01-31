@@ -22,11 +22,9 @@ tracing-subscriber.workspace = true
 
 [dependencies.blutils-core]
 version = "6.3.2"
-workspace = true
 
 [dependencies.blutils-proc-adapter]
 version = "6.3.2"
-workspace = true
 
 
 [[bin]]
