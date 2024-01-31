@@ -1,3 +1,9 @@
+## v6.3.1 (2024-01-30)
+
+### Fix
+
+- fix the database building command
+
 ## v6.3.0 (2024-01-28)
 
 ### Feat
