@@ -209,7 +209,12 @@ pub(super) fn build_taxonomy_database(
             tax_id,
             RankedTaxidUnit {
                 rank,
-                name,
+                name: match name {
+                    name if name.is_empty() || name == "null" => {
+                        format!("taxid-{tax_id}")
+                    }
+                    name => name,
+                },
                 lineage,
             },
         );
