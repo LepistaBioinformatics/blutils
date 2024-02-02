@@ -1,3 +1,11 @@
+## v6.3.3 (2024-02-01)
+
+### Fix
+
+- fix the database generation to includ eoptions to remove non-linnaean ranks to kept the database more consistene
+- include the taxid when taxnames are not available allowing users to check identities
+- include the main workspace package in cz tracked files
+
 ## v6.3.2 (2024-01-30)
 
 ### Fix
