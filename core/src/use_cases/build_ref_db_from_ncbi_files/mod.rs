@@ -14,6 +14,7 @@ pub fn build_ref_db_from_ncbi_files(
     taxdump_directory_path: PathBuf,
     ignore_taxids: Option<Vec<u64>>,
     replace_rank: Option<HashMap<String, String>>,
+    drop_non_linnaean_taxonomies: Option<bool>,
     threads: usize,
 ) -> Result<(), MappedErrors> {
     // ? -----------------------------------------------------------------------
@@ -48,6 +49,7 @@ pub fn build_ref_db_from_ncbi_files(
         accessions_map,
         ignore_taxids,
         replace_rank,
+        drop_non_linnaean_taxonomies,
         output_path,
         threads,
     )?;

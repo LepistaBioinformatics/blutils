@@ -145,8 +145,16 @@ fn find_single_query_consensus(
         let score_results = result
             .to_owned()
             .into_iter()
-            .filter(|i| i.bit_score == score)
-            .map(|mut i| i.parse_taxonomy())
+            .filter_map(|i| {
+                if i.bit_score != score {
+                    None
+                } else {
+                    match i.to_owned().parse_taxonomy() {
+                        Err(err) => panic!("{err}"),
+                        Ok(res) => Some(res),
+                    }
+                }
+            })
             .collect::<Vec<BlastResultRow>>();
         //
         // Early return case no results found.
@@ -175,7 +183,9 @@ fn find_single_query_consensus(
                                 let rank = match filter_rank_by_identity(
                                     config.to_owned().taxon.to_owned(),
                                     score_results[0].perc_identity,
+                                    Some(res.to_owned().rank),
                                     res.to_owned().rank,
+                                    Some(res.to_owned().rank),
                                 ) {
                                     Err(err) => panic!("{err}"),
                                     Ok(rank) => rank,
@@ -346,7 +356,9 @@ fn find_multi_taxa_consensus(
             final_taxon = build_taxon(
                 no_consensus_option.query.to_owned(),
                 taxon.to_owned(),
+                None,
                 reference_taxonomy_elements[index - 1].to_owned(),
+                None,
                 loop_reference_taxonomy_elements.to_owned(),
             );
 
@@ -356,7 +368,9 @@ fn find_multi_taxa_consensus(
         final_taxon = build_taxon(
             no_consensus_option.query.to_owned(),
             taxon.to_owned(),
+            None,
             ref_taxonomy.to_owned(),
+            None,
             loop_reference_taxonomy_elements,
         );
     }
@@ -367,13 +381,23 @@ fn find_multi_taxa_consensus(
 fn build_taxon(
     query: String,
     taxon: Taxon,
+    preceding_element: Option<TaxonomyElement>,
     mut element: TaxonomyElement,
+    descendent_element: Option<TaxonomyElement>,
     taxonomy: Vec<TaxonomyElement>,
 ) -> BlastQueryConsensusResult {
     element.rank = match filter_rank_by_identity(
         taxon.to_owned(),
         element.perc_identity,
-        element.rank,
+        match preceding_element {
+            None => None,
+            Some(item) => Some(item.rank),
+        },
+        element.rank.to_owned(),
+        match descendent_element {
+            None => None,
+            Some(item) => Some(item.rank),
+        },
     ) {
         Err(err) => panic!("{err}"),
         Ok(res) => res,

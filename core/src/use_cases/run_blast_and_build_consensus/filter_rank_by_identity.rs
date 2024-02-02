@@ -12,7 +12,9 @@ use mycelium_base::utils::errors::MappedErrors;
 pub(super) fn filter_rank_by_identity(
     taxon: Taxon,
     perc_identity: f64,
+    preceding_linnaean_rank: Option<ValidTaxonomicRanksEnum>,
     current_rank: ValidTaxonomicRanksEnum,
+    descendent_linnaean_rank: Option<ValidTaxonomicRanksEnum>,
 ) -> Result<ValidTaxonomicRanksEnum, MappedErrors> {
     let selected_rank = match taxon {
         Fungi => filter_fungi_identities(perc_identity)?,

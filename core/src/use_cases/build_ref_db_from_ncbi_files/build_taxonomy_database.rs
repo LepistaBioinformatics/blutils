@@ -40,6 +40,7 @@ pub(super) fn build_taxonomy_database(
     accessions_map: HashSet<(String, u64)>,
     ignore_taxids: Option<Vec<u64>>,
     replace_rank: Option<HashMap<String, String>>,
+    drop_non_linnaean_taxonomies: Option<bool>,
     output_path: PathBuf,
     threads: usize,
 ) -> Result<(), MappedErrors> {
@@ -323,7 +324,7 @@ pub(super) fn build_taxonomy_database(
                     }
                 } else {
                     match write_or_append_to_file(
-                        format!("{}\t{}\n", header, "merged"
+                        format!("{}\t{}\n", header, "unknown"
                     ),
                         non_mapped_file_file_binding,
                     ) {
@@ -364,9 +365,25 @@ pub(super) fn build_taxonomy_database(
                 };
 
                 let valid_rank = match record.rank.parse::<ValidTaxonomicRanksEnum>() {
-                    Ok(res) => res.to_string(),
+                    Ok(res) => match res {
+                        //
+                        // Skip non linnaean taxonomies if the non-linnaean rank
+                        // was found and the `drop_non_linnaean_taxonomies` flag
+                        // is set to true.
+                        //
+                        ValidTaxonomicRanksEnum::Other(rank) => {
+                            if let Some(true) = drop_non_linnaean_taxonomies {
+                                return None;
+                            } else {
+                                slugify!(rank.clone().as_str(), separator = "-")
+                            }
+                        }
+                        _ => res.to_string(),
+                    },
                     Err(_) => {
-                        slugify!(record.rank.clone().as_str(), separator = "-")
+                        panic!(
+                            "Unexpected error detected on parse rank: {}", record.rank
+                        )
                     },
                 };
 
@@ -397,8 +414,21 @@ pub(super) fn build_taxonomy_database(
             })
             .collect::<Vec<(String, String)>>();
 
+        //
+        // Skip non linnaean taxonomies if the non-linnaean rank was found and
+        // the `drop_non_linnaean_taxonomies` flag is set to true.
+        //
         let slug_rank = match ValidTaxonomicRanksEnum::from_str(&ranked_tax_id.rank) {
-            Ok(res) => res.to_string(),
+            Ok(res) => match res {
+                ValidTaxonomicRanksEnum::Other(rank) => {
+                    if let Some(true) = drop_non_linnaean_taxonomies {
+                        return;
+                    } else {
+                        slugify!(rank.as_str(), separator = "-")
+                    }
+                }
+                _ => res.to_string(),
+            },
             Err(_) => slugify!(ranked_tax_id.rank.as_str(), separator = "-"),
         };
 

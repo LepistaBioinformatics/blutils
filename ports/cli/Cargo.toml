@@ -18,13 +18,8 @@ categories.workspace = true
 clap.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
-
-
-[dependencies.blutils-core]
-version = "6.3.2"
-
-[dependencies.blutils-proc-adapter]
-version = "6.3.2"
+blutils-core = { version = "6.3.2", path = "../../core" }
+blutils-proc-adapter = { version = "6.3.2", path = "../../adapters/proc" }
 
 
 [[bin]]

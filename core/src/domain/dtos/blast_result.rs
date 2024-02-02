@@ -1,9 +1,12 @@
 use self::ValidTaxonomicRanksEnum::*;
 
 use core::fmt;
+use mycelium_base::utils::errors::{invalid_arg_err, MappedErrors};
 use serde::Serialize;
+use slugify::slugify;
 use std::slice::Iter;
 use std::str::FromStr;
+use tracing::error;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -17,6 +20,7 @@ pub(crate) enum ValidTaxonomicRanksEnum {
     Family,
     Genus,
     Species,
+    Other(String),
 }
 
 impl ValidTaxonomicRanksEnum {
@@ -43,20 +47,23 @@ impl ValidTaxonomicRanksEnum {
 }
 
 impl FromStr for ValidTaxonomicRanksEnum {
-    type Err = ();
+    type Err = String;
 
     fn from_str(input: &str) -> Result<ValidTaxonomicRanksEnum, Self::Err> {
-        match input.to_lowercase().trim() {
-            "undefined" => Ok(ValidTaxonomicRanksEnum::Undefined),
-            "domain" => Ok(ValidTaxonomicRanksEnum::Domain),
-            "kingdom" => Ok(ValidTaxonomicRanksEnum::Kingdom),
-            "phylum" => Ok(ValidTaxonomicRanksEnum::Phylum),
-            "class" => Ok(ValidTaxonomicRanksEnum::Class),
-            "order" => Ok(ValidTaxonomicRanksEnum::Order),
-            "family" => Ok(ValidTaxonomicRanksEnum::Family),
-            "genus" => Ok(ValidTaxonomicRanksEnum::Genus),
-            "species" => Ok(ValidTaxonomicRanksEnum::Species),
-            _ => Err(()),
+        let binding = input.to_lowercase();
+        let trimmed_input = binding.trim();
+
+        match trimmed_input {
+            "u" | "undefined" => Ok(ValidTaxonomicRanksEnum::Undefined),
+            "d" | "domain" => Ok(ValidTaxonomicRanksEnum::Domain),
+            "k" | "kingdom" => Ok(ValidTaxonomicRanksEnum::Kingdom),
+            "p" | "phylum" => Ok(ValidTaxonomicRanksEnum::Phylum),
+            "c" | "class" => Ok(ValidTaxonomicRanksEnum::Class),
+            "o" | "order" => Ok(ValidTaxonomicRanksEnum::Order),
+            "f" | "family" => Ok(ValidTaxonomicRanksEnum::Family),
+            "g" | "genus" => Ok(ValidTaxonomicRanksEnum::Genus),
+            "s" | "species" => Ok(ValidTaxonomicRanksEnum::Species),
+            other => Ok(ValidTaxonomicRanksEnum::Other(slugify!(other))),
         }
     }
 }
@@ -73,6 +80,7 @@ impl fmt::Display for ValidTaxonomicRanksEnum {
             ValidTaxonomicRanksEnum::Genus => write!(f, "g"),
             ValidTaxonomicRanksEnum::Species => write!(f, "s"),
             ValidTaxonomicRanksEnum::Undefined => write!(f, "u"),
+            ValidTaxonomicRanksEnum::Other(other) => write!(f, "{}", other),
         }
     }
 }
@@ -127,9 +135,9 @@ impl BlastResultRow {
     /// After execute parsing the literal string should be converted to a
     /// Vec<TaxonomyElement> format.
     ///
-    pub fn parse_taxonomy(&mut self) -> Self {
+    pub fn parse_taxonomy(&mut self) -> Result<Self, MappedErrors> {
         if let TaxonomyFieldEnum::Literal(res) = &self.taxonomy {
-            let parsed_taxonomy = res
+            let splitted_taxonomy = res
                 //
                 // Split by semicolon converting the literal string to a vector
                 // of strings containing the rank and the taxid joined with a
@@ -138,7 +146,11 @@ impl BlastResultRow {
                 //  s__257984
                 //
                 .split(";")
-                .map(|tax| {
+                .collect::<Vec<_>>();
+
+            let parsed_taxonomy = splitted_taxonomy.to_owned()
+                    .into_iter()
+                    .filter_map(|tax| {
                     //
                     // Split rank and taxid.
                     //
@@ -151,42 +163,56 @@ impl BlastResultRow {
                     // from two, panic the program.
                     //
                     if splitted_tax.len() != 2 {
-                        panic!("Invalid taxonomy format: {:?}", splitted_tax)
+                        return None
                     }
                     //
                     // Then, try to parse the resulting vector into a
                     // `TaxonomyElement` struct.
                     //
-                    TaxonomyElement {
+                    Some(TaxonomyElement {
                         rank: match splitted_tax[0]
                             .to_owned()
                             .parse::<ValidTaxonomicRanksEnum>()
                         {
-                            Err(_) => {
-                                panic!(
-                                    "Unexpected error on parse taxonomy: {:?}",
+                            Err(err) => {
+                                error!(
+                                    "Unexpected error on parse taxonomy `{:?}`: {err}",
                                     splitted_tax
-                                )
-                            }
+                                );
+
+                                return None
+                            },
                             Ok(res) => res,
                         },
                         taxid: match splitted_tax[1].to_owned().parse::<i64>() {
                             Err(err) => {
-                                panic!("Unexpected error on parse taxid: {err}")
+                                error!(
+                                    "Unexpected error on parse taxid `{:?}`: {err}",
+                                    splitted_tax
+                                );
+
+                                return None;
                             }
                             Ok(res) => res,
                         },
                         perc_identity: self.perc_identity,
                         taxonomy: None,
                         mutated: false,
-                    }
+                    })
                 })
-                .collect();
+                .collect::<Vec<TaxonomyElement>>();
+
+            if parsed_taxonomy.len() != splitted_taxonomy.len() {
+                return invalid_arg_err(
+                    "Unexpected error on parse taxonomy".to_string(),
+                )
+                .as_error();
+            }
 
             self.taxonomy = TaxonomyFieldEnum::Parsed(parsed_taxonomy);
         };
 
-        return self.to_owned();
+        Ok(self.to_owned())
     }
 }
 
