@@ -1,9 +1,9 @@
 use blul_core::{
-    domain::dtos::blast_builder::{BlastBuilder, Strand, Taxon},
-    use_cases::{
-        check_host_requirements, run_blast_and_build_consensus,
-        ConsensusStrategy,
+    domain::dtos::{
+        blast_builder::{BlastBuilder, Strand, Taxon},
+        consensus_strategy::ConsensusStrategy,
     },
+    use_cases::{check_host_requirements, run_blast_and_build_consensus},
 };
 use blul_proc::execute_blast::ExecuteBlastnProcRepository;
 use clap::Parser;

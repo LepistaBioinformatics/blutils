@@ -1,19 +1,33 @@
+mod build_blast_consensus_identity;
 mod build_consensus_identities;
 mod filter_rank_by_identity;
+mod find_multi_taxa_consensus;
+mod find_single_query_consensus;
+mod force_parsed_taxonomy;
+mod get_rank_lowest_statistics;
+mod get_taxonomy_from_position;
 mod run_parallel_blast;
 
-use self::build_consensus_identities::build_consensus_identities;
+use build_blast_consensus_identity::*;
+use build_consensus_identities::*;
+use filter_rank_by_identity::*;
+use find_multi_taxa_consensus::*;
+use find_single_query_consensus::*;
+use force_parsed_taxonomy::*;
+use get_rank_lowest_statistics::*;
+use get_taxonomy_from_position::*;
+use run_parallel_blast::*;
+
 use crate::domain::{
     dtos::{
         blast_builder::BlastBuilder,
         blast_result::{BlastQueryConsensusResult, ConsensusResult},
+        consensus_strategy::ConsensusStrategy,
     },
     entities::execute_blastn::ExecuteBlastn,
 };
 
-pub use build_consensus_identities::ConsensusStrategy;
 use mycelium_base::utils::errors::MappedErrors;
-use run_parallel_blast::run_parallel_blast;
 use std::{
     fs::File,
     io::Write,
