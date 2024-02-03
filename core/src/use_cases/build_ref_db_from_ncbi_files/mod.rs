@@ -1,8 +1,21 @@
 mod build_fasta_database;
 mod build_taxonomy_database;
+mod load_del_nodes_dataframe;
+mod load_dump_file;
+mod load_lineage_dataframe;
+mod load_merged_dataframe;
+mod load_names_dataframe;
+mod load_nodes_dataframe;
 
-use self::build_taxonomy_database::build_taxonomy_database;
-use build_fasta_database::build_fasta_database;
+use build_fasta_database::*;
+use build_taxonomy_database::*;
+use load_del_nodes_dataframe::*;
+use load_dump_file::*;
+use load_lineage_dataframe::*;
+use load_merged_dataframe::*;
+use load_names_dataframe::*;
+use load_nodes_dataframe::*;
+
 use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use std::{collections::HashMap, path::PathBuf};
 use tracing::info;

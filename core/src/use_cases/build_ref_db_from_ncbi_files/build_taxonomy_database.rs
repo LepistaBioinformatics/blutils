@@ -1,25 +1,23 @@
+use super::{
+    load_del_nodes_dataframe, load_lineage_dataframe, load_merged_dataframe,
+    load_names_dataframe, load_nodes_dataframe,
+};
 use crate::{
-    domain::dtos::blast_result::ValidTaxonomicRanksEnum,
+    domain::dtos::linnaean_ranks::LinnaeanRanks,
     use_cases::shared::write_or_append_to_file,
 };
 
 use mycelium_base::utils::errors::{use_case_err, MappedErrors};
-use polars_core::prelude::*;
-use polars_io::prelude::*;
 use polars_ops::{
     frame::{JoinArgs, JoinType},
     prelude::DataFrameJoinOps,
 };
-//use rayon::prelude::{ParallelBridge, ParallelIterator};
 use slugify::slugify;
 use std::{
     collections::{HashMap, HashSet},
-    env::temp_dir,
-    fs::{create_dir, remove_file, File},
-    io::{BufRead, BufReader, BufWriter, Write},
+    fs::remove_file,
     path::PathBuf,
     str::FromStr,
-    sync::Mutex,
 };
 use tracing::{debug, warn};
 
@@ -84,21 +82,21 @@ pub(super) fn build_taxonomy_database(
     // ? -----------------------------------------------------------------------
 
     debug!("Loading and validating `DELETED` nodes");
-    let del_nodes_vector = get_del_nodes_dataframe(del_nodes_path, threads)?;
+    let del_nodes_vector = load_del_nodes_dataframe(del_nodes_path, threads)?;
 
     debug!("Loading and validating `MERGED` nodes");
-    let merged_map = get_merged_dataframe(merged_path, threads)?;
+    let merged_map = load_merged_dataframe(merged_path, threads)?;
 
     debug!("Loading and validating `NAMES`");
-    let names_df = get_names_dataframe(names_path, threads)?;
+    let names_df = load_names_dataframe(names_path, threads)?;
 
     debug!("Loading and validating `NODES`");
 
-    let nodes_df = get_nodes_dataframe(nodes_path, threads)?;
+    let nodes_df = load_nodes_dataframe(nodes_path, threads)?;
 
     debug!("Loading and validating `LINEAGES`");
 
-    let lineages_df = get_lineage_dataframe(lineage_path, threads)?;
+    let lineages_df = load_lineage_dataframe(lineage_path, threads)?;
 
     debug!("Joining `NODES` and `LINEAGES`");
 
@@ -364,14 +362,14 @@ pub(super) fn build_taxonomy_database(
                     }
                 };
 
-                let valid_rank = match record.rank.parse::<ValidTaxonomicRanksEnum>() {
+                let valid_rank = match record.rank.parse::<LinnaeanRanks>() {
                     Ok(res) => match res {
                         //
                         // Skip non linnaean taxonomies if the non-linnaean rank
                         // was found and the `drop_non_linnaean_taxonomies` flag
                         // is set to true.
                         //
-                        ValidTaxonomicRanksEnum::Other(rank) => {
+                        LinnaeanRanks::Other(rank) => {
                             if let Some(true) = drop_non_linnaean_taxonomies {
                                 return None;
                             } else {
@@ -418,9 +416,9 @@ pub(super) fn build_taxonomy_database(
         // Skip non linnaean taxonomies if the non-linnaean rank was found and
         // the `drop_non_linnaean_taxonomies` flag is set to true.
         //
-        let slug_rank = match ValidTaxonomicRanksEnum::from_str(&ranked_tax_id.rank) {
+        let slug_rank = match LinnaeanRanks::from_str(&ranked_tax_id.rank) {
             Ok(res) => match res {
-                ValidTaxonomicRanksEnum::Other(rank) => {
+                LinnaeanRanks::Other(rank) => {
                     if let Some(true) = drop_non_linnaean_taxonomies {
                         return;
                     } else {
@@ -482,313 +480,4 @@ pub(super) fn build_taxonomy_database(
     });
 
     Ok(())
-}
-
-/// Loads names dataframe from taxdump
-fn get_names_dataframe(
-    path: PathBuf,
-    threads: usize,
-) -> Result<DataFrame, MappedErrors> {
-    let column_definitions = vec![
-        ("tax_id".to_string(), DataType::Int64),
-        ("text_name".to_string(), DataType::String),
-        ("unique_name".to_string(), DataType::String),
-        ("name_class".to_string(), DataType::String),
-    ];
-
-    match load_named_dataframe(path, column_definitions, threads) {
-        Ok(df) => {
-            match df
-                .select([
-                    "tax_id".to_string(),
-                    "text_name".to_string(),
-                    "name_class".to_string(),
-                ])
-                .unwrap()
-                .filter(
-                    &df.column("name_class")
-                        .unwrap()
-                        .str()
-                        .unwrap()
-                        .equal("scientific name"),
-                ) {
-                Ok(df) => Ok(df),
-                Err(err) => {
-                    return use_case_err(
-                        format!("Unexpected error detected on filter names dataframe: {err}")
-                    )
-                    .as_error();
-                }
-            }
-        }
-        Err(err) => {
-            return use_case_err(format!(
-                "Unexpected error detected on load names dataframe: {err}"
-            ))
-            .as_error();
-        }
-    }
-}
-
-/// Loads nodes dataframe from taxdump
-fn get_nodes_dataframe(
-    path: PathBuf,
-    threads: usize,
-) -> Result<DataFrame, MappedErrors> {
-    let column_definitions = vec![
-        ("tax_id".to_string(), DataType::Int64),
-        ("parent_tax_id".to_string(), DataType::Int64),
-        ("rank".to_string(), DataType::String),
-    ];
-
-    load_named_dataframe(path, column_definitions, threads)
-}
-
-/// Loads lineage dataframe from taxdump
-fn get_lineage_dataframe(
-    path: PathBuf,
-    threads: usize,
-) -> Result<DataFrame, MappedErrors> {
-    let column_definitions = vec![
-        ("tax_id".to_string(), DataType::Int64),
-        ("lineage".to_string(), DataType::String),
-    ];
-
-    load_named_dataframe(path, column_definitions, threads)
-}
-
-/// Loads nodes dataframe from taxdump
-fn get_del_nodes_dataframe(
-    path: PathBuf,
-    threads: usize,
-) -> Result<Vec<u64>, MappedErrors> {
-    let column_definitions = vec![("tax_id".to_string(), DataType::Int64)];
-    let df = load_named_dataframe(path, column_definitions, threads);
-
-    match df {
-        Ok(df) => {
-            let del_nodes = match df.column("tax_id") {
-                Ok(col) => col
-                    .i64()
-                    .unwrap()
-                    .into_iter()
-                    .filter_map(|tax_id| {
-                        if tax_id.is_none() {
-                            return None;
-                        }
-
-                        Some(tax_id.unwrap())
-                    })
-                    .collect::<Vec<i64>>(),
-                Err(err) => {
-                    return use_case_err(format!(
-                        "Unexpected error detected on get deleted nodes dataframe: {err}"
-                    ))
-                    .as_error()
-                }
-            };
-
-            Ok(del_nodes
-                .into_iter()
-                .map(|tax_id| tax_id as u64)
-                .collect::<Vec<u64>>())
-        }
-        Err(err) => {
-            return use_case_err(format!(
-            "Unexpected error detected on load deleted nodes dataframe: {err}"
-        ))
-            .as_error()
-        }
-    }
-}
-
-fn get_merged_dataframe(
-    path: PathBuf,
-    threads: usize,
-) -> Result<HashMap<u64, u64>, MappedErrors> {
-    let column_definitions = vec![
-        ("tax_id".to_string(), DataType::Int64),
-        ("new_tax_id".to_string(), DataType::Int64),
-    ];
-
-    match load_named_dataframe(path, column_definitions, threads) {
-        Ok(df) => {
-            let merged_nodes = match df.column("tax_id") {
-                Ok(col) => col
-                    .i64()
-                    .unwrap()
-                    .into_iter()
-                    .filter_map(|tax_id| {
-                        if tax_id.is_none() {
-                            return None;
-                        }
-
-                        Some(tax_id.unwrap())
-                    })
-                    .collect::<Vec<i64>>(),
-                Err(err) => {
-                    return use_case_err(format!(
-                        "Unexpected error detected on get merged nodes dataframe: {err}"
-                    ))
-                    .as_error()
-                }
-            };
-
-            let new_tax_ids = match df.column("new_tax_id") {
-                Ok(col) => col
-                    .i64()
-                    .unwrap()
-                    .into_iter()
-                    .filter_map(|tax_id| {
-                        if tax_id.is_none() {
-                            return None;
-                        }
-
-                        Some(tax_id.unwrap())
-                    })
-                    .collect::<Vec<i64>>(),
-                Err(err) => {
-                    return use_case_err(format!(
-                        "Unexpected error detected on get merged nodes dataframe: {err}"
-                    ))
-                    .as_error()
-                }
-            };
-
-            let mut merged_map = HashMap::new();
-            for (tax_id, new_tax_id) in
-                merged_nodes.iter().zip(new_tax_ids.iter())
-            {
-                merged_map.insert(*tax_id as u64, *new_tax_id as u64);
-            }
-
-            Ok(merged_map)
-        }
-        Err(err) => {
-            return use_case_err(format!(
-            "Unexpected error detected on load merged nodes dataframe: {err}"
-        ))
-            .as_error()
-        }
-    }
-}
-
-/// Loads a dataframe from a file
-fn load_named_dataframe(
-    path: PathBuf,
-    column_definitions: Vec<(String, DataType)>,
-    threads: usize,
-) -> Result<DataFrame, MappedErrors> {
-    // ? -----------------------------------------------------------------------
-    // ? Create columns and schema as usable vectors
-    // ? -----------------------------------------------------------------------
-
-    debug!("Validating dataframe schema");
-
-    let mut schema = Schema::new();
-    let mut columns = Vec::<String>::new();
-
-    for (name, column_type) in &column_definitions {
-        schema.with_column(name.to_owned().into(), column_type.to_owned());
-        columns.push(name.to_owned());
-    }
-
-    // ? -----------------------------------------------------------------------
-    // ? Replace default taxdump separator by a simple tabulation
-    // ? -----------------------------------------------------------------------
-
-    debug!("Translating taxdump file to a tabular format");
-
-    let tmp_dir = temp_dir().join("blutils");
-
-    if !tmp_dir.exists() {
-        match create_dir(tmp_dir.to_owned()) {
-            Err(err) => {
-                return use_case_err(format!(
-                    "Unexpected error detected on create temporary directory: {err}"
-                ))
-                .as_error()
-            }
-            Ok(res) => res,
-        };
-    }
-
-    let temp_file_path = tmp_dir.to_owned().join(path.file_name().unwrap());
-
-    debug!("Temporary content written to {:?}", temp_file_path);
-
-    if temp_file_path.exists() {
-        remove_file(temp_file_path.to_owned()).unwrap();
-    }
-
-    let reader = match File::open(path) {
-        Ok(file) => BufReader::new(file),
-        Err(err) => {
-            return use_case_err(format!(
-                "Unexpected error detected on open temporary file: {err}"
-            ))
-            .as_error()
-        }
-    };
-
-    let writer = match File::create(temp_file_path.to_owned()) {
-        Err(err) => {
-            return use_case_err(format!(
-                "Unexpected error detected on read temporary file: {err}"
-            ))
-            .as_error()
-        }
-        Ok(file) => Mutex::new(BufWriter::new(file)),
-    };
-
-    reader.lines().for_each(|line| {
-        let line = line
-            .unwrap()
-            .to_string()
-            .replace("\t|\t", "\t")
-            .replace("|\t", "\t")
-            .replace("\t|", "\t");
-
-        writeln!(writer.lock().unwrap(), "{}", line).unwrap();
-    });
-
-    // ? -----------------------------------------------------------------------
-    // ? Load dataframe itself
-    // ? -----------------------------------------------------------------------
-
-    debug!("Loading dataframe itself");
-
-    let sequential_columns = columns
-        .iter()
-        .enumerate()
-        .map(|(i, _)| format!("column_{}", i + 1))
-        .collect::<Vec<String>>();
-
-    match CsvReader::from_path(temp_file_path) {
-        Ok(reader) => {
-            let mut df = reader
-                .with_separator(b'\t')
-                .has_header(false)
-                .with_columns(Some(sequential_columns))
-                .with_n_threads(Some(threads))
-                .finish()
-                .unwrap();
-
-            for (i, (column, _type)) in schema.iter().enumerate() {
-                df.rename(
-                    format!("column_{}", i + 1).as_str(),
-                    column.to_string().as_str(),
-                )
-                .unwrap();
-            }
-
-            Ok(df)
-        }
-        Err(err) => {
-            return use_case_err(format!(
-                "Unexpected error occurred on load table: {err}",
-            ))
-            .as_error()
-        }
-    }
 }

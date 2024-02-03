@@ -4,11 +4,13 @@ use super::{
 };
 use crate::domain::dtos::{
     blast_builder::Taxon,
-    blast_result::{
-        BlastQueryConsensusResult, BlastQueryNoConsensusResult, BlastResultRow,
-        ConsensusResult, TaxonomyElement, ValidTaxonomicRanksEnum,
+    blast_result::BlastResultRow,
+    consensus_result::{
+        ConsensusResult, QueryWithConsensusResult, QueryWithoutConsensusResult,
     },
     consensus_strategy::ConsensusStrategy,
+    linnaean_ranks::LinnaeanRanks,
+    taxonomy::TaxonomyBean,
 };
 
 use mycelium_base::utils::errors::MappedErrors;
@@ -21,7 +23,7 @@ use mycelium_base::utils::errors::MappedErrors;
 pub(super) fn find_multi_taxa_consensus(
     records: Vec<BlastResultRow>,
     taxon: Taxon,
-    no_consensus_option: BlastQueryNoConsensusResult,
+    no_consensus_option: QueryWithoutConsensusResult,
     strategy: ConsensusStrategy,
 ) -> Result<ConsensusResult, MappedErrors> {
     // ? -----------------------------------------------------------------------
@@ -60,7 +62,7 @@ pub(super) fn find_multi_taxa_consensus(
     let taxonomies = sorted_records
         .into_iter()
         .map(|i| force_parsed_taxonomy(i.taxonomy))
-        .collect::<Vec<Vec<TaxonomyElement>>>();
+        .collect::<Vec<Vec<TaxonomyBean>>>();
 
     let lowest_taxonomy_of_higher_rank =
         get_rank_lowest_statistics(taxonomies.first().unwrap().to_owned());
@@ -69,7 +71,7 @@ pub(super) fn find_multi_taxa_consensus(
     // ? Initialize the final response based on high taxonomic rank
     // ? -----------------------------------------------------------------------
 
-    let mut final_taxon = BlastQueryConsensusResult {
+    let mut final_taxon = QueryWithConsensusResult {
         query: no_consensus_option.query.to_owned(),
         taxon: Some(lowest_taxonomy_of_higher_rank),
     };
@@ -83,7 +85,7 @@ pub(super) fn find_multi_taxa_consensus(
 
     for (index, ref_taxonomy) in reference_taxonomy_elements.iter().enumerate()
     {
-        let mut level_taxonomies = Vec::<(ValidTaxonomicRanksEnum, i64)>::new();
+        let mut level_taxonomies = Vec::<(LinnaeanRanks, i64)>::new();
 
         for taxonomy in taxonomies.iter() {
             if index < taxonomy.len() {
@@ -106,9 +108,7 @@ pub(super) fn find_multi_taxa_consensus(
             final_taxon = build_blast_consensus_identity(
                 no_consensus_option.query.to_owned(),
                 taxon.to_owned(),
-                None,
                 reference_taxonomy_elements[index - 1].to_owned(),
-                None,
                 loop_reference_taxonomy_elements.to_owned(),
             );
 
@@ -118,9 +118,7 @@ pub(super) fn find_multi_taxa_consensus(
         final_taxon = build_blast_consensus_identity(
             no_consensus_option.query.to_owned(),
             taxon.to_owned(),
-            None,
             ref_taxonomy.to_owned(),
-            None,
             loop_reference_taxonomy_elements,
         );
     }

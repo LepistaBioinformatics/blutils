@@ -21,7 +21,7 @@ use run_parallel_blast::*;
 use crate::domain::{
     dtos::{
         blast_builder::BlastBuilder,
-        blast_result::{BlastQueryConsensusResult, ConsensusResult},
+        consensus_result::{ConsensusResult, QueryWithConsensusResult},
         consensus_strategy::ConsensusStrategy,
     },
     entities::execute_blastn::ExecuteBlastn,
@@ -95,17 +95,17 @@ fn write_json_output(results: Vec<ConsensusResult>, out_dir: PathBuf) {
     };
 
     let consensus_type_results = results.iter().fold(
-        Vec::<BlastQueryConsensusResult>::new(),
+        Vec::<QueryWithConsensusResult>::new(),
         |mut init, record| {
             match record {
                 ConsensusResult::NoConsensusFound(res) => {
-                    init.push(BlastQueryConsensusResult {
+                    init.push(QueryWithConsensusResult {
                         query: res.query.to_owned(),
                         taxon: None,
                     });
                 }
                 ConsensusResult::ConsensusFound(res) => {
-                    init.push(BlastQueryConsensusResult {
+                    init.push(QueryWithConsensusResult {
                         query: res.query.to_owned(),
                         taxon: res.taxon.to_owned(),
                     })

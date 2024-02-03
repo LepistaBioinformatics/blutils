@@ -1,12 +1,10 @@
-use crate::domain::dtos::blast_result::{TaxonomyElement, TaxonomyFieldEnum};
+use crate::domain::dtos::taxonomy::{Taxonomy, TaxonomyBean};
 
-pub(super) fn force_parsed_taxonomy(
-    taxonomy: TaxonomyFieldEnum,
-) -> Vec<TaxonomyElement> {
+pub(super) fn force_parsed_taxonomy(taxonomy: Taxonomy) -> Vec<TaxonomyBean> {
     match taxonomy {
-        TaxonomyFieldEnum::Literal(_) => {
+        Taxonomy::Literal(_) => {
             panic!("Invalid format taxonomic field.")
         }
-        TaxonomyFieldEnum::Parsed(res) => res,
+        Taxonomy::Parsed(res) => res,
     }
 }

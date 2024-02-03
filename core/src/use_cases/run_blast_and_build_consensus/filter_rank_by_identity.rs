@@ -1,6 +1,7 @@
 use crate::domain::dtos::{
     blast_builder::Taxon::{self, *},
-    blast_result::ValidTaxonomicRanksEnum::{self, *},
+    linnaean_ranks::LinnaeanRanks::{self, *},
+    taxonomy::TaxonomyBean,
 };
 
 use mycelium_base::utils::errors::MappedErrors;
@@ -12,17 +13,16 @@ use mycelium_base::utils::errors::MappedErrors;
 pub(super) fn filter_rank_by_identity(
     taxon: Taxon,
     perc_identity: f64,
-    preceding_linnaean_rank: Option<ValidTaxonomicRanksEnum>,
-    current_rank: ValidTaxonomicRanksEnum,
-    descendent_linnaean_rank: Option<ValidTaxonomicRanksEnum>,
-) -> Result<ValidTaxonomicRanksEnum, MappedErrors> {
+    current_rank: LinnaeanRanks,
+    taxonomy: Vec<TaxonomyBean>,
+) -> Result<LinnaeanRanks, MappedErrors> {
     let selected_rank = match taxon {
         Fungi => filter_fungi_identities(perc_identity)?,
         Bacteria => filter_bacteria_identities(perc_identity)?,
         Eukaryotes => filter_eukaryote_identities(perc_identity)?,
     };
 
-    let ranks = ValidTaxonomicRanksEnum::ordered_iter(Some(true));
+    let ranks = LinnaeanRanks::ordered_iter(Some(true));
 
     let current_rank_index =
         ranks.to_owned().position(|rank| rank == &current_rank);
@@ -42,7 +42,7 @@ pub(super) fn filter_rank_by_identity(
 /// TODO: Review the identity percentages and check a reference.
 fn filter_fungi_identities(
     perc_identity: f64,
-) -> Result<ValidTaxonomicRanksEnum, MappedErrors> {
+) -> Result<LinnaeanRanks, MappedErrors> {
     match perc_identity {
         i if i >= 97.0 => return Ok(Species),
         i if i >= 95.0 => return Ok(Genus),
@@ -60,7 +60,7 @@ fn filter_fungi_identities(
 /// TODO: Review the identity percentages and check a reference.
 fn filter_bacteria_identities(
     perc_identity: f64,
-) -> Result<ValidTaxonomicRanksEnum, MappedErrors> {
+) -> Result<LinnaeanRanks, MappedErrors> {
     match perc_identity {
         i if i >= 99.0 => return Ok(Species),
         i if i >= 97.0 => return Ok(Genus),
@@ -78,7 +78,7 @@ fn filter_bacteria_identities(
 /// TODO: Review the identity percentages and check a reference.
 fn filter_eukaryote_identities(
     perc_identity: f64,
-) -> Result<ValidTaxonomicRanksEnum, MappedErrors> {
+) -> Result<LinnaeanRanks, MappedErrors> {
     match perc_identity {
         i if i >= 97.0 => return Ok(Species),
         i if i >= 95.0 => return Ok(Genus),

@@ -3,11 +3,10 @@ use super::{
 };
 use crate::domain::dtos::{
     blast_builder::BlastBuilder,
-    blast_result::{
-        BlastQueryNoConsensusResult, BlastQueryResult, BlastResultRow,
-        ConsensusResult, TaxonomyFieldEnum,
-    },
+    blast_result::{BlastQueryResult, BlastResultRow},
+    consensus_result::{ConsensusResult, QueryWithoutConsensusResult},
     consensus_strategy::ConsensusStrategy,
+    taxonomy::Taxonomy,
 };
 
 use mycelium_base::utils::errors::{execution_err, MappedErrors};
@@ -80,7 +79,7 @@ pub(super) fn build_consensus_identities(
         .map(|result| {
             if result.results.to_owned().is_none() {
                 return Ok(ConsensusResult::NoConsensusFound(
-                    BlastQueryNoConsensusResult {
+                    QueryWithoutConsensusResult {
                         query: result.query,
                     },
                 ));
@@ -170,7 +169,7 @@ fn fold_results_by_query(
                 s_end,
                 e_value,
                 bit_score,
-                taxonomy: TaxonomyFieldEnum::Literal(taxonomy),
+                taxonomy: Taxonomy::Literal(taxonomy),
             },
         );
     }

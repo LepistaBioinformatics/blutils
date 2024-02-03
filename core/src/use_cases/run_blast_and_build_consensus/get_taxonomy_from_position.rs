@@ -1,9 +1,9 @@
-use crate::domain::dtos::blast_result::TaxonomyElement;
+use crate::domain::dtos::taxonomy::TaxonomyBean;
 
 pub(super) fn get_taxonomy_from_position(
     position: usize,
-    taxonomy: Vec<TaxonomyElement>,
-) -> Vec<TaxonomyElement> {
+    taxonomy: Vec<TaxonomyBean>,
+) -> Vec<TaxonomyBean> {
     taxonomy
         .into_iter()
         .enumerate()
@@ -16,5 +16,5 @@ pub(super) fn get_taxonomy_from_position(
                 }
             },
         )
-        .collect::<Vec<TaxonomyElement>>()
+        .collect::<Vec<TaxonomyBean>>()
 }

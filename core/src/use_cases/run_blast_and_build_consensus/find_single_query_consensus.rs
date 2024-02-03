@@ -4,11 +4,13 @@ use super::{
 };
 use crate::domain::dtos::{
     blast_builder::BlastBuilder,
-    blast_result::{
-        BlastQueryConsensusResult, BlastQueryNoConsensusResult, BlastResultRow,
-        ConsensusResult, TaxonomyFieldEnum, ValidTaxonomicRanksEnum,
+    blast_result::BlastResultRow,
+    consensus_result::{
+        ConsensusResult, QueryWithConsensusResult, QueryWithoutConsensusResult,
     },
     consensus_strategy::ConsensusStrategy,
+    linnaean_ranks::LinnaeanRanks,
+    taxonomy::Taxonomy,
 };
 
 use mycelium_base::utils::errors::MappedErrors;
@@ -42,7 +44,7 @@ pub(super) fn find_single_query_consensus(
     let mut sorted_keys = grouped_results.keys().cloned().collect::<Vec<i64>>();
     sorted_keys.sort_by(|a, b| b.cmp(a));
 
-    let no_consensus = BlastQueryNoConsensusResult {
+    let no_consensus = QueryWithoutConsensusResult {
         query: query.to_owned(),
     };
 
@@ -71,9 +73,9 @@ pub(super) fn find_single_query_consensus(
         // Fetch the lower taxonomic rank case only one record returned.
         //
         if score_results.len() == 1 {
-            for rank in ValidTaxonomicRanksEnum::ordered_iter(None) {
+            for rank in LinnaeanRanks::ordered_iter(None) {
                 match score_results[0].taxonomy.to_owned() {
-                    TaxonomyFieldEnum::Parsed(taxonomies) => {
+                    Taxonomy::Parsed(taxonomies) => {
                         match taxonomies
                             .to_owned()
                             .into_iter()
@@ -88,9 +90,8 @@ pub(super) fn find_single_query_consensus(
                                 let rank = match filter_rank_by_identity(
                                     config.to_owned().taxon.to_owned(),
                                     score_results[0].perc_identity,
-                                    None,
                                     res.to_owned().rank,
-                                    None,
+                                    taxonomies.clone(),
                                 ) {
                                     Err(err) => panic!("{err}"),
                                     Ok(rank) => rank,
@@ -101,11 +102,9 @@ pub(super) fn find_single_query_consensus(
                                 }
 
                                 let position =
-                                    ValidTaxonomicRanksEnum::ordered_iter(
-                                        Some(true),
-                                    )
-                                    .position(|i| i == &rank)
-                                    .unwrap();
+                                    LinnaeanRanks::ordered_iter(Some(true))
+                                        .position(|i| i == &rank)
+                                        .unwrap();
 
                                 let filtered_taxonomy =
                                     get_taxonomy_from_position(
@@ -131,7 +130,7 @@ pub(super) fn find_single_query_consensus(
                                 }
 
                                 return Ok(ConsensusResult::ConsensusFound(
-                                    BlastQueryConsensusResult {
+                                    QueryWithConsensusResult {
                                         query,
                                         taxon: Some(res),
                                     },

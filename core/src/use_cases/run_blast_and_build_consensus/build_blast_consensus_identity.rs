@@ -1,37 +1,26 @@
 use super::{filter_rank_by_identity, get_taxonomy_from_position};
 use crate::domain::dtos::{
-    blast_builder::Taxon,
-    blast_result::{
-        BlastQueryConsensusResult, TaxonomyElement, ValidTaxonomicRanksEnum,
-    },
+    blast_builder::Taxon, consensus_result::QueryWithConsensusResult,
+    linnaean_ranks::LinnaeanRanks, taxonomy::TaxonomyBean,
 };
 
 pub(super) fn build_blast_consensus_identity(
     query: String,
     taxon: Taxon,
-    preceding_element: Option<TaxonomyElement>,
-    mut element: TaxonomyElement,
-    descendent_element: Option<TaxonomyElement>,
-    taxonomy: Vec<TaxonomyElement>,
-) -> BlastQueryConsensusResult {
+    mut element: TaxonomyBean,
+    taxonomy: Vec<TaxonomyBean>,
+) -> QueryWithConsensusResult {
     element.rank = match filter_rank_by_identity(
         taxon.to_owned(),
         element.perc_identity,
-        match preceding_element {
-            None => None,
-            Some(item) => Some(item.rank),
-        },
         element.rank.to_owned(),
-        match descendent_element {
-            None => None,
-            Some(item) => Some(item.rank),
-        },
+        taxonomy.clone(),
     ) {
         Err(err) => panic!("{err}"),
         Ok(res) => res,
     };
 
-    let ordered_taxonomies = ValidTaxonomicRanksEnum::ordered_iter(Some(true));
+    let ordered_taxonomies = LinnaeanRanks::ordered_iter(Some(true));
 
     let updated_taxid = taxonomy.to_owned().iter().find_map(|i| {
         if i.rank == element.rank {
@@ -89,7 +78,7 @@ pub(super) fn build_blast_consensus_identity(
         }
     }
 
-    BlastQueryConsensusResult {
+    QueryWithConsensusResult {
         query,
         taxon: Some(element),
     }
