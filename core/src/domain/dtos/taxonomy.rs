@@ -1,10 +1,10 @@
-use super::linnaean_ranks::LinnaeanRanks;
+use super::linnaean_ranks::LinnaeanRank;
 use serde::Serialize;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct TaxonomyBean {
-    pub rank: LinnaeanRanks,
+    pub rank: LinnaeanRank,
     pub taxid: i64,
     pub perc_identity: f64,
     pub taxonomy: Option<String>,

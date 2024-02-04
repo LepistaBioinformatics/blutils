@@ -3,7 +3,7 @@ use super::{
     load_names_dataframe, load_nodes_dataframe,
 };
 use crate::{
-    domain::dtos::linnaean_ranks::LinnaeanRanks,
+    domain::dtos::linnaean_ranks::LinnaeanRank,
     use_cases::shared::write_or_append_to_file,
 };
 
@@ -362,14 +362,14 @@ pub(super) fn build_taxonomy_database(
                     }
                 };
 
-                let valid_rank = match record.rank.parse::<LinnaeanRanks>() {
+                let valid_rank = match record.rank.parse::<LinnaeanRank>() {
                     Ok(res) => match res {
                         //
                         // Skip non linnaean taxonomies if the non-linnaean rank
                         // was found and the `drop_non_linnaean_taxonomies` flag
                         // is set to true.
                         //
-                        LinnaeanRanks::Other(rank) => {
+                        LinnaeanRank::Other(rank) => {
                             if let Some(true) = drop_non_linnaean_taxonomies {
                                 return None;
                             } else {
@@ -416,9 +416,9 @@ pub(super) fn build_taxonomy_database(
         // Skip non linnaean taxonomies if the non-linnaean rank was found and
         // the `drop_non_linnaean_taxonomies` flag is set to true.
         //
-        let slug_rank = match LinnaeanRanks::from_str(&ranked_tax_id.rank) {
+        let slug_rank = match LinnaeanRank::from_str(&ranked_tax_id.rank) {
             Ok(res) => match res {
-                LinnaeanRanks::Other(rank) => {
+                LinnaeanRank::Other(rank) => {
                     if let Some(true) = drop_non_linnaean_taxonomies {
                         return;
                     } else {

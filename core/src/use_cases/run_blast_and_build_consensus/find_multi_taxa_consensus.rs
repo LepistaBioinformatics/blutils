@@ -6,10 +6,10 @@ use crate::domain::dtos::{
     blast_builder::Taxon,
     blast_result::BlastResultRow,
     consensus_result::{
-        ConsensusResult, QueryWithConsensusResult, QueryWithoutConsensusResult,
+        ConsensusResult, QueryWithConsensus, QueryWithoutConsensus,
     },
     consensus_strategy::ConsensusStrategy,
-    linnaean_ranks::LinnaeanRanks,
+    linnaean_ranks::{InterpolatedIdentity, LinnaeanRank},
     taxonomy::TaxonomyBean,
 };
 
@@ -23,7 +23,7 @@ use mycelium_base::utils::errors::MappedErrors;
 pub(super) fn find_multi_taxa_consensus(
     records: Vec<BlastResultRow>,
     taxon: Taxon,
-    no_consensus_option: QueryWithoutConsensusResult,
+    no_consensus_option: QueryWithoutConsensus,
     strategy: ConsensusStrategy,
 ) -> Result<ConsensusResult, MappedErrors> {
     // ? -----------------------------------------------------------------------
@@ -71,7 +71,7 @@ pub(super) fn find_multi_taxa_consensus(
     // ? Initialize the final response based on high taxonomic rank
     // ? -----------------------------------------------------------------------
 
-    let mut final_taxon = QueryWithConsensusResult {
+    let mut final_taxon = QueryWithConsensus {
         query: no_consensus_option.query.to_owned(),
         taxon: Some(lowest_taxonomy_of_higher_rank),
     };
@@ -83,20 +83,26 @@ pub(super) fn find_multi_taxa_consensus(
     let reference_taxonomy_elements =
         force_parsed_taxonomy(reference_taxonomy.taxonomy.to_owned());
 
+    let interpolated_identities = InterpolatedIdentity::new(
+        taxon.to_owned(),
+        reference_taxonomy_elements
+            .clone()
+            .into_iter()
+            .map(|bean| bean.rank)
+            .collect(),
+    )?;
+
     for (index, ref_taxonomy) in reference_taxonomy_elements.iter().enumerate()
     {
-        let mut level_taxonomies = Vec::<(LinnaeanRanks, i64)>::new();
+        let mut level_taxonomies = Vec::<(LinnaeanRank, i64)>::new();
 
         for taxonomy in taxonomies.iter() {
             if index < taxonomy.len() {
-                if !level_taxonomies.contains(&(
-                    taxonomy[index].rank.to_owned(),
-                    taxonomy[index].taxid,
-                )) {
-                    level_taxonomies.push((
-                        taxonomy[index].rank.to_owned(),
-                        taxonomy[index].taxid,
-                    ));
+                let level_taxonomy =
+                    (taxonomy[index].rank.to_owned(), taxonomy[index].taxid);
+
+                if !level_taxonomies.contains(&level_taxonomy) {
+                    level_taxonomies.push(level_taxonomy);
                 }
             }
         }
@@ -107,9 +113,9 @@ pub(super) fn find_multi_taxa_consensus(
         if level_taxonomies.len() > 1 {
             final_taxon = build_blast_consensus_identity(
                 no_consensus_option.query.to_owned(),
-                taxon.to_owned(),
                 reference_taxonomy_elements[index - 1].to_owned(),
                 loop_reference_taxonomy_elements.to_owned(),
+                interpolated_identities.to_owned(),
             );
 
             break;
@@ -117,9 +123,9 @@ pub(super) fn find_multi_taxa_consensus(
 
         final_taxon = build_blast_consensus_identity(
             no_consensus_option.query.to_owned(),
-            taxon.to_owned(),
             ref_taxonomy.to_owned(),
             loop_reference_taxonomy_elements,
+            interpolated_identities.to_owned(),
         );
     }
 

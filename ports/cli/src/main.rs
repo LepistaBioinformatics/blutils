@@ -10,8 +10,9 @@ use tracing_subscriber::{fmt, EnvFilter};
 #[command(author, version, about, long_about = None)]
 enum Cli {
     BuildDb(db_builder::BuildDatabaseArguments),
+
     /// Execute the parallel blast and run consensus algorithm.
-    Blast(blast::Arguments),
+    Blastn(blast::Arguments),
 
     /// Check `Blutils` dependencies.
     Check(check::Arguments),
@@ -49,7 +50,7 @@ fn main() {
         Cli::BuildDb(sub_args) => {
             db_builder::run_blast_and_build_consensus_cmd(sub_args)
         }
-        Cli::Blast(blast_args) => {
+        Cli::Blastn(blast_args) => {
             match blast_args.run_blast {
                 blast::Commands::RunWithConsensus(args) => {
                     blast::run_blast_and_build_consensus_cmd(args)

@@ -1,17 +1,17 @@
-use serde::Serialize;
-
 use super::taxonomy::TaxonomyBean;
+
+use serde::Serialize;
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct QueryWithConsensusResult {
+pub(crate) struct QueryWithConsensus {
     pub query: String,
     pub taxon: Option<TaxonomyBean>,
 }
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct QueryWithoutConsensusResult {
+pub(crate) struct QueryWithoutConsensus {
     pub query: String,
 }
 
@@ -22,11 +22,11 @@ pub(crate) enum ConsensusResult {
     ///
     /// This option should be used when the consensus checking process not found
     /// an appropriate taxonomy.
-    NoConsensusFound(QueryWithoutConsensusResult),
+    NoConsensusFound(QueryWithoutConsensus),
 
     /// Consensus option
     ///
     /// This option should be used when the consensus checking process found an
     /// appropriate taxonomy.
-    ConsensusFound(QueryWithConsensusResult),
+    ConsensusFound(QueryWithConsensus),
 }

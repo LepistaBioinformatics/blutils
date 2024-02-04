@@ -1,6 +1,5 @@
 mod build_blast_consensus_identity;
 mod build_consensus_identities;
-mod filter_rank_by_identity;
 mod find_multi_taxa_consensus;
 mod find_single_query_consensus;
 mod force_parsed_taxonomy;
@@ -10,7 +9,6 @@ mod run_parallel_blast;
 
 use build_blast_consensus_identity::*;
 use build_consensus_identities::*;
-use filter_rank_by_identity::*;
 use find_multi_taxa_consensus::*;
 use find_single_query_consensus::*;
 use force_parsed_taxonomy::*;
@@ -21,13 +19,14 @@ use run_parallel_blast::*;
 use crate::domain::{
     dtos::{
         blast_builder::BlastBuilder,
-        consensus_result::{ConsensusResult, QueryWithConsensusResult},
+        consensus_result::{ConsensusResult, QueryWithConsensus},
         consensus_strategy::ConsensusStrategy,
     },
     entities::execute_blastn::ExecuteBlastn,
 };
 
 use mycelium_base::utils::errors::MappedErrors;
+use serde::Serialize;
 use std::{
     fs::File,
     io::Write,
@@ -70,19 +69,31 @@ pub fn run_blast_and_build_consensus(
     let blast_output = build_consensus_identities(
         output,
         Path::new(input_taxonomies),
-        blast_config,
+        blast_config.to_owned(),
         strategy,
     )?;
 
     write_json_output(
         blast_output.to_owned(),
+        blast_config,
         Path::new(out_dir).to_path_buf(),
     );
 
     Ok(true)
 }
 
-fn write_json_output(results: Vec<ConsensusResult>, out_dir: PathBuf) {
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BlutilsOutput {
+    results: Vec<QueryWithConsensus>,
+    config: BlastBuilder,
+}
+
+fn write_json_output(
+    results: Vec<ConsensusResult>,
+    config: BlastBuilder,
+    out_dir: PathBuf,
+) {
     let output_file = out_dir.join("blutils.consensus.json");
     info!("");
     info!("Blutils output file:");
@@ -95,17 +106,17 @@ fn write_json_output(results: Vec<ConsensusResult>, out_dir: PathBuf) {
     };
 
     let consensus_type_results = results.iter().fold(
-        Vec::<QueryWithConsensusResult>::new(),
+        Vec::<QueryWithConsensus>::new(),
         |mut init, record| {
             match record {
                 ConsensusResult::NoConsensusFound(res) => {
-                    init.push(QueryWithConsensusResult {
+                    init.push(QueryWithConsensus {
                         query: res.query.to_owned(),
                         taxon: None,
                     });
                 }
                 ConsensusResult::ConsensusFound(res) => {
-                    init.push(QueryWithConsensusResult {
+                    init.push(QueryWithConsensus {
                         query: res.query.to_owned(),
                         taxon: res.taxon.to_owned(),
                     })
@@ -117,9 +128,20 @@ fn write_json_output(results: Vec<ConsensusResult>, out_dir: PathBuf) {
     );
 
     match file.write_all(
-        serde_json::to_string_pretty(&consensus_type_results)
-            .unwrap()
-            .as_bytes(),
+        serde_json::to_string_pretty(&BlutilsOutput {
+            results: consensus_type_results,
+            config: BlastBuilder {
+                subject_reads: PathBuf::from(config.subject_reads)
+                    .file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+                ..config
+            },
+        })
+        .unwrap()
+        .as_bytes(),
     ) {
         Err(err) => panic!("{err}"),
         Ok(_) => (),

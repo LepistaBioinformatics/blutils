@@ -1,5 +1,5 @@
 use super::{
-    linnaean_ranks::LinnaeanRanks,
+    linnaean_ranks::LinnaeanRank,
     taxonomy::{Taxonomy, TaxonomyBean},
 };
 use mycelium_base::utils::errors::{invalid_arg_err, MappedErrors};
@@ -70,7 +70,7 @@ impl BlastResultRow {
                     Some(TaxonomyBean {
                         rank: match splitted_tax[0]
                             .to_owned()
-                            .parse::<LinnaeanRanks>()
+                            .parse::<LinnaeanRank>()
                         {
                             Err(err) => {
                                 error!(

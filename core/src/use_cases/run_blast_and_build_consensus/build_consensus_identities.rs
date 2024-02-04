@@ -4,7 +4,7 @@ use super::{
 use crate::domain::dtos::{
     blast_builder::BlastBuilder,
     blast_result::{BlastQueryResult, BlastResultRow},
-    consensus_result::{ConsensusResult, QueryWithoutConsensusResult},
+    consensus_result::{ConsensusResult, QueryWithoutConsensus},
     consensus_strategy::ConsensusStrategy,
     taxonomy::Taxonomy,
 };
@@ -79,7 +79,7 @@ pub(super) fn build_consensus_identities(
         .map(|result| {
             if result.results.to_owned().is_none() {
                 return Ok(ConsensusResult::NoConsensusFound(
-                    QueryWithoutConsensusResult {
+                    QueryWithoutConsensus {
                         query: result.query,
                     },
                 ));

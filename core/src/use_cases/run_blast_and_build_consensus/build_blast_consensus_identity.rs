@@ -1,29 +1,32 @@
-use super::{filter_rank_by_identity, get_taxonomy_from_position};
+use super::get_taxonomy_from_position;
 use crate::domain::dtos::{
-    blast_builder::Taxon, consensus_result::QueryWithConsensusResult,
-    linnaean_ranks::LinnaeanRanks, taxonomy::TaxonomyBean,
+    consensus_result::QueryWithConsensus,
+    linnaean_ranks::{
+        InterpolatedIdentity, LinnaeanRank, RankedLinnaeanIdentity,
+    },
+    taxonomy::TaxonomyBean,
 };
 
 pub(super) fn build_blast_consensus_identity(
     query: String,
-    taxon: Taxon,
-    mut element: TaxonomyBean,
+    mut bean: TaxonomyBean,
     taxonomy: Vec<TaxonomyBean>,
-) -> QueryWithConsensusResult {
-    element.rank = match filter_rank_by_identity(
-        taxon.to_owned(),
-        element.perc_identity,
-        element.rank.to_owned(),
-        taxonomy.clone(),
-    ) {
-        Err(err) => panic!("{err}"),
-        Ok(res) => res,
+    interpolated_taxonomy: InterpolatedIdentity,
+) -> QueryWithConsensus {
+    bean.rank = match interpolated_taxonomy
+        .get_rank_adjusted_by_identity(bean.perc_identity as f64)
+    {
+        Some(identity_adjusted_rank) => match identity_adjusted_rank {
+            RankedLinnaeanIdentity::DefaultRank(rank, _) => rank,
+            RankedLinnaeanIdentity::NonDefaultRank(rank, _) => {
+                LinnaeanRank::Other(rank)
+            }
+        },
+        None => bean.rank,
     };
 
-    let ordered_taxonomies = LinnaeanRanks::ordered_iter(Some(true));
-
     let updated_taxid = taxonomy.to_owned().iter().find_map(|i| {
-        if i.rank == element.rank {
+        if i.rank == bean.rank {
             Some(i.taxid)
         } else {
             None
@@ -42,9 +45,9 @@ pub(super) fn build_blast_consensus_identity(
                 taxonomy.to_owned(),
             );
 
-            element.mutated = true;
-            element.taxid = taxid;
-            element.taxonomy = Some(
+            bean.mutated = true;
+            bean.taxid = taxid;
+            bean.taxonomy = Some(
                 filtered_taxonomy
                     .into_iter()
                     .map(|i| i.taxonomy_to_string())
@@ -53,9 +56,20 @@ pub(super) fn build_blast_consensus_identity(
             );
         }
         None => {
-            let desired_rank_position = ordered_taxonomies
+            let desired_rank_position = interpolated_taxonomy
+                .interpolation()
                 .to_owned()
-                .position(|rank| rank == &element.rank);
+                .into_iter()
+                .rev()
+                .to_owned()
+                .position(|i| match i {
+                    RankedLinnaeanIdentity::DefaultRank(rank, _) => {
+                        rank == bean.rank
+                    }
+                    RankedLinnaeanIdentity::NonDefaultRank(rank, _) => {
+                        LinnaeanRank::Other(rank) == bean.rank
+                    }
+                });
 
             let filtered_taxonomy = get_taxonomy_from_position(
                 desired_rank_position.unwrap(),
@@ -65,9 +79,9 @@ pub(super) fn build_blast_consensus_identity(
             let lower_taxonomy = filtered_taxonomy.last();
 
             if lower_taxonomy.is_some() {
-                element.mutated = true;
-                element.taxid = lower_taxonomy.unwrap().taxid;
-                element.taxonomy = Some(
+                bean.mutated = true;
+                bean.taxid = lower_taxonomy.unwrap().taxid;
+                bean.taxonomy = Some(
                     filtered_taxonomy
                         .into_iter()
                         .map(|i| i.taxonomy_to_string())
@@ -78,8 +92,8 @@ pub(super) fn build_blast_consensus_identity(
         }
     }
 
-    QueryWithConsensusResult {
+    QueryWithConsensus {
         query,
-        taxon: Some(element),
+        taxon: Some(bean),
     }
 }
