@@ -1,16 +1,6 @@
 {
   "results": [
     {
-      "query": "NR114924.257984.Bac",
-      "taxon": {
-        "rank": "class",
-        "taxid": 1760,
-        "percIdentity": 100.0,
-        "taxonomy": "d__2;p__201174;c__1760",
-        "mutated": true
-      }
-    },
-    {
       "query": "close-to-NR_040877",
       "taxon": {
         "rank": "family",
@@ -21,15 +11,23 @@
       }
     },
     {
-      "query": "draft-5123",
+      "query": "NR114924.257984.Bac",
       "taxon": {
-        "rank": {
-          "other": "species-group"
-        },
-        "taxid": 653685,
+        "rank": "class",
+        "taxid": 1760,
         "percIdentity": 100.0,
-        "taxonomy": "d__2;clade__1783272;p__1239;c__91061;o__1385;f__186817;g__1386;species-group__653685",
+        "taxonomy": "d__2;p__201174;c__1760",
         "mutated": true
+      }
+    },
+    {
+      "query": "NR_113097.873513",
+      "taxon": {
+        "rank": "strain",
+        "taxid": 873513,
+        "percIdentity": 100.0,
+        "taxonomy": "d__2;clade__1783270;clade__68336;p__976;c__200643;o__171549;f__171552;g__2974251;s__28126;strain__873513",
+        "mutated": false
       }
     },
     {
@@ -43,15 +41,13 @@
       }
     },
     {
-      "query": "NR_113097.873513",
+      "query": "draft-5123",
       "taxon": {
-        "rank": {
-          "other": "strain"
-        },
-        "taxid": 873513,
+        "rank": "species-group",
+        "taxid": 653685,
         "percIdentity": 100.0,
-        "taxonomy": "d__2;clade__1783270;clade__68336;p__976;c__200643;o__171549;f__171552;g__2974251;s__28126;strain__873513",
-        "mutated": false
+        "taxonomy": "d__2;clade__1783272;p__1239;c__91061;o__1385;f__186817;g__1386;species-group__653685",
+        "mutated": true
       }
     },
     {

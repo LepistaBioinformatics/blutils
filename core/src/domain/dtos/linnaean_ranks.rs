@@ -22,6 +22,8 @@ pub(crate) enum LinnaeanRank {
     Family,
     Genus,
     Species,
+
+    #[serde(untagged)]
     Other(String),
 }
 
