@@ -1,11 +1,12 @@
 use super::linnaean_ranks::LinnaeanRank;
+
 use serde::Serialize;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct TaxonomyBean {
     pub rank: LinnaeanRank,
-    pub taxid: i64,
+    pub identifier: String,
     pub perc_identity: f64,
     pub taxonomy: Option<String>,
     pub mutated: bool,
@@ -13,7 +14,7 @@ pub(crate) struct TaxonomyBean {
 
 impl TaxonomyBean {
     pub fn taxonomy_to_string(&self) -> String {
-        format!("{}__{}", self.rank.to_string(), self.taxid.to_string())
+        format!("{}__{}", self.rank.to_string(), self.identifier.to_string())
     }
 }
 

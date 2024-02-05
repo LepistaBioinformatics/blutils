@@ -27,7 +27,7 @@ pub(super) fn build_blast_consensus_identity(
 
     let updated_taxid = taxonomy.to_owned().iter().find_map(|i| {
         if i.rank == bean.rank {
-            Some(i.taxid)
+            Some(i.identifier.to_owned())
         } else {
             None
         }
@@ -38,7 +38,7 @@ pub(super) fn build_blast_consensus_identity(
             let desired_rank_position = taxonomy
                 .to_owned()
                 .into_iter()
-                .position(|item| item.taxid == taxid);
+                .position(|item| item.identifier == taxid);
 
             let filtered_taxonomy = get_taxonomy_from_position(
                 desired_rank_position.unwrap(),
@@ -46,7 +46,7 @@ pub(super) fn build_blast_consensus_identity(
             );
 
             bean.mutated = true;
-            bean.taxid = taxid;
+            bean.identifier = taxid;
             bean.taxonomy = Some(
                 filtered_taxonomy
                     .into_iter()
@@ -80,7 +80,7 @@ pub(super) fn build_blast_consensus_identity(
 
             if lower_taxonomy.is_some() {
                 bean.mutated = true;
-                bean.taxid = lower_taxonomy.unwrap().taxid;
+                bean.identifier = lower_taxonomy.unwrap().identifier.to_owned();
                 bean.taxonomy = Some(
                     filtered_taxonomy
                         .into_iter()

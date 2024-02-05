@@ -166,7 +166,8 @@ pub(super) fn find_single_query_consensus(
                             let lower_taxonomy = lower_taxonomy.unwrap();
 
                             res.rank = lower_taxonomy.to_owned().rank;
-                            res.taxid = lower_taxonomy.taxid;
+                            res.identifier =
+                                lower_taxonomy.identifier.to_owned();
                             res.taxonomy = Some(
                                 filtered_taxonomy
                                     .into_iter()

@@ -123,7 +123,9 @@ pub(super) fn run_parallel_blast(
     // ? Processing sequences as chunks
 
     let chunk_size = source_sequences.len() / threads;
+    let chunk_size = if chunk_size == 0 { 1 } else { chunk_size };
     debug!("Total Sequences: {}", source_sequences.len());
+    debug!("Number of Threads: {}", threads);
     debug!("Chunk Size: {}", chunk_size);
 
     source_sequences

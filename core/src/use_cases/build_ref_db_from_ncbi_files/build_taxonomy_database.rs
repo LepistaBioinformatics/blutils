@@ -399,7 +399,7 @@ pub(super) fn build_taxonomy_database(
                 let ranked_name = format!(
                     "{}__{}",
                     valid_rank,
-                    slugify!(record.name.as_str())
+                    slugify!(record.name.as_str()).replace("__", "_")
                 );
 
                 let ranked_taxid = format!(
@@ -444,7 +444,7 @@ pub(super) fn build_taxonomy_database(
             header = header,
             ranked_names = ranked_names,
             rank = slug_rank,
-            name = slugify!(ranked_tax_id.name.as_str())
+            name = slugify!(ranked_tax_id.name.as_str()).replace("__", "_")
         ), text_taxonomies_file_binding) {
             Ok(_) => (),
             Err(err) => {

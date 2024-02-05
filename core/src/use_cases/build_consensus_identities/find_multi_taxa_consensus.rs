@@ -94,12 +94,14 @@ pub(super) fn find_multi_taxa_consensus(
 
     for (index, ref_taxonomy) in reference_taxonomy_elements.iter().enumerate()
     {
-        let mut level_taxonomies = Vec::<(LinnaeanRank, i64)>::new();
+        let mut level_taxonomies = Vec::<(LinnaeanRank, String)>::new();
 
         for taxonomy in taxonomies.iter() {
             if index < taxonomy.len() {
-                let level_taxonomy =
-                    (taxonomy[index].rank.to_owned(), taxonomy[index].taxid);
+                let level_taxonomy = (
+                    taxonomy[index].rank.to_owned(),
+                    taxonomy[index].identifier.to_owned(),
+                );
 
                 if !level_taxonomies.contains(&level_taxonomy) {
                     level_taxonomies.push(level_taxonomy);

@@ -82,7 +82,7 @@ impl BlastResultRow {
                             },
                             Ok(res) => res,
                         },
-                        taxid: match splitted_tax[1].to_owned().parse::<i64>() {
+                        identifier: match splitted_tax[1].to_owned().parse::<String>() {
                             Err(err) => {
                                 error!(
                                     "Unexpected error on parse taxid `{:?}`: {err}",
