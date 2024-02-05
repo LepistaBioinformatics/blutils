@@ -1,21 +1,8 @@
-mod build_blast_consensus_identity;
-mod build_consensus_identities;
-mod find_multi_taxa_consensus;
-mod find_single_query_consensus;
-mod force_parsed_taxonomy;
-mod get_rank_lowest_statistics;
-mod get_taxonomy_from_position;
 mod run_parallel_blast;
 
-use build_blast_consensus_identity::*;
-use build_consensus_identities::*;
-use find_multi_taxa_consensus::*;
-use find_single_query_consensus::*;
-use force_parsed_taxonomy::*;
-use get_rank_lowest_statistics::*;
-use get_taxonomy_from_position::*;
 use run_parallel_blast::*;
 
+use super::build_consensus_identities;
 use crate::domain::{
     dtos::{
         blast_builder::BlastBuilder,

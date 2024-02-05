@@ -1,6 +1,9 @@
 use crate::{
     domain::{
-        dtos::blast_builder::BlastBuilder,
+        dtos::{
+            blast_builder::BlastBuilder,
+            parallel_blast_output::ParallelBlastOutput,
+        },
         entities::execute_blastn::{ExecuteBlastn, ExecutionResponse},
     },
     use_cases::shared::write_or_append_to_file,
@@ -11,15 +14,9 @@ use rayon::prelude::*;
 use std::{
     fs::{create_dir, remove_file, File},
     io::{BufRead, BufReader},
-    path::{Path, PathBuf},
+    path::Path,
 };
 use tracing::{debug, info, warn};
-
-#[derive(Debug, Clone)]
-pub struct ParallelBlastOutput {
-    pub output_file: PathBuf,
-    pub headers: Vec<String>,
-}
 
 /// Run blast in parallel mode
 ///

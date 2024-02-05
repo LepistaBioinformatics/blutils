@@ -1,11 +1,23 @@
-use super::{
-    find_single_query_consensus, run_parallel_blast::ParallelBlastOutput,
-};
+mod build_blast_consensus_identity;
+mod find_multi_taxa_consensus;
+mod find_single_query_consensus;
+mod force_parsed_taxonomy;
+mod get_rank_lowest_statistics;
+mod get_taxonomy_from_position;
+
+use build_blast_consensus_identity::*;
+use find_multi_taxa_consensus::*;
+use find_single_query_consensus::*;
+use force_parsed_taxonomy::*;
+use get_rank_lowest_statistics::*;
+use get_taxonomy_from_position::*;
+
 use crate::domain::dtos::{
     blast_builder::BlastBuilder,
     blast_result::{BlastQueryResult, BlastResultRow},
     consensus_result::{ConsensusResult, QueryWithoutConsensus},
     consensus_strategy::ConsensusStrategy,
+    parallel_blast_output::ParallelBlastOutput,
     taxonomy::Taxonomy,
 };
 
@@ -22,7 +34,7 @@ use tracing::{error, warn};
 /// Join the `blast` output with reference `taxonomies` file and calculate
 /// consensus taxonomies based on the `subjects` frequencies and concordance.
 #[tracing::instrument(name = "Build consensus identities from Blast output")]
-pub(super) fn build_consensus_identities(
+pub fn build_consensus_identities(
     blast_output: ParallelBlastOutput,
     taxonomies_file: &Path,
     config: BlastBuilder,
