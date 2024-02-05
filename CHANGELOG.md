@@ -1,3 +1,20 @@
+## v7.0.0 (2024-02-04)
+
+### Feat
+
+- finish the implementation of the consensus generator for the blast command
+
+### Fix
+
+- replace the taxid by identifier in taxonomy parsing to allow input non taxid values
+- set the non-linnaean rank other as untagged
+
+### Refactor
+
+- move the blast build use-cases to a dedicated module
+- refactors building database related use-cases and dtos related to blast results generation
+- refacores the blast run with consensus use-case to allow search for the code at the file level
+
 ## v6.3.3 (2024-02-01)
 
 ### Fix
