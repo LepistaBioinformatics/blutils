@@ -1,3 +1,9 @@
+## v7.0.1 (2024-02-05)
+
+### Fix
+
+- **consensus-generation**: fix the generation of the consensus identities that stop the search for subjects early without evaluate the full results
+
 ## v7.0.0 (2024-02-04)
 
 ### Feat
