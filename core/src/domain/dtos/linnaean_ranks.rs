@@ -140,6 +140,7 @@ impl InterpolatedIdentity {
         Ok(Self { interpolation })
     }
 
+    /// Get the interpolation
     pub(crate) fn interpolation(&self) -> &Vec<RankedLinnaeanIdentity> {
         &self.interpolation
     }
@@ -153,18 +154,19 @@ impl InterpolatedIdentity {
         &self,
         identity: f64,
     ) -> Option<RankedLinnaeanIdentity> {
-        self.interpolation.to_owned().into_iter().find_map(|rank| {
-            let rank_identity = match rank {
-                DefaultRank(_, rank_identity) => rank_identity,
-                NonDefaultRank(_, rank_identity) => rank_identity,
-            };
+        self.interpolation
+            .to_owned()
+            .into_iter()
+            .rev()
+            .skip_while(|rank| {
+                let rank_identity = match rank {
+                    DefaultRank(_, rank_identity) => *rank_identity,
+                    NonDefaultRank(_, rank_identity) => *rank_identity,
+                };
 
-            if identity as f64 <= rank_identity as f64 {
-                return Some(rank);
-            }
-
-            None
-        })
+                rank_identity >= identity
+            })
+            .find_map(|rank| Some(rank))
     }
 
     ///

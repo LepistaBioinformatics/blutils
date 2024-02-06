@@ -16,6 +16,7 @@ use crate::domain::dtos::{
 
 use mycelium_base::utils::errors::MappedErrors;
 use std::collections::HashMap;
+use tracing::warn;
 
 pub(super) fn find_single_query_consensus(
     query: String,
@@ -102,9 +103,14 @@ pub(super) fn find_single_query_consensus(
                     .find(|i| &i.rank == rank)
                 {
                     None => {
+                        warn!(
+                            "No consensus found for query (at rank {}): {}",
+                            rank, query
+                        );
+
                         return Ok(ConsensusResult::NoConsensusFound(
                             no_consensus,
-                        ))
+                        ));
                     }
                     Some(mut res) => {
                         let identity_adjusted_rank =
@@ -114,11 +120,16 @@ pub(super) fn find_single_query_consensus(
                                 ) {
                                 Some(rank) => rank,
                                 None => {
+                                    warn!(
+                                        "No consensus found for query (at taxonomy {}): {}",
+                                        res.rank, query
+                                    );
+
                                     return Ok(
                                         ConsensusResult::NoConsensusFound(
                                             no_consensus,
                                         ),
-                                    )
+                                    );
                                 }
                             };
 
