@@ -1,3 +1,10 @@
+## v7.0.2 (2024-02-06)
+
+### Fix
+
+- fix the multi-taxa filtration process
+- fix the lca filtration process
+
 ## v7.0.1 (2024-02-05)
 
 ### Fix
