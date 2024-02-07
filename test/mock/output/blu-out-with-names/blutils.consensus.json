@@ -1,33 +1,17 @@
 {
   "results": [
     {
-      "query": "draft-8923",
-      "taxon": {
-        "rank": "species",
-        "identifier": "2880966",
-        "percIdentity": 99.318,
-        "taxonomy": "d__2;clade__1783272;p__1239;c__91061;o__1385;f__186817;g__1386;s__2880966",
-        "mutated": true
-      }
+      "query": "INVALID_SEQUENCE",
+      "taxon": null
     },
     {
-      "query": "draft-1605",
+      "query": "NR025123.135626.Bac",
       "taxon": {
         "rank": "species",
-        "identifier": "2880966",
-        "percIdentity": 99.091,
-        "taxonomy": "d__2;clade__1783272;p__1239;c__91061;o__1385;f__186817;g__1386;s__2880966",
+        "identifier": "135626",
+        "percIdentity": 100.0,
+        "taxonomy": "d__2;p__1224;c__1236;o__135622;f__267890;g__22;s__135626",
         "mutated": true
-      }
-    },
-    {
-      "query": "close-to-NR_040877",
-      "taxon": {
-        "rank": "order",
-        "identifier": "171549",
-        "percIdentity": 88.255,
-        "taxonomy": "d__2;clade__1783270;clade__68336;p__976;c__200643;o__171549",
-        "mutated": false
       }
     },
     {
@@ -37,26 +21,6 @@
         "identifier": "257984",
         "percIdentity": 100.0,
         "taxonomy": "d__2;p__201174;c__1760;o__85006;f__1268;g__1742989;s__257984",
-        "mutated": true
-      }
-    },
-    {
-      "query": "draft-5123",
-      "taxon": {
-        "rank": "species",
-        "identifier": "260554",
-        "percIdentity": 100.0,
-        "taxonomy": "d__2;clade__1783272;p__1239;c__91061;o__1385;f__186817;g__1386;species-group__653685;species-subgroup__653388;s__260554",
-        "mutated": true
-      }
-    },
-    {
-      "query": "draft-893",
-      "taxon": {
-        "rank": "genus",
-        "identifier": "2837503",
-        "percIdentity": 98.024,
-        "taxonomy": "d__2;clade__1783272;p__1239;c__91061;o__1385;f__186817;g__2837503",
         "mutated": true
       }
     },
@@ -71,18 +35,54 @@
       }
     },
     {
-      "query": "NR025123.135626.Bac",
+      "query": "close-to-NR_040877",
+      "taxon": {
+        "rank": "order",
+        "identifier": "171549",
+        "percIdentity": 88.255,
+        "taxonomy": "d__2;clade__1783270;clade__68336;p__976;c__200643;o__171549",
+        "mutated": false
+      }
+    },
+    {
+      "query": "draft-1605",
       "taxon": {
         "rank": "species",
-        "identifier": "135626",
-        "percIdentity": 100.0,
-        "taxonomy": "d__2;p__1224;c__1236;o__135622;f__267890;g__22;s__135626",
+        "identifier": "2880966",
+        "percIdentity": 99.091,
+        "taxonomy": "d__2;clade__1783272;p__1239;c__91061;o__1385;f__186817;g__1386;s__2880966",
         "mutated": true
       }
     },
     {
-      "query": "INVALID_SEQUENCE",
-      "taxon": null
+      "query": "draft-5123",
+      "taxon": {
+        "rank": "species",
+        "identifier": "260554",
+        "percIdentity": 100.0,
+        "taxonomy": "d__2;clade__1783272;p__1239;c__91061;o__1385;f__186817;g__1386;species-group__653685;species-subgroup__653388;s__260554",
+        "mutated": true
+      }
+    },
+    {
+      "query": "draft-8923",
+      "taxon": {
+        "rank": "species",
+        "identifier": "2880966",
+        "percIdentity": 99.318,
+        "taxonomy": "d__2;clade__1783272;p__1239;c__91061;o__1385;f__186817;g__1386;s__2880966",
+        "mutated": true
+      }
+    },
+    {
+      "query": "draft-893",
+      "taxon": {
+        "rank": "genus",
+        "identifier": "2837503",
+        "percIdentity": 98.024,
+        "taxonomy": "d__2;clade__1783272;p__1239;c__91061;o__1385;f__186817;g__2837503",
+        "mutated": true
+      }
     }
   ],
   "config": {
