@@ -98,30 +98,17 @@ pub(super) fn find_multi_taxa_consensus(
 
     for (index, ref_taxonomy) in reference_taxonomy_elements.iter().enumerate()
     {
-        //let mut level_taxonomies = HashSet::<String>::new();
         let level_taxonomies = taxonomies
             .iter()
             .take_while(|taxonomy| taxonomy.len() > index)
             .map(|taxonomy| {
                 format!(
-                    "{}{}",
-                    taxonomy[index].rank.to_string(),
-                    &taxonomy[index].identifier
+                    "{rank}{identifier}",
+                    rank = taxonomy[index].rank.to_string(),
+                    identifier = &taxonomy[index].identifier
                 )
             })
             .collect::<HashSet<String>>();
-
-        println!("{:?}", level_taxonomies);
-
-        /* for taxonomy in taxonomies.iter() {
-            if index < taxonomy.len() {
-                level_taxonomies.insert(format!(
-                    "{}{}",
-                    taxonomy[index].rank.to_string(),
-                    &taxonomy[index].identifier
-                ));
-            }
-        } */
 
         let loop_reference_taxonomy_elements =
             reference_taxonomy_elements.to_owned();
