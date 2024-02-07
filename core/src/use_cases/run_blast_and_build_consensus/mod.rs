@@ -92,7 +92,7 @@ fn write_json_output(
         Ok(res) => res,
     };
 
-    let consensus_type_results = results.iter().fold(
+    let mut consensus_type_results = results.iter().fold(
         Vec::<QueryWithConsensus>::new(),
         |mut init, record| {
             match record {
@@ -113,6 +113,8 @@ fn write_json_output(
             init
         },
     );
+
+    consensus_type_results.sort_by(|a, b| a.query.cmp(&b.query));
 
     match file.write_all(
         serde_json::to_string_pretty(&BlutilsOutput {

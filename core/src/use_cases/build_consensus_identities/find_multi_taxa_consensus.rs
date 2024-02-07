@@ -9,11 +9,12 @@ use crate::domain::dtos::{
         ConsensusResult, QueryWithConsensus, QueryWithoutConsensus,
     },
     consensus_strategy::ConsensusStrategy,
-    linnaean_ranks::{InterpolatedIdentity, LinnaeanRank},
+    linnaean_ranks::InterpolatedIdentity,
     taxonomy::TaxonomyBean,
 };
 
 use mycelium_base::utils::errors::MappedErrors;
+use std::collections::HashSet;
 
 /// Find the consensus among Blast results with multiple output.
 ///
@@ -44,11 +45,14 @@ pub(super) fn find_multi_taxa_consensus(
         a_taxonomy.len().cmp(&b_taxonomy.len())
     });
 
-    let reference_taxonomy = match strategy {
-        ConsensusStrategy::Cautious => {
-            sorted_records.first().unwrap().to_owned()
+    let reference_taxonomy = match match strategy {
+        ConsensusStrategy::Cautious => sorted_records.first(),
+        ConsensusStrategy::Relaxed => sorted_records.last(),
+    } {
+        Some(reference) => reference.to_owned(),
+        None => {
+            return Ok(ConsensusResult::NoConsensusFound(no_consensus_option))
         }
-        ConsensusStrategy::Relaxed => sorted_records.last().unwrap().to_owned(),
     };
 
     // ? -----------------------------------------------------------------------
@@ -94,20 +98,30 @@ pub(super) fn find_multi_taxa_consensus(
 
     for (index, ref_taxonomy) in reference_taxonomy_elements.iter().enumerate()
     {
-        let mut level_taxonomies = Vec::<(LinnaeanRank, String)>::new();
+        //let mut level_taxonomies = HashSet::<String>::new();
+        let level_taxonomies = taxonomies
+            .iter()
+            .take_while(|taxonomy| taxonomy.len() > index)
+            .map(|taxonomy| {
+                format!(
+                    "{}{}",
+                    taxonomy[index].rank.to_string(),
+                    &taxonomy[index].identifier
+                )
+            })
+            .collect::<HashSet<String>>();
 
-        for taxonomy in taxonomies.iter() {
+        println!("{:?}", level_taxonomies);
+
+        /* for taxonomy in taxonomies.iter() {
             if index < taxonomy.len() {
-                let level_taxonomy = (
-                    taxonomy[index].rank.to_owned(),
-                    taxonomy[index].identifier.to_owned(),
-                );
-
-                if !level_taxonomies.contains(&level_taxonomy) {
-                    level_taxonomies.push(level_taxonomy);
-                }
+                level_taxonomies.insert(format!(
+                    "{}{}",
+                    taxonomy[index].rank.to_string(),
+                    &taxonomy[index].identifier
+                ));
             }
-        }
+        } */
 
         let loop_reference_taxonomy_elements =
             reference_taxonomy_elements.to_owned();
