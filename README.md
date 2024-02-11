@@ -9,7 +9,7 @@ results. Currently the BlastN is available.
 [crates.io](https://crates.io/crates/blutils) using cargo:
 
 ```bash
-cargo install blutils
+cargo install blutils-cli
 ```
 
 After installed, `Blutils` could be evoked using the `blu` command.
@@ -26,9 +26,10 @@ A utility to make it easier to run and analyze Blast results
 Usage: blu <COMMAND>
 
 Commands:
-  blast  Execute the parallel blast and run consensus algorithm
-  check  Check `Blutils` dependencies
-  help   Print this message or the help of the given subcommand(s)
+  build-db  Build the blast database as a pre-requisite for the blastn command
+  blastn    Execute the parallel blast and run consensus algorithm
+  check     Check `Blutils` dependencies
+  help      Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help     Print help information
@@ -55,7 +56,7 @@ The `Blutils` execution is simple. To check all available options evoke the
 blast subcommand help:
 
 ```bash
-blu blast run-with-consensus --help
+blu blastn run-with-consensus --help
 ```
 
 After inspect available options, simple run `Blutils` with test data. First
@@ -71,7 +72,7 @@ curl ${INPUT_DIR}/query/ref_databases/mock-16S_taxonomies.tsv > mock-16S_taxonom
 Then run `Blutils`:
 
 ```bash
-blu blast run-with-consensus \
+blu blastn run-with-consensus \
     query.fna \
     mock-16S.fna \
     mock-16S_taxonomies.tsv \
@@ -90,19 +91,54 @@ the former, the Blutils response, which will be close to:
 ```bash
 [
   {
-    "query": "NR114924.257984.Bac",
-    "taxon": {
-      "rank": "class",
-      "taxid": 1760,
-      "percIdentity": 100.0
-    }
-  },
-  {
     "query": "NR025123.135626.Bac",
     "taxon": {
       "rank": "species",
-      "taxid": 135626,
-      "percIdentity": 100.0
+      "identifier": "shewanella-olleyana",
+      "percIdentity": 100.0,
+      "bitScore": 2695.0,
+      "alignLength": 1459,
+      "mismatches": 0,
+      "gapOpenings": 0,
+      "qStart": 1,
+      "qEnd": 1459,
+      "sStart": 1,
+      "sEnd": 1459,
+      "eValue": 0.0,
+      "taxonomy": "d__bacteria;p__pseudomonadota;c__gammaproteobacteria;o__alteromonadales;f__shewanellaceae;g__shewanella;s__shewanella-olleyana",
+      "mutated": true,
+      "consensusBeans": null
+    }
+  },
+  {
+    "query": "draft-5123",
+    "taxon": {
+      "rank": "species",
+      "identifier": "bacillus-mojavensis-subgroup",
+      "percIdentity": 100.0,
+      "bitScore": 815.0,
+      "alignLength": 441,
+      "mismatches": 0,
+      "gapOpenings": 0,
+      "qStart": 1,
+      "qEnd": 441,
+      "sStart": 217,
+      "sEnd": 657,
+      "eValue": 0.0,
+      "taxonomy": "d__bacteria;clade__terrabacteria-group;p__bacillota;c__bacilli;o__bacillales;f__taxid-186817;g__bacillus;species-group__bacillus-subtilis-group;species-subgroup__bacillus-mojavensis-subgroup",
+      "mutated": true,
+      "consensusBeans": [
+        {
+          "rank": "species",
+          "identifier": "bacillus-halotolerans",
+          "occurrences": 5
+        },
+        {
+          "rank": "species",
+          "identifier": "bacillus-mojavensis",
+          "occurrences": 4
+        }
+      ]
     }
   },
   {

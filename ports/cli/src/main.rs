@@ -9,12 +9,13 @@ use tracing_subscriber::{fmt, EnvFilter};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 enum Cli {
+    /// Build the blast database as a pre-requisite for the blastn command.
     BuildDb(db_builder::BuildDatabaseArguments),
 
-    /// Execute the parallel blast and run consensus algorithm.
+    /// Execute the parallel blast and run consensus algorithm
     Blastn(blast::Arguments),
 
-    /// Check `Blutils` dependencies.
+    /// Check `Blutils` dependencies
     Check(check::Arguments),
 }
 
