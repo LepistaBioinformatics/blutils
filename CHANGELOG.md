@@ -1,3 +1,9 @@
+## v7.0.3 (2024-02-10)
+
+### Fix
+
+- **consensus-generation-use-case**: fix the consensus generation issue that leads our algorithm to select a clade below the maximum expexted lca ideitity
+
 ## v7.0.2 (2024-02-06)
 
 ### Fix
