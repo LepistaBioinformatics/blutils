@@ -1,7 +1,4 @@
-use super::{
-    build_blast_consensus_identity, force_parsed_taxonomy,
-    get_rank_lowest_statistics,
-};
+use super::{build_blast_consensus_identity, force_parsed_taxonomy};
 use crate::domain::dtos::{
     blast_builder::Taxon,
     blast_result::BlastResultRow,
@@ -45,11 +42,15 @@ pub(super) fn find_multi_taxa_consensus(
         a_taxonomy.len().cmp(&b_taxonomy.len())
     });
 
+    //
+    // The reference taxonomy is the longest or shortest taxonomy vector, given
+    // the selected strategy.
+    //
     let reference_taxonomy = match match strategy {
         ConsensusStrategy::Cautious => sorted_records.first(),
         ConsensusStrategy::Relaxed => sorted_records.last(),
     } {
-        Some(reference) => reference.to_owned(),
+        Some(reference) => force_parsed_taxonomy(reference.taxonomy.to_owned()),
         None => {
             return Ok(ConsensusResult::NoConsensusFound(no_consensus_option))
         }
@@ -63,13 +64,20 @@ pub(super) fn find_multi_taxa_consensus(
     //
     // ? -----------------------------------------------------------------------
 
-    let taxonomies = sorted_records
+    let sorted_taxonomies = sorted_records
         .into_iter()
         .map(|i| force_parsed_taxonomy(i.taxonomy))
         .collect::<Vec<Vec<TaxonomyBean>>>();
 
-    let lowest_taxonomy_of_higher_rank =
-        get_rank_lowest_statistics(taxonomies.first().unwrap().to_owned());
+    let lowest_taxonomy_of_higher_rank = {
+        let mut rank_taxonomies = sorted_taxonomies.first().unwrap().to_owned();
+
+        rank_taxonomies.sort_by(|a, b| {
+            a.perc_identity.partial_cmp(&b.perc_identity).unwrap()
+        });
+
+        rank_taxonomies.first().unwrap().to_owned()
+    };
 
     // ? -----------------------------------------------------------------------
     // ? Initialize the final response based on high taxonomic rank
@@ -84,23 +92,35 @@ pub(super) fn find_multi_taxa_consensus(
     // ? Try to update the final response
     // ? -----------------------------------------------------------------------
 
-    let reference_taxonomy_elements =
-        force_parsed_taxonomy(reference_taxonomy.taxonomy.to_owned());
-
+    //
+    // Initialize the interpolated identities. Interpolated identities contains
+    // the full lineage of the records to be tested including the interpolated
+    // identity percentages.
+    //
     let interpolated_identities = InterpolatedIdentity::new(
         taxon.to_owned(),
-        reference_taxonomy_elements
+        reference_taxonomy
             .clone()
             .into_iter()
             .map(|bean| bean.rank)
             .collect(),
     )?;
 
-    for (index, ref_taxonomy) in reference_taxonomy_elements.iter().enumerate()
+    if interpolated_identities.interpolation().len() != reference_taxonomy.len()
     {
-        let level_taxonomies = taxonomies
+        panic!(
+            "Interpolated identities length is not equal to reference taxonomy length"
+        );
+    }
+
+    //
+    // Here the reference taxonomies (the longest or shortest) are used to
+    // filter children taxonomies.
+    //
+    for (index, ref_taxonomy) in reference_taxonomy.iter().enumerate() {
+        let level_taxonomies = sorted_taxonomies
             .iter()
-            .take_while(|taxonomy| taxonomy.len() > index)
+            .take_while(|taxonomy| index < taxonomy.len())
             .map(|taxonomy| {
                 format!(
                     "{rank}{identifier}",
@@ -110,15 +130,24 @@ pub(super) fn find_multi_taxa_consensus(
             })
             .collect::<HashSet<String>>();
 
-        let loop_reference_taxonomy_elements =
-            reference_taxonomy_elements.to_owned();
+        if level_taxonomies.is_empty() {
+            continue;
+        }
 
         if level_taxonomies.len() > 1 {
             final_taxon = build_blast_consensus_identity(
                 no_consensus_option.query.to_owned(),
-                reference_taxonomy_elements[index - 1].to_owned(),
-                loop_reference_taxonomy_elements.to_owned(),
+                reference_taxonomy[index - 1].to_owned(),
+                index - 1,
+                reference_taxonomy.to_owned(),
                 interpolated_identities.to_owned(),
+                Some(
+                    sorted_taxonomies
+                        .iter()
+                        .take_while(|taxonomy| index < taxonomy.len())
+                        .map(|taxonomy| taxonomy[index].to_owned())
+                        .collect::<Vec<TaxonomyBean>>(),
+                ),
             );
 
             break;
@@ -127,8 +156,10 @@ pub(super) fn find_multi_taxa_consensus(
         final_taxon = build_blast_consensus_identity(
             no_consensus_option.query.to_owned(),
             ref_taxonomy.to_owned(),
-            loop_reference_taxonomy_elements,
+            index,
+            reference_taxonomy.to_owned(),
             interpolated_identities.to_owned(),
+            None,
         );
     }
 

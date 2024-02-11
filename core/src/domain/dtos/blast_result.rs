@@ -2,6 +2,7 @@ use super::{
     linnaean_ranks::LinnaeanRank,
     taxonomy::{Taxonomy, TaxonomyBean},
 };
+
 use mycelium_base::utils::errors::{invalid_arg_err, MappedErrors};
 use serde::Serialize;
 use tracing::error;
@@ -94,8 +95,18 @@ impl BlastResultRow {
                             Ok(res) => res,
                         },
                         perc_identity: self.perc_identity,
+                        bit_score: self.bit_score as f64,
+                        align_length: self.align_length,
+                        mismatches: self.mismatches,
+                        gap_openings: self.gap_openings,
+                        q_start: self.q_start,
+                        q_end: self.q_end,
+                        s_start: self.s_start,
+                        s_end: self.s_end,
+                        e_value: self.e_value,
                         taxonomy: None,
                         mutated: false,
+                        consensus_beans: None,
                     })
                 })
                 .collect::<Vec<TaxonomyBean>>();

@@ -2,14 +2,12 @@ mod build_blast_consensus_identity;
 mod find_multi_taxa_consensus;
 mod find_single_query_consensus;
 mod force_parsed_taxonomy;
-mod get_rank_lowest_statistics;
 mod get_taxonomy_from_position;
 
 use build_blast_consensus_identity::*;
 use find_multi_taxa_consensus::*;
 use find_single_query_consensus::*;
 use force_parsed_taxonomy::*;
-use get_rank_lowest_statistics::*;
 use get_taxonomy_from_position::*;
 
 use crate::domain::dtos::{
