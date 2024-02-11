@@ -1,3 +1,9 @@
+## v7.0.4 (2024-02-11)
+
+### Fix
+
+- **build-db**: fix bug on generate reference database which missing names data on load inicial taxdump database
+
 ## v7.0.3 (2024-02-10)
 
 ### Fix
