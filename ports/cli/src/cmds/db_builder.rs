@@ -66,10 +66,6 @@ pub(crate) struct BuildDatabaseArguments {
     ///
     #[arg(short, long)]
     replace_rank: Option<Vec<String>>,
-
-    /// The number of threads to be used.
-    #[arg(short, long, default_value = "1")]
-    threads: Option<usize>,
 }
 
 pub(crate) fn run_blast_and_build_consensus_cmd(args: BuildDatabaseArguments) {
@@ -77,11 +73,6 @@ pub(crate) fn run_blast_and_build_consensus_cmd(args: BuildDatabaseArguments) {
     if let Err(err) = check_host_requirements(Some("debug")) {
         panic!("{err}");
     }
-
-    let threads = match args.threads {
-        Some(n) => n,
-        None => 1,
-    };
 
     match build_ref_db_from_ncbi_files(
         &args.blast_database_path,
@@ -103,7 +94,6 @@ pub(crate) fn run_blast_and_build_consensus_cmd(args: BuildDatabaseArguments) {
             None => None,
         },
         args.drop_non_linnaean_taxonomies,
-        threads,
     ) {
         Err(err) => panic!("{err}"),
         Ok(_) => (),

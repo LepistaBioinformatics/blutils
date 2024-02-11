@@ -1,12 +1,11 @@
 use mycelium_base::utils::errors::{use_case_err, MappedErrors};
 use polars_core::prelude::*;
-use polars_io::prelude::*;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{
-    env::temp_dir,
-    fs::{create_dir, remove_file, File},
-    io::{BufRead, BufReader, BufWriter, Write},
+    collections::HashMap,
+    fs::File,
+    io::{BufRead, BufReader},
     path::PathBuf,
-    sync::Mutex,
 };
 use tracing::debug;
 
@@ -14,13 +13,12 @@ use tracing::debug;
 pub(super) fn load_dump_file(
     path: PathBuf,
     column_definitions: Vec<(String, DataType)>,
-    threads: usize,
 ) -> Result<DataFrame, MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Create columns and schema as usable vectors
     // ? -----------------------------------------------------------------------
 
-    debug!("Validating dataframe schema");
+    debug!("Build dataframe schema");
 
     let mut schema = Schema::new();
     let mut columns = Vec::<String>::new();
@@ -31,35 +29,32 @@ pub(super) fn load_dump_file(
     }
 
     // ? -----------------------------------------------------------------------
-    // ? Replace default taxdump separator by a simple tabulation
+    // ? Build columns map from file
     // ? -----------------------------------------------------------------------
 
-    debug!("Translating taxdump file to a tabular format");
+    debug!("Build columns map from file");
 
-    let tmp_dir = temp_dir().join("blutils");
-
-    if !tmp_dir.exists() {
-        match create_dir(tmp_dir.to_owned()) {
-            Err(err) => {
-                return use_case_err(format!(
-                    "Unexpected error detected on create temporary directory: {err}"
-                ))
-                .as_error()
-            }
-            Ok(res) => res,
-        };
-    }
-
-    let temp_file_path = tmp_dir.to_owned().join(path.file_name().unwrap());
-
-    debug!("Temporary content written to {:?}", temp_file_path);
-
-    if temp_file_path.exists() {
-        remove_file(temp_file_path.to_owned()).unwrap();
-    }
-
-    let reader = match File::open(path) {
-        Ok(file) => BufReader::new(file),
+    let mut column_maps = HashMap::<String, Vec<_>>::new();
+    match File::open(path.to_owned()) {
+        Ok(file) => {
+            BufReader::new(file)
+                .lines()
+                .flat_map(Result::ok)
+                .for_each(|line| {
+                    for (i, column) in columns.iter().enumerate() {
+                        column_maps
+                            .entry(column.to_string())
+                            .or_insert_with(Vec::new)
+                            .push(
+                                line.split('|')
+                                    .map(|value| value.trim().replace("\t", ""))
+                                    .nth(i)
+                                    .unwrap()
+                                    .to_string(),
+                            );
+                    }
+                })
+        }
         Err(err) => {
             return use_case_err(format!(
                 "Unexpected error detected on open temporary file: {err}"
@@ -68,64 +63,57 @@ pub(super) fn load_dump_file(
         }
     };
 
-    let writer = match File::create(temp_file_path.to_owned()) {
+    // ? -----------------------------------------------------------------------
+    // ? Build output dataframe
+    // ? -----------------------------------------------------------------------
+
+    debug!("Build output dataframe");
+
+    let mut df = match DataFrame::new(
+        column_definitions
+            .par_iter()
+            .map(|(name, _type)| {
+                let series = column_maps
+                    .get(name)
+                    .unwrap()
+                    .par_iter()
+                    .map(|value| value.to_string())
+                    .collect::<Vec<_>>();
+                Series::new(name, series)
+            })
+            .collect::<Vec<_>>(),
+    ) {
+        Ok(df) => df,
         Err(err) => {
             return use_case_err(format!(
-                "Unexpected error detected on read temporary file: {err}"
+                "Unexpected error detected on create dataframe: {err}"
             ))
             .as_error()
         }
-        Ok(file) => Mutex::new(BufWriter::new(file)),
     };
 
-    reader.lines().for_each(|line| {
-        let line = line
-            .unwrap()
-            .to_string()
-            .replace("\t|\t", "\t")
-            .replace("|\t", "\t")
-            .replace("\t|", "\t");
-
-        writeln!(writer.lock().unwrap(), "{}", line).unwrap();
-    });
-
     // ? -----------------------------------------------------------------------
-    // ? Load dataframe itself
+    // ? Update dataframe schema
     // ? -----------------------------------------------------------------------
 
-    debug!("Loading dataframe itself");
+    debug!("Update dataframe schema");
 
-    let sequential_columns = columns
-        .iter()
-        .enumerate()
-        .map(|(i, _)| format!("column_{}", i + 1))
-        .collect::<Vec<String>>();
-
-    match CsvReader::from_path(temp_file_path) {
-        Ok(reader) => {
-            let mut df = reader
-                .with_separator(b'\t')
-                .has_header(false)
-                .with_columns(Some(sequential_columns))
-                .with_n_threads(Some(threads))
-                .finish()
-                .unwrap();
-
-            for (i, (column, _type)) in schema.iter().enumerate() {
-                df.rename(
-                    format!("column_{}", i + 1).as_str(),
-                    column.to_string().as_str(),
-                )
-                .unwrap();
+    for (column, _type) in schema.iter() {
+        match df.apply(column, |s| match s.cast(_type) {
+            Ok(casted) => casted,
+            Err(err) => {
+                panic!("Unexpected error detected on cast column: {err}")
             }
-
-            Ok(df)
-        }
-        Err(err) => {
-            return use_case_err(format!(
-                "Unexpected error occurred on load table: {err}",
-            ))
-            .as_error()
-        }
+        }) {
+            Ok(res) => res,
+            Err(err) => {
+                return use_case_err(format!(
+                    "Unexpected error detected on apply column: {err}"
+                ))
+                .as_error()
+            }
+        };
     }
+
+    Ok(df)
 }

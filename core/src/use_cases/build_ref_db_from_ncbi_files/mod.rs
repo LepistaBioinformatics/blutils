@@ -21,14 +21,16 @@ use std::{collections::HashMap, path::PathBuf};
 use tracing::info;
 
 /// Build blutil sreference database from NCBI files
-#[tracing::instrument(name = "Build Reference DB from New TaxDump")]
+#[tracing::instrument(
+    name = "Build Reference DB from New TaxDump",
+    skip(ignore_taxids, replace_rank, drop_non_linnaean_taxonomies)
+)]
 pub fn build_ref_db_from_ncbi_files(
     blast_database_path: &str,
     taxdump_directory_path: PathBuf,
     ignore_taxids: Option<Vec<u64>>,
     replace_rank: Option<HashMap<String, String>>,
     drop_non_linnaean_taxonomies: Option<bool>,
-    threads: usize,
 ) -> Result<(), MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Build blast database
@@ -64,7 +66,6 @@ pub fn build_ref_db_from_ncbi_files(
         replace_rank,
         drop_non_linnaean_taxonomies,
         output_path,
-        threads,
     )?;
 
     Ok(())

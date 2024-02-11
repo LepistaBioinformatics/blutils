@@ -7,10 +7,9 @@ use std::path::PathBuf;
 /// Loads nodes dataframe from taxdump
 pub(super) fn load_del_nodes_dataframe(
     path: PathBuf,
-    threads: usize,
 ) -> Result<Vec<u64>, MappedErrors> {
     let column_definitions = vec![("tax_id".to_string(), DataType::Int64)];
-    let df = load_dump_file(path, column_definitions, threads);
+    let df = load_dump_file(path, column_definitions);
 
     match df {
         Ok(df) => {

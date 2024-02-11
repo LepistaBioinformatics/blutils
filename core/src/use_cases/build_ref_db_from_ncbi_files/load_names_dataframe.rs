@@ -7,7 +7,6 @@ use std::path::PathBuf;
 /// Loads names dataframe from taxdump
 pub(super) fn load_names_dataframe(
     path: PathBuf,
-    threads: usize,
 ) -> Result<DataFrame, MappedErrors> {
     let column_definitions = vec![
         ("tax_id".to_string(), DataType::Int64),
@@ -16,7 +15,7 @@ pub(super) fn load_names_dataframe(
         ("name_class".to_string(), DataType::String),
     ];
 
-    match load_dump_file(path, column_definitions, threads) {
+    match load_dump_file(path, column_definitions) {
         Ok(df) => {
             match df
                 .select([

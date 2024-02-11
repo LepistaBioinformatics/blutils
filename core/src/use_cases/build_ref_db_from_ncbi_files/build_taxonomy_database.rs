@@ -28,7 +28,20 @@ pub(crate) struct RankedTaxidUnit {
     pub lineage: String,
 }
 
-#[tracing::instrument(name = "Build Taxonomy DB", skip(accessions_map))]
+#[tracing::instrument(
+    name = "Build Taxonomy DB",
+    skip(
+        names_path,
+        nodes_path,
+        lineage_path,
+        del_nodes_path,
+        merged_path,
+        accessions_map,
+        ignore_taxids,
+        replace_rank,
+        drop_non_linnaean_taxonomies,
+    )
+)]
 pub(super) fn build_taxonomy_database(
     names_path: PathBuf,
     nodes_path: PathBuf,
@@ -40,7 +53,6 @@ pub(super) fn build_taxonomy_database(
     replace_rank: Option<HashMap<String, String>>,
     drop_non_linnaean_taxonomies: Option<bool>,
     output_path: PathBuf,
-    threads: usize,
 ) -> Result<(), MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Validate arguments
@@ -82,21 +94,21 @@ pub(super) fn build_taxonomy_database(
     // ? -----------------------------------------------------------------------
 
     debug!("Loading and validating `DELETED` nodes");
-    let del_nodes_vector = load_del_nodes_dataframe(del_nodes_path, threads)?;
+    let del_nodes_vector = load_del_nodes_dataframe(del_nodes_path)?;
 
     debug!("Loading and validating `MERGED` nodes");
-    let merged_map = load_merged_dataframe(merged_path, threads)?;
+    let merged_map = load_merged_dataframe(merged_path)?;
 
     debug!("Loading and validating `NAMES`");
-    let names_df = load_names_dataframe(names_path, threads)?;
+    let names_df = load_names_dataframe(names_path)?;
 
     debug!("Loading and validating `NODES`");
 
-    let nodes_df = load_nodes_dataframe(nodes_path, threads)?;
+    let nodes_df = load_nodes_dataframe(nodes_path)?;
 
     debug!("Loading and validating `LINEAGES`");
 
-    let lineages_df = load_lineage_dataframe(lineage_path, threads)?;
+    let lineages_df = load_lineage_dataframe(lineage_path)?;
 
     debug!("Joining `NODES` and `LINEAGES`");
 
@@ -362,7 +374,18 @@ pub(super) fn build_taxonomy_database(
                     }
                 };
 
-                let valid_rank = match record.rank.parse::<LinnaeanRank>() {
+                let valid_rank = match replace_rank.to_owned() {
+                    Some(replace_rank) => {
+                        if let Some(replaced_rank) = replace_rank.get(&record.rank) {
+                            replaced_rank.to_string()
+                        } else {
+                            record.rank.to_string()
+                        }
+                    }
+                    None => record.rank.to_string(),
+                };
+
+                let valid_rank = match valid_rank.parse::<LinnaeanRank>() {
                     Ok(res) => match res {
                         //
                         // Skip non linnaean taxonomies if the non-linnaean rank
@@ -383,17 +406,6 @@ pub(super) fn build_taxonomy_database(
                             "Unexpected error detected on parse rank: {}", record.rank
                         )
                     },
-                };
-
-                let valid_rank = match replace_rank.to_owned() {
-                    Some(replace_rank) => {
-                        if let Some(replaced_rank) = replace_rank.get(&valid_rank) {
-                            replaced_rank.to_string()
-                        } else {
-                            valid_rank
-                        }
-                    }
-                    None => valid_rank,
                 };
 
                 let ranked_name = format!(

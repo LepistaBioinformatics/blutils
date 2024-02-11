@@ -6,14 +6,13 @@ use std::{collections::HashMap, path::PathBuf};
 
 pub(super) fn load_merged_dataframe(
     path: PathBuf,
-    threads: usize,
 ) -> Result<HashMap<u64, u64>, MappedErrors> {
     let column_definitions = vec![
         ("tax_id".to_string(), DataType::Int64),
         ("new_tax_id".to_string(), DataType::Int64),
     ];
 
-    match load_dump_file(path, column_definitions, threads) {
+    match load_dump_file(path, column_definitions) {
         Ok(df) => {
             let merged_nodes = match df.column("tax_id") {
                 Ok(col) => col
