@@ -12,7 +12,7 @@ use std::str::FromStr;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) enum LinnaeanRank {
+pub enum LinnaeanRank {
     Undefined,
     Domain,
     Kingdom,

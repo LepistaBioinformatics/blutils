@@ -56,6 +56,9 @@ fn main() {
                 blast::Commands::RunWithConsensus(args) => {
                     blast::run_blast_and_build_consensus_cmd(args)
                 }
+                blast::Commands::BuildConsensus(args) => {
+                    blast::build_consensus_cmd(args)
+                }
             };
         }
         Cli::Check(check_args) => {

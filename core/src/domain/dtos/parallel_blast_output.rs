@@ -3,5 +3,5 @@ use std::path::PathBuf;
 #[derive(Debug, Clone)]
 pub struct ParallelBlastOutput {
     pub output_file: PathBuf,
-    pub headers: Vec<String>,
+    pub headers: Option<Vec<String>>,
 }

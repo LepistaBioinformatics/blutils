@@ -1,9 +1,15 @@
+use std::path::{Path, PathBuf};
+
 use blul_core::{
     domain::dtos::{
         blast_builder::{BlastBuilder, Strand, Taxon},
         consensus_strategy::ConsensusStrategy,
+        parallel_blast_output::ParallelBlastOutput,
     },
-    use_cases::{check_host_requirements, run_blast_and_build_consensus},
+    use_cases::{
+        build_consensus_identities, check_host_requirements,
+        run_blast_and_build_consensus,
+    },
 };
 use blul_proc::execute_blast::ExecuteBlastnProcRepository;
 use clap::Parser;
@@ -18,6 +24,9 @@ pub(crate) struct Arguments {
 pub(crate) enum Commands {
     /// Run blast and generate consensus identities.
     RunWithConsensus(RunBlastAndBuildConsensusArguments),
+
+    /// Generate consensus from blast results.
+    BuildConsensus(BuildConsensusArguments),
 }
 
 #[derive(Parser, Debug)]
@@ -26,7 +35,7 @@ pub(crate) struct RunBlastAndBuildConsensusArguments {
     query: String,
 
     /// The reference sequences system file path
-    subject: String,
+    database: String,
 
     /// The taxonomy system file path
     tax_file: String,
@@ -45,6 +54,13 @@ pub(crate) struct RunBlastAndBuildConsensusArguments {
     /// relaxed: Select the longest taxonomic path to find consensus from.
     #[arg(long)]
     strategy: ConsensusStrategy,
+
+    /// Use taxid instead of taxonomy
+    ///
+    /// If true, the consensus will be based on the taxid instead of the
+    /// taxonomy itself.
+    #[arg(short, long, default_value = "false")]
+    use_taxid: bool,
 
     /// Case true, overwrite the output file if exists. Otherwise dispatch an
     /// error if the output file exists.
@@ -80,6 +96,37 @@ pub(crate) struct RunBlastAndBuildConsensusArguments {
     word_size: Option<i32>,
 }
 
+#[derive(Parser, Debug)]
+pub(crate) struct BuildConsensusArguments {
+    /// The reference sequences system file path
+    blast_out: String,
+
+    /// The taxonomy system file path
+    tax_file: String,
+
+    /// The output directory
+    out_dir: String,
+
+    /// This option checks the higher taxon which the consensus search should be
+    /// based
+    #[arg(long)]
+    taxon: Taxon,
+
+    /// The strategy to be used
+    ///
+    /// cautious: Select the shortest taxonomic path to find consensus from.
+    /// relaxed: Select the longest taxonomic path to find consensus from.
+    #[arg(long)]
+    strategy: ConsensusStrategy,
+
+    /// Use taxid instead of taxonomy
+    ///
+    /// If true, the consensus will be based on the taxid instead of the
+    /// taxonomy itself.
+    #[arg(short, long, default_value = "false")]
+    use_taxid: bool,
+}
+
 pub(crate) fn run_blast_and_build_consensus_cmd(
     args: RunBlastAndBuildConsensusArguments,
 ) {
@@ -91,7 +138,7 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
     let repo = ExecuteBlastnProcRepository {};
 
     // Create configuration DTO
-    let mut config = BlastBuilder::default(&args.subject, args.taxon);
+    let mut config = BlastBuilder::default(&args.database, args.taxon);
 
     if args.max_target_seqs.is_some() {
         config = config.with_max_target_seqs(args.max_target_seqs.unwrap());
@@ -123,7 +170,7 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
         None => 1,
     };
 
-    match run_blast_and_build_consensus(
+    if let Err(err) = run_blast_and_build_consensus(
         &args.query,
         &args.tax_file,
         &args.out_dir,
@@ -132,8 +179,23 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
         &args.force_overwrite,
         threads,
         args.strategy,
+        Some(args.use_taxid),
     ) {
-        Err(err) => panic!("{err}"),
-        Ok(_) => (),
+        panic!("{err}")
+    };
+}
+
+pub(crate) fn build_consensus_cmd(args: BuildConsensusArguments) {
+    if let Err(err) = build_consensus_identities(
+        ParallelBlastOutput {
+            output_file: PathBuf::from(args.blast_out),
+            headers: None,
+        },
+        Path::new(&args.tax_file),
+        args.taxon,
+        args.strategy,
+        Some(args.use_taxid),
+    ) {
+        panic!("{err}")
     };
 }

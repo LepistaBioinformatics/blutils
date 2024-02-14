@@ -15,5 +15,6 @@ pub trait ExecuteBlastn: Sync + Send + Debug {
         &self,
         query_sequences: String,
         blast_config: BlastBuilder,
+        threads: usize,
     ) -> Result<ExecutionResponse, MappedErrors>;
 }

@@ -3,7 +3,10 @@ use super::{
     load_names_dataframe, load_nodes_dataframe,
 };
 use crate::{
-    domain::dtos::linnaean_ranks::LinnaeanRank,
+    domain::dtos::{
+        linnaean_ranks::LinnaeanRank,
+        taxonomies_map::{TaxonomiesMap, TaxonomyMapUnit},
+    },
     use_cases::shared::write_or_append_to_file,
 };
 
@@ -14,8 +17,9 @@ use polars_ops::{
 };
 use slugify::slugify;
 use std::{
-    collections::{HashMap, HashSet},
-    fs::remove_file,
+    collections::HashMap,
+    fs::{remove_file, File},
+    io::Write,
     path::PathBuf,
     str::FromStr,
 };
@@ -48,11 +52,11 @@ pub(super) fn build_taxonomy_database(
     lineage_path: PathBuf,
     del_nodes_path: PathBuf,
     merged_path: PathBuf,
-    accessions_map: HashSet<(String, u64)>,
+    accessions_map: HashMap<u64, Vec<String>>,
     ignore_taxids: Option<Vec<u64>>,
     replace_rank: Option<HashMap<String, String>>,
     drop_non_linnaean_taxonomies: Option<bool>,
-    output_path: PathBuf,
+    database: String,
 ) -> Result<(), MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Validate arguments
@@ -235,6 +239,19 @@ pub(super) fn build_taxonomy_database(
     // ? Build output files
     // ? -----------------------------------------------------------------------
 
+    let output_path = PathBuf::from(database.to_owned());
+
+    //
+    // Create the main output file path
+    //
+    let output_database_file = match output_path.parent() {
+        Some(parent) => parent.join(format!(
+            "{}.blutils.json",
+            output_path.file_stem().unwrap().to_str().unwrap()
+        )),
+        None => PathBuf::from("blutils.json"),
+    };
+
     //
     // Create the textual taxonomies file
     //
@@ -290,8 +307,10 @@ pub(super) fn build_taxonomy_database(
     // ? Hydrate lineages and Build the output taxonomies dataframe
     // ? -----------------------------------------------------------------------
 
-    accessions_map.into_iter().for_each(|(accession, tax_id)| {
-        let header = format!("{}.{}", accession, tax_id);
+    let mut taxonomies = Vec::<TaxonomyMapUnit>::new();
+
+    accessions_map.into_iter().for_each(|(tax_id, accessions)| {
+        let header = format!("{tax_id}");
 
         let ranked_tax_id = match ranked_tax_ids.get(&tax_id) {
             Some(res) => res,
@@ -475,21 +494,35 @@ pub(super) fn build_taxonomy_database(
             .collect::<Vec<String>>()
             .join(";");
 
-        match write_or_append_to_file(format!(
-            "{header}\t{ranked_taxids};{rank}__{tax_id}\n",
-            header = header,
-            ranked_taxids = ranked_taxids,
-            rank = slug_rank,
-            tax_id = tax_id
-        ), numeric_taxonomies_file_binding) {
-            Ok(_) => (),
-            Err(err) => {
-                panic!(
-                    "Unexpected error detected on write tax-ids taxonomy file: {err}"
-                );
-            }
-        };
+            taxonomies.push(TaxonomyMapUnit {
+                taxid: tax_id,
+                rank: slug_rank,
+                numeric_lineage: ranked_taxids,
+                text_lineage: ranked_names,
+                accessions: accessions.to_owned(),
+            });
     });
+
+    let mut file = match File::create(output_database_file) {
+        Err(err) => panic!("{err}"),
+        Ok(res) => res,
+    };
+
+    match file.write_all(
+        serde_json::to_string_pretty(&TaxonomiesMap {
+            blutils_version: env!("CARGO_PKG_VERSION").to_string(),
+            ignore_taxids,
+            replace_rank,
+            drop_non_linnaean_taxonomies,
+            source_database: database,
+            taxonomies,
+        })
+        .unwrap()
+        .as_bytes(),
+    ) {
+        Err(err) => panic!("{err}"),
+        Ok(_) => (),
+    };
 
     Ok(())
 }

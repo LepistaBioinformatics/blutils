@@ -4,7 +4,7 @@ use serde::Serialize;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ConsensusBean {
+pub struct ConsensusBean {
     pub rank: LinnaeanRank,
     pub identifier: String,
     pub occurrences: i32,
@@ -12,7 +12,7 @@ pub(crate) struct ConsensusBean {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct TaxonomyBean {
+pub struct TaxonomyBean {
     pub rank: LinnaeanRank,
     pub identifier: String,
     pub perc_identity: f64,

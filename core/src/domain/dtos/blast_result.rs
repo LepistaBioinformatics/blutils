@@ -10,7 +10,8 @@ use tracing::error;
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BlastResultRow {
-    pub subject: String,
+    pub subject_accession: String,
+    pub subject_taxid: i64,
     pub perc_identity: f64,
     pub align_length: i64,
     pub mismatches: i64,

@@ -13,10 +13,11 @@ impl ExecuteBlastn for ExecuteBlastnProcRepository {
         &self,
         query_sequences: String,
         blast_config: BlastBuilder,
+        threads: usize,
     ) -> Result<ExecutionResponse, MappedErrors> {
         let blast_response = match Exec::cmd("blastn")
             .stdin(&*query_sequences)
-            .arg("-subject")
+            .arg("-db")
             .arg(&blast_config.subject_reads)
             .arg("-outfmt")
             .arg(&blast_config.out_format.to_string())
@@ -32,6 +33,8 @@ impl ExecuteBlastn for ExecuteBlastnProcRepository {
             .arg(&blast_config.e_value.to_string())
             .arg("-word_size")
             .arg(&blast_config.word_size.to_string())
+            .arg("-num_threads")
+            .arg(threads.to_string())
             .stdout(Redirection::Pipe)
             .stderr(Redirection::Pipe)
             .capture()

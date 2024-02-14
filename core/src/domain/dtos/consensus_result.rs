@@ -4,20 +4,20 @@ use serde::Serialize;
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct QueryWithConsensus {
+pub struct QueryWithConsensus {
     pub query: String,
     pub taxon: Option<TaxonomyBean>,
 }
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct QueryWithoutConsensus {
+pub struct QueryWithoutConsensus {
     pub query: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) enum ConsensusResult {
+pub enum ConsensusResult {
     /// No consensus option
     ///
     /// This option should be used when the consensus checking process not found

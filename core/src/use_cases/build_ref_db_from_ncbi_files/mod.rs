@@ -1,4 +1,4 @@
-mod build_fasta_database;
+mod build_accessions_map;
 mod build_taxonomy_database;
 mod load_del_nodes_dataframe;
 mod load_dump_file;
@@ -7,7 +7,7 @@ mod load_merged_dataframe;
 mod load_names_dataframe;
 mod load_nodes_dataframe;
 
-use build_fasta_database::*;
+use build_accessions_map::*;
 use build_taxonomy_database::*;
 use load_del_nodes_dataframe::*;
 use load_dump_file::*;
@@ -23,7 +23,13 @@ use tracing::info;
 /// Build blutil sreference database from NCBI files
 #[tracing::instrument(
     name = "Build Reference DB from New TaxDump",
-    skip(ignore_taxids, replace_rank, drop_non_linnaean_taxonomies)
+    skip(
+        blast_database_path,
+        taxdump_directory_path,
+        ignore_taxids,
+        replace_rank,
+        drop_non_linnaean_taxonomies
+    )
 )]
 pub fn build_ref_db_from_ncbi_files(
     blast_database_path: &str,
@@ -36,16 +42,20 @@ pub fn build_ref_db_from_ncbi_files(
     // ? Build blast database
     // ? -----------------------------------------------------------------------
 
-    info!("Building blast database from: {:?}", blast_database_path);
+    info!("Collecting base taxonomies for {:?}", blast_database_path);
 
-    let (output_path, accessions_map) =
-        build_fasta_database(blast_database_path)?;
+    let taxids_map = build_accessions_map(blast_database_path)?;
 
-    info!("Blast database built successfully");
+    info!("Base taxonomies collected successfully");
 
     // ? -----------------------------------------------------------------------
     // ? Build taxonomy database from tax-ids
     // ? -----------------------------------------------------------------------
+
+    info!(
+        "Building taxonomy database from: {:?}",
+        taxdump_directory_path
+    );
 
     if !taxdump_directory_path.is_dir() {
         return execution_err(format!(
@@ -61,12 +71,14 @@ pub fn build_ref_db_from_ncbi_files(
         taxdump_directory_path.join("taxidlineage.dmp"),
         taxdump_directory_path.join("delnodes.dmp"),
         taxdump_directory_path.join("merged.dmp"),
-        accessions_map,
+        taxids_map,
         ignore_taxids,
         replace_rank,
         drop_non_linnaean_taxonomies,
-        output_path,
+        blast_database_path.to_string(),
     )?;
+
+    info!("Taxonomy database built successfully");
 
     Ok(())
 }

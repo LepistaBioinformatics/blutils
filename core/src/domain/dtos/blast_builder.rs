@@ -75,12 +75,14 @@ impl fmt::Display for Strand {
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlastBuilder {
+    pub(crate) blutils_version: String,
+
     // ? IO related parameters
     pub subject_reads: String,
     pub taxon: Taxon,
 
     // ? BlastN configuration related parameters
-    pub out_format: i8,
+    pub out_format: String,
     pub max_target_seqs: i32,
     pub perc_identity: i32,
     pub query_cov: i32,
@@ -92,9 +94,10 @@ pub struct BlastBuilder {
 impl BlastBuilder {
     pub fn default(subject_reads: &str, taxon: Taxon) -> Self {
         BlastBuilder {
+            blutils_version: env!("CARGO_PKG_VERSION").to_string(),
             subject_reads: subject_reads.to_string(),
             taxon,
-            out_format: 6,
+            out_format: "6 qseqid sacc staxid pident length mismatch gapopen qstart qend sstart send evalue bitscore".to_string(),
             max_target_seqs: 10,
             perc_identity: 80,
             query_cov: 80,

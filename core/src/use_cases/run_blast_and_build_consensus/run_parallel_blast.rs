@@ -10,7 +10,7 @@ use crate::{
 };
 
 use mycelium_base::utils::errors::{execution_err, MappedErrors};
-use rayon::prelude::*;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::{
     fs::{create_dir, remove_file, File},
     io::{BufRead, BufReader},
@@ -22,7 +22,17 @@ use tracing::{debug, info, warn};
 ///
 /// This implementation target to saturate the host machine CPU utilization.
 /// Simple blast usage not allows the full usage of these resource.
-#[tracing::instrument(name = "Run Parallel Blast")]
+#[tracing::instrument(
+    name = "Run Parallel Blast",
+    skip(
+        input_sequences,
+        out_dir,
+        blast_config,
+        blast_execution_repo,
+        overwrite,
+        threads,
+    )
+)]
 pub(super) fn run_parallel_blast(
     input_sequences: &str,
     out_dir: &str,
@@ -122,11 +132,12 @@ pub(super) fn run_parallel_blast(
 
     // ? Processing sequences as chunks
 
-    let chunk_size = source_sequences.len() / threads;
-    let chunk_size = if chunk_size == 0 { 1 } else { chunk_size };
+    //let chunk_size = source_sequences.len() / threads;
+    //let chunk_size = if chunk_size == 0 { 1 } else { chunk_size };
+    let chunk_size = 50;
     debug!("Total Sequences: {}", source_sequences.len());
     debug!("Number of Threads: {}", threads);
-    debug!("Chunk Size: {}", chunk_size);
+    //debug!("Chunk Size: {}", chunk_size);
 
     source_sequences
         .chunks(chunk_size)
@@ -140,7 +151,11 @@ pub(super) fn run_parallel_blast(
             );
 
             let response = match pool.install(|| {
-                blast_execution_repo.run(chunk.join(""), blast_config.clone())
+                blast_execution_repo.run(
+                    chunk.join(""),
+                    blast_config.clone(),
+                    threads,
+                )
             }) {
                 Err(err) => {
                     panic!("Unexpected error detected on execute blast: {err}")
@@ -168,6 +183,6 @@ pub(super) fn run_parallel_blast(
 
     Ok(ParallelBlastOutput {
         output_file,
-        headers,
+        headers: Some(headers),
     })
 }

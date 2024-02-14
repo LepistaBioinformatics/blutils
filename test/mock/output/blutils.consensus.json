@@ -6,43 +6,11 @@
     },
     {
       "query": "NR025123.135626.Bac",
-      "taxon": {
-        "rank": "species",
-        "identifier": "shewanella-olleyana",
-        "percIdentity": 100.0,
-        "bitScore": 2695.0,
-        "alignLength": 1459,
-        "mismatches": 0,
-        "gapOpenings": 0,
-        "qStart": 1,
-        "qEnd": 1459,
-        "sStart": 1,
-        "sEnd": 1459,
-        "eValue": 0.0,
-        "taxonomy": "d__bacteria;p__pseudomonadota;c__gammaproteobacteria;o__alteromonadales;f__shewanellaceae;g__shewanella;s__shewanella-olleyana",
-        "mutated": true,
-        "consensusBeans": null
-      }
+      "taxon": null
     },
     {
       "query": "NR114924.257984.Bac",
-      "taxon": {
-        "rank": "species",
-        "identifier": "glutamicibacter-mysorens",
-        "percIdentity": 100.0,
-        "bitScore": 2726.0,
-        "alignLength": 1478,
-        "mismatches": 0,
-        "gapOpenings": 0,
-        "qStart": 1,
-        "qEnd": 1478,
-        "sStart": 1,
-        "sEnd": 1478,
-        "eValue": 0.0,
-        "taxonomy": "d__bacteria;clade__terrabacteria-group;p__taxid-201174;c__actinomycetes;o__micrococcales;f__micrococcaceae;g__glutamicibacter;s__glutamicibacter-mysorens",
-        "mutated": true,
-        "consensusBeans": null
-      }
+      "taxon": null
     },
     {
       "query": "NR_113097.873513",
@@ -59,7 +27,7 @@
         "sStart": 1,
         "sEnd": 1480,
         "eValue": 0.0,
-        "taxonomy": "d__bacteria;clade__fcb-group;clade__bacteroidota-chlorobiota-group;p__bacteroidota;c__taxid-200643;o__taxid-171549;f__taxid-171552;g__segatella;s__segatella-buccae",
+        "taxonomy": "d__bacteria;clade__fcb-group;clade__bacteroidota-chlorobiota-group;p__bacteroidota;c__bacteroidia;o__bacteroidales;f__prevotellaceae;g__segatella;s__segatella-buccae",
         "mutated": true,
         "consensusBeans": null
       }
@@ -79,35 +47,19 @@
         "sStart": 1,
         "sEnd": 1494,
         "eValue": 0.0,
-        "taxonomy": "d__bacteria;clade__fcb-group;clade__bacteroidota-chlorobiota-group;p__bacteroidota;c__taxid-200643;o__taxid-171549;f__taxid-171552;g__segatella;s__segatella-copri",
+        "taxonomy": "d__bacteria;clade__fcb-group;clade__bacteroidota-chlorobiota-group;p__bacteroidota;c__bacteroidia;o__bacteroidales;f__prevotellaceae;g__segatella;s__segatella-copri",
         "mutated": true,
         "consensusBeans": null
       }
     },
     {
       "query": "draft-1605",
-      "taxon": {
-        "rank": "species",
-        "identifier": "bacillus-rhizoplanae",
-        "percIdentity": 99.091,
-        "bitScore": 791.0,
-        "alignLength": 440,
-        "mismatches": 4,
-        "gapOpenings": 0,
-        "qStart": 1,
-        "qEnd": 440,
-        "sStart": 355,
-        "sEnd": 794,
-        "eValue": 0.0,
-        "taxonomy": "d__bacteria;clade__terrabacteria-group;p__bacillota;c__bacilli;o__bacillales;f__taxid-186817;g__bacillus;s__bacillus-rhizoplanae",
-        "mutated": true,
-        "consensusBeans": null
-      }
+      "taxon": null
     },
     {
       "query": "draft-2582",
       "taxon": {
-        "rank": "species",
+        "rank": "genus",
         "identifier": "pseudomonas",
         "percIdentity": 99.772,
         "bitScore": 806.0,
@@ -121,44 +73,13 @@
         "eValue": 0.0,
         "taxonomy": "d__bacteria;p__pseudomonadota;c__gammaproteobacteria;o__pseudomonadales;f__pseudomonadaceae;g__pseudomonas",
         "mutated": true,
-        "consensusBeans": [
-          {
-            "rank": "species-group",
-            "identifier": "pseudomonas-putida-group",
-            "occurrences": 4
-          },
-          {
-            "rank": "species",
-            "identifier": "pseudomonas-entomophila",
-            "occurrences": 1
-          },
-          {
-            "rank": "species",
-            "identifier": "pseudomonas-guariconensis",
-            "occurrences": 1
-          },
-          {
-            "rank": "species",
-            "identifier": "pseudomonas-oryzicola",
-            "occurrences": 1
-          },
-          {
-            "rank": "species",
-            "identifier": "pseudomonas-sichuanensis",
-            "occurrences": 1
-          },
-          {
-            "rank": "species",
-            "identifier": "pseudomonas-wayambapalatensis",
-            "occurrences": 1
-          }
-        ]
+        "consensusBeans": null
       }
     },
     {
       "query": "draft-5123",
       "taxon": {
-        "rank": "species",
+        "rank": "species-group",
         "identifier": "bacillus-mojavensis-subgroup",
         "percIdentity": 100.0,
         "bitScore": 815.0,
@@ -170,47 +91,20 @@
         "sStart": 217,
         "sEnd": 657,
         "eValue": 0.0,
-        "taxonomy": "d__bacteria;clade__terrabacteria-group;p__bacillota;c__bacilli;o__bacillales;f__taxid-186817;g__bacillus;species-group__bacillus-subtilis-group;species-subgroup__bacillus-mojavensis-subgroup",
-        "mutated": true,
-        "consensusBeans": [
-          {
-            "rank": "species",
-            "identifier": "bacillus-halotolerans",
-            "occurrences": 5
-          },
-          {
-            "rank": "species",
-            "identifier": "bacillus-mojavensis",
-            "occurrences": 4
-          }
-        ]
-      }
-    },
-    {
-      "query": "draft-8923",
-      "taxon": {
-        "rank": "species",
-        "identifier": "bacillus-rhizoplanae",
-        "percIdentity": 99.318,
-        "bitScore": 797.0,
-        "alignLength": 440,
-        "mismatches": 3,
-        "gapOpenings": 0,
-        "qStart": 1,
-        "qEnd": 440,
-        "sStart": 355,
-        "sEnd": 794,
-        "eValue": 0.0,
-        "taxonomy": "d__bacteria;clade__terrabacteria-group;p__bacillota;c__bacilli;o__bacillales;f__taxid-186817;g__bacillus;s__bacillus-rhizoplanae",
+        "taxonomy": "d__bacteria;clade__terrabacteria-group;p__bacillota;c__bacilli;o__bacillales;f__bacillaceae;g__bacillus;species-group__bacillus-subtilis-group;species-subgroup__bacillus-mojavensis-subgroup",
         "mutated": true,
         "consensusBeans": null
       }
     },
     {
+      "query": "draft-8923",
+      "taxon": null
+    },
+    {
       "query": "draft-893",
       "taxon": {
         "rank": "genus",
-        "identifier": "taxid-186817",
+        "identifier": "bacillaceae",
         "percIdentity": 98.024,
         "bitScore": 440.0,
         "alignLength": 253,
@@ -221,7 +115,7 @@
         "sStart": 353,
         "sEnd": 605,
         "eValue": 2.04e-123,
-        "taxonomy": "d__bacteria;clade__terrabacteria-group;p__bacillota;c__bacilli;o__bacillales;f__taxid-186817",
+        "taxonomy": "d__bacteria;clade__terrabacteria-group;p__bacillota;c__bacilli;o__bacillales;f__bacillaceae",
         "mutated": true,
         "consensusBeans": [
           {
@@ -239,9 +133,9 @@
     }
   ],
   "config": {
-    "subjectReads": "16S_ribosomal_RNA.fasta",
+    "subjectReads": "16S_ribosomal_RNA",
     "taxon": "bacteria",
-    "outFormat": 6,
+    "outFormat": "6 qseqid sacc staxid pident length mismatch gapopen qstart qend sstart send evalue bitscore",
     "maxTargetSeqs": 10,
     "percIdentity": 80,
     "queryCov": 80,

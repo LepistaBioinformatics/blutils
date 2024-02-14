@@ -3,7 +3,7 @@ use super::{
     get_taxonomy_from_position,
 };
 use crate::domain::dtos::{
-    blast_builder::BlastBuilder,
+    blast_builder::Taxon,
     blast_result::BlastResultRow,
     consensus_result::{
         ConsensusResult, QueryWithConsensus, QueryWithoutConsensus,
@@ -21,7 +21,7 @@ use tracing::warn;
 pub(super) fn find_single_query_consensus(
     query: String,
     result: Vec<BlastResultRow>,
-    config: BlastBuilder,
+    taxon: Taxon,
     strategy: ConsensusStrategy,
 ) -> Result<ConsensusResult, MappedErrors> {
     // ? -----------------------------------------------------------------------
@@ -85,7 +85,7 @@ pub(super) fn find_single_query_consensus(
             // Generate interpolated identities for the taxon.
             //
             let interpolated_identities = InterpolatedIdentity::new(
-                config.to_owned().taxon.to_owned(),
+                taxon.to_owned(),
                 taxonomies
                     .clone()
                     .into_iter()
@@ -206,7 +206,7 @@ pub(super) fn find_single_query_consensus(
         if score_results.len() > 1 {
             match find_multi_taxa_consensus(
                 score_results,
-                config.to_owned().taxon,
+                taxon,
                 no_consensus.clone(),
                 strategy.to_owned(),
             ) {
