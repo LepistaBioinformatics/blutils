@@ -16,5 +16,9 @@
     "taxid",
     "taxids"
   ],
-  "rust-analyzer.linkedProjects": ["./core/Cargo.toml"]
+  "rust-analyzer.linkedProjects": [
+    "./core/Cargo.toml",
+    "./ports/cli/Cargo.toml",
+    "./ports/cli/Cargo.toml"
+  ]
 }

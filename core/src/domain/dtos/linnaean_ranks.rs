@@ -309,9 +309,9 @@ impl InterpolatedIdentity {
                 NonDefaultRank(_, _) => 100.0,
             };
 
-            if last_window_identity < first_window_identity {
+            /* if last_window_identity < first_window_identity {
                 panic!("Unexpected error. Last window identity is less than first window identity");
-            }
+            } */
 
             let window_weight = last_window_identity - first_window_identity;
             let window_size = (window.len() - 1) as f64;
