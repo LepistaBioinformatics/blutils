@@ -1,3 +1,6 @@
 /target
 /Cargo.lock
 assets
+
+test/mock/output/blast.out
+test/mock/output/blutils.consensus.json
