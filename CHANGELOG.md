@@ -1,3 +1,14 @@
+## v7.0.5 (2024-02-18)
+
+### Fix
+
+- fix the consensus generation to include additional information from the blast results
+- wip - fix the database generation to allow low memory machines to generate databases
+
+### Refactor
+
+- refacrore blat command to split commands from execution parts
+
 ## v7.0.4 (2024-02-11)
 
 ### Fix

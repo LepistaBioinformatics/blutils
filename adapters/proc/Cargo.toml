@@ -17,7 +17,7 @@ categories.workspace = true
 
 mycelium-base.workspace = true
 subprocess.workspace = true
-blutils-core = { version = "7.0.4", path = "../../core" }
+blutils-core = { version = "7.0.5", path = "../../core" }
 
 
 [lib]
