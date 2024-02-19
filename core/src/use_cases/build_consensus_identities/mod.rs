@@ -2,13 +2,11 @@ mod build_blast_consensus_identity;
 mod find_multi_taxa_consensus;
 mod find_single_query_consensus;
 mod force_parsed_taxonomy;
-mod get_taxonomy_from_position;
 
 use build_blast_consensus_identity::*;
 use find_multi_taxa_consensus::*;
 use find_single_query_consensus::*;
 use force_parsed_taxonomy::*;
-use get_taxonomy_from_position::*;
 use polars_core::{
     export::num::ToPrimitive, prelude::NamedFrom, series::Series,
 };
@@ -20,7 +18,7 @@ use crate::domain::dtos::{
     consensus_strategy::ConsensusStrategy,
     parallel_blast_output::ParallelBlastOutput,
     taxonomies_map::TaxonomiesMap,
-    taxonomy::Taxonomy,
+    taxonomy_bean::Taxonomy,
 };
 
 use mycelium_base::utils::errors::{execution_err, use_case_err, MappedErrors};
@@ -29,7 +27,7 @@ use polars_io::SerReader;
 use polars_lazy::prelude::*;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::{collections::HashMap, fs::read_to_string, path::Path, sync::Arc};
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 /// BUild consensus identities from BlastN output.
 ///
@@ -46,21 +44,29 @@ pub fn build_consensus_identities(
     strategy: ConsensusStrategy,
     use_taxid: Option<bool>,
 ) -> Result<Vec<ConsensusResult>, MappedErrors> {
-    // ? ----------------------------------------------------------------------
+    // ? -----------------------------------------------------------------------
     // ? Load blast output as lazy
-    // ? ----------------------------------------------------------------------
+    // ? -----------------------------------------------------------------------
+
+    info!("Loading Blast results");
 
     let blast_output_df = get_results_dataframe(&blast_output.output_file)?;
 
-    // ? ----------------------------------------------------------------------
+    info!("Blast results loaded");
+
+    // ? -----------------------------------------------------------------------
     // ? Load taxonomies as lazy
-    // ? ----------------------------------------------------------------------
+    // ? -----------------------------------------------------------------------
+
+    info!("Loading Blutils taxonomies");
 
     let taxonomies_df = get_taxonomies_dataframe(taxonomies_file, use_taxid)?;
 
-    // ? ----------------------------------------------------------------------
+    info!("Blutils taxonomies loaded");
+
+    // ? -----------------------------------------------------------------------
     // ? Merge files as lazy
-    // ? ----------------------------------------------------------------------
+    // ? -----------------------------------------------------------------------
 
     let joined_df = blast_output_df.lazy().left_join(
         taxonomies_df.lazy(),
@@ -68,9 +74,9 @@ pub fn build_consensus_identities(
         col("taxid"),
     );
 
-    // ? ----------------------------------------------------------------------
+    // ? -----------------------------------------------------------------------
     // ? Build consensus vector
-    // ? ----------------------------------------------------------------------
+    // ? -----------------------------------------------------------------------
 
     let mut query_results = fold_results_by_query(joined_df)?;
 

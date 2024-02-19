@@ -1,22 +1,18 @@
-use super::{
-    find_multi_taxa_consensus, force_parsed_taxonomy,
-    get_taxonomy_from_position,
-};
+use super::{find_multi_taxa_consensus, force_parsed_taxonomy};
 use crate::domain::dtos::{
     blast_builder::Taxon,
     blast_result::BlastResultRow,
     consensus_result::{
-        ConsensusResult, QueryWithConsensus, QueryWithoutConsensus,
+        ConsensusBean, ConsensusResult, QueryWithConsensus,
+        QueryWithoutConsensus,
     },
     consensus_strategy::ConsensusStrategy,
-    linnaean_ranks::{
-        InterpolatedIdentity, LinnaeanRank, RankedLinnaeanIdentity,
-    },
+    linnaean_ranks::InterpolatedIdentity,
+    taxonomy_bean::{Taxonomy, TaxonomyBean},
 };
 
 use mycelium_base::utils::errors::MappedErrors;
 use std::collections::HashMap;
-use tracing::warn;
 
 pub(super) fn find_single_query_consensus(
     query: String,
@@ -51,7 +47,7 @@ pub(super) fn find_single_query_consensus(
     };
 
     for score in sorted_keys.to_owned().into_iter() {
-        let score_results = result
+        let bit_score_matches = result
             .to_owned()
             .into_iter()
             .filter_map(|i| {
@@ -68,19 +64,28 @@ pub(super) fn find_single_query_consensus(
         //
         // Early return case no results found.
         //
-        if score_results.len() == 0 {
+        if bit_score_matches.len() == 0 {
             return Ok(ConsensusResult::NoConsensusFound(no_consensus));
         }
         //
         // Fetch the lower taxonomic rank case only one record returned.
         //
-        if score_results.len() == 1 {
+        if bit_score_matches.len() == 1 {
+            //
+            // Unwrap the single match record.
+            //
+            let target_blast_match = match bit_score_matches.first() {
+                Some(record) => record,
+                None => {
+                    return Ok(ConsensusResult::NoConsensusFound(no_consensus));
+                }
+            };
             //
             // This action prevents the program to panic when the taxonomy
             // is not already parsed.
             //
             let taxonomies =
-                force_parsed_taxonomy(score_results[0].taxonomy.to_owned());
+                force_parsed_taxonomy(target_blast_match.taxonomy.to_owned());
             //
             // Generate interpolated identities for the taxon.
             //
@@ -89,123 +94,63 @@ pub(super) fn find_single_query_consensus(
                 taxonomies
                     .clone()
                     .into_iter()
-                    .map(|bean| bean.rank)
+                    .map(|bean| bean.reached_rank)
                     .collect(),
             )?;
-
-            for rank in LinnaeanRank::ordered_iter(None) {
-                //
-                // Try to find the consensus for the rank.
-                //
-                match taxonomies
-                    .to_owned()
-                    .into_iter()
-                    .find(|i| &i.rank == rank)
-                {
-                    None => {
-                        warn!(
-                            "No consensus found for query (at rank {}): {}",
-                            rank, query
-                        );
-
-                        return Ok(ConsensusResult::NoConsensusFound(
-                            no_consensus,
-                        ));
-                    }
-                    Some(mut res) => {
-                        let identity_adjusted_rank =
-                            match interpolated_identities
-                                .get_rank_adjusted_by_identity(
-                                    score_results[0].perc_identity,
-                                ) {
-                                Some(rank) => rank,
-                                None => {
-                                    warn!(
-                                        "No consensus found for query (at taxonomy {}): {}",
-                                        res.rank, query
-                                    );
-
-                                    return Ok(
-                                        ConsensusResult::NoConsensusFound(
-                                            no_consensus,
-                                        ),
-                                    );
-                                }
-                            };
-
-                        let reviewed_rank = match identity_adjusted_rank {
-                            RankedLinnaeanIdentity::DefaultRank(rank, _) => {
-                                rank
-                            }
-                            RankedLinnaeanIdentity::NonDefaultRank(rank, _) => {
-                                LinnaeanRank::Other(rank)
-                            }
-                        };
-
-                        if res.to_owned().rank == reviewed_rank {
-                            res.mutated = true;
-                        }
-
-                        let position = match interpolated_identities
-                            .interpolation()
-                            .to_owned()
+            //
+            // Fetch the adjusted taxonomy based on the interpolated identities.
+            //
+            let identity_adjusted_taxonomy = interpolated_identities
+                .get_adjusted_taxonomy_by_identity(
+                    target_blast_match.perc_identity,
+                    taxonomies.to_owned(),
+                );
+            //
+            // Unwrap the last taxonomy element to be used as the final taxon.
+            //
+            let target_bean = match identity_adjusted_taxonomy.last() {
+                Some(bean) => bean.to_owned(),
+                None => panic!(
+                    "No taxonomy found for result: {:?}",
+                    target_blast_match.subject_accession
+                ),
+            };
+            //
+            // Initialize the consensus bean.
+            //
+            let consensus_bean = ConsensusBean::from_taxonomy_bean(
+                target_bean.to_owned(),
+                Some(target_blast_match.subject_accession.to_owned()),
+                Taxonomy::taxonomy_beans_to_string(taxonomies.to_owned()),
+            );
+            //
+            // Return the consensus result.
+            //
+            return Ok(ConsensusResult::ConsensusFound(QueryWithConsensus {
+                query,
+                taxon: Some(TaxonomyBean {
+                    single_match: true,
+                    identifier: target_blast_match.subject_taxid.to_string(),
+                    taxonomy: Some(
+                        identity_adjusted_taxonomy
                             .into_iter()
-                            .position(|i| match i {
-                                RankedLinnaeanIdentity::DefaultRank(
-                                    rank,
-                                    _,
-                                ) => rank == reviewed_rank,
-                                RankedLinnaeanIdentity::NonDefaultRank(
-                                    rank,
-                                    _,
-                                ) => LinnaeanRank::Other(rank) == reviewed_rank,
-                            }) {
-                            Some(position) => position,
-                            None => {
-                                panic!("Unexpected error detected on find consensus position")
-                            }
-                        };
-
-                        let filtered_taxonomy = get_taxonomy_from_position(
-                            position,
-                            taxonomies.to_owned(),
-                        );
-
-                        let lower_taxonomy = filtered_taxonomy.last();
-
-                        if lower_taxonomy.is_some() {
-                            let lower_taxonomy = lower_taxonomy.unwrap();
-
-                            res.rank = lower_taxonomy.to_owned().rank;
-                            res.identifier =
-                                lower_taxonomy.identifier.to_owned();
-                            res.taxonomy = Some(
-                                filtered_taxonomy
-                                    .into_iter()
-                                    .map(|i| i.taxonomy_to_string())
-                                    .collect::<Vec<String>>()
-                                    .join(";"),
-                            );
-                        }
-
-                        return Ok(ConsensusResult::ConsensusFound(
-                            QueryWithConsensus {
-                                query,
-                                taxon: Some(res),
-                            },
-                        ));
-                    }
-                }
-            }
-
-            return Ok(ConsensusResult::NoConsensusFound(no_consensus));
+                            .map(|i| i.taxonomy_to_string())
+                            .collect::<Vec<String>>()
+                            .join(";"),
+                    ),
+                    consensus_beans: Some(ConsensusBean::fold_consensus_list(
+                        vec![consensus_bean],
+                    )),
+                    ..target_bean
+                }),
+            }));
         }
         //
         // Fetch the lower taxonomic rank case more than one record returned.
         //
-        if score_results.len() > 1 {
+        if bit_score_matches.len() > 1 {
             match find_multi_taxa_consensus(
-                score_results,
+                bit_score_matches,
                 taxon,
                 no_consensus.clone(),
                 strategy.to_owned(),

@@ -1,6 +1,6 @@
 use super::{
     linnaean_ranks::LinnaeanRank,
-    taxonomy::{Taxonomy, TaxonomyBean},
+    taxonomy_bean::{Taxonomy, TaxonomyBean},
 };
 
 use mycelium_base::utils::errors::{invalid_arg_err, MappedErrors};
@@ -70,7 +70,7 @@ impl BlastResultRow {
                     // `TaxonomyElement` struct.
                     //
                     Some(TaxonomyBean {
-                        rank: match splitted_tax[0]
+                        reached_rank: match splitted_tax[0]
                             .to_owned()
                             .parse::<LinnaeanRank>()
                         {
@@ -84,6 +84,7 @@ impl BlastResultRow {
                             },
                             Ok(res) => res,
                         },
+                        max_allowed_rank: None,
                         identifier: match splitted_tax[1].to_owned().parse::<String>() {
                             Err(err) => {
                                 error!(
@@ -97,16 +98,9 @@ impl BlastResultRow {
                         },
                         perc_identity: self.perc_identity,
                         bit_score: self.bit_score as f64,
-                        align_length: self.align_length,
-                        mismatches: self.mismatches,
-                        gap_openings: self.gap_openings,
-                        q_start: self.q_start,
-                        q_end: self.q_end,
-                        s_start: self.s_start,
-                        s_end: self.s_end,
-                        e_value: self.e_value,
                         taxonomy: None,
                         mutated: false,
+                        single_match: false,
                         consensus_beans: None,
                     })
                 })

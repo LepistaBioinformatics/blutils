@@ -1,5 +1,6 @@
 use self::{LinnaeanRank::*, RankedLinnaeanIdentity::*};
 use super::blast_builder::Taxon::{self, *};
+use super::taxonomy_bean::TaxonomyBean;
 use crate::domain::utils::round;
 
 use core::fmt;
@@ -154,19 +155,40 @@ impl InterpolatedIdentity {
         &self,
         identity: f64,
     ) -> Option<RankedLinnaeanIdentity> {
-        self.interpolation
-            .to_owned()
+        let mut result =
+            self.interpolation
+                .to_owned()
+                .into_iter()
+                .skip_while(|rank| {
+                    let rank_identity = match rank {
+                        DefaultRank(_, rank_identity) => *rank_identity,
+                        NonDefaultRank(_, rank_identity) => *rank_identity,
+                    };
+
+                    identity > rank_identity
+                });
+
+        result.find_map(|rank| Some(rank))
+    }
+
+    pub(crate) fn get_adjusted_taxonomy_by_identity(
+        &self,
+        identity: f64,
+        taxonomy: Vec<TaxonomyBean>,
+    ) -> Vec<TaxonomyBean> {
+        self.interpolation()
             .into_iter()
-            .rev()
-            .skip_while(|rank| {
-                let rank_identity = match rank {
-                    DefaultRank(_, rank_identity) => *rank_identity,
-                    NonDefaultRank(_, rank_identity) => *rank_identity,
+            .zip(taxonomy.to_owned().into_iter())
+            .filter(|(interpolated, _)| {
+                let item_identity = match interpolated {
+                    DefaultRank(_, perc_identity) => perc_identity,
+                    NonDefaultRank(_, perc_identity) => perc_identity,
                 };
 
-                rank_identity >= identity
+                &identity >= item_identity
             })
-            .find_map(|rank| Some(rank))
+            .map(|(_, taxonomy)| taxonomy)
+            .collect()
     }
 
     ///

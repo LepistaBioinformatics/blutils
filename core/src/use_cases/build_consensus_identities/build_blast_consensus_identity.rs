@@ -1,63 +1,47 @@
-use std::collections::HashMap;
-
-use super::get_taxonomy_from_position;
 use crate::domain::dtos::{
-    consensus_result::QueryWithConsensus,
+    consensus_result::{ConsensusBean, QueryWithConsensus},
     linnaean_ranks::{
-        InterpolatedIdentity, LinnaeanRank, RankedLinnaeanIdentity,
+        InterpolatedIdentity, LinnaeanRank, RankedLinnaeanIdentity::*,
     },
-    taxonomy::{ConsensusBean, TaxonomyBean},
+    taxonomy_bean::TaxonomyBean,
 };
 
 pub(super) fn build_blast_consensus_identity(
     query: String,
     mut bean: TaxonomyBean,
+    max_allowed_identity: f64,
+    target_as_single_match: bool,
     bean_index: usize,
     taxonomy: Vec<TaxonomyBean>,
     interpolated_taxonomy: InterpolatedIdentity,
-    consensus_beans: Option<Vec<TaxonomyBean>>,
+    consensus_beans: Option<Vec<ConsensusBean>>,
 ) -> QueryWithConsensus {
     //
     // Update the rank of the bean according to the interpolated taxonomy.
     //
-    bean.rank = match interpolated_taxonomy
-        .get_rank_adjusted_by_identity(bean.perc_identity as f64)
+    bean.max_allowed_rank = match interpolated_taxonomy
+        .get_rank_adjusted_by_identity(max_allowed_identity)
     {
         Some(identity_adjusted_rank) => match identity_adjusted_rank {
-            RankedLinnaeanIdentity::DefaultRank(rank, _) => rank,
-            RankedLinnaeanIdentity::NonDefaultRank(rank, _) => {
-                LinnaeanRank::Other(rank)
-            }
+            DefaultRank(rank, _) => Some(rank),
+            NonDefaultRank(rank, _) => Some(LinnaeanRank::Other(rank)),
         },
-        None => bean.rank,
+        None => None,
     };
+
+    //
+    // Check for mutation of record
+    //
+    if let Some(allowed_rank) = bean.max_allowed_rank.to_owned() {
+        bean.mutated = bean.reached_rank != allowed_rank;
+    }
 
     //
     // Fold consensus beans by rank and identity to aggregate the occurrences
     // of each taxon.
     //
-    let mut consensus_beans = consensus_beans
-        .unwrap_or_default()
-        .into_iter()
-        .fold(HashMap::<String, ConsensusBean>::new(), |mut acc, bean| {
-            let rank = bean.rank.to_string();
-            let identifier = bean.identifier.to_string();
-
-            let consensus_bean = acc
-                .entry(format!("{}__{}", rank, identifier))
-                .or_insert(ConsensusBean {
-                    rank: bean.rank,
-                    identifier: bean.identifier,
-                    occurrences: 0,
-                });
-
-            consensus_bean.occurrences += 1;
-
-            acc
-        })
-        .into_iter()
-        .map(|(_, bean)| bean)
-        .collect::<Vec<ConsensusBean>>();
+    let mut consensus_beans =
+        ConsensusBean::fold_consensus_list(consensus_beans.unwrap_or_default());
 
     //
     // Sort consensus beans by occurrences and identifier.
@@ -75,10 +59,52 @@ pub(super) fn build_blast_consensus_identity(
                 )
         });
 
-        bean.consensus_beans = Some(consensus_beans);
+        bean.consensus_beans = Some(consensus_beans.to_owned());
     }
 
-    match taxonomy.get(bean_index) {
+    if let Some(_bean) = taxonomy.get(bean_index) {
+        let adjusted_taxonomy: Vec<TaxonomyBean> = {
+            let base_iterator = interpolated_taxonomy
+                .get_adjusted_taxonomy_by_identity(
+                    max_allowed_identity,
+                    taxonomy.to_owned(),
+                )
+                .into_iter();
+
+            if target_as_single_match && consensus_beans.len() == 1 {
+                base_iterator.collect()
+            } else {
+                base_iterator
+                    .enumerate()
+                    .take_while(|(index, _)| index <= &bean_index)
+                    .map(|i| i.1.to_owned())
+                    .collect()
+            }
+        };
+
+        let last_taxonomy = adjusted_taxonomy.last().unwrap_or(_bean);
+
+        bean.identifier = last_taxonomy.identifier.to_owned();
+        bean.reached_rank = last_taxonomy.reached_rank.to_owned();
+        bean.taxonomy = Some(
+            adjusted_taxonomy
+                .into_iter()
+                .map(|i| i.taxonomy_to_string())
+                .collect::<Vec<String>>()
+                .join(";"),
+        )
+        //bean.taxonomy = Some(
+        //    filtered_taxonomy
+        //        .into_iter()
+        //        .map(|i| i.taxonomy_to_string())
+        //        .collect::<Vec<String>>()
+        //        .join(";"),
+        //);
+    } else {
+        panic!("No taxonomy found for bean at index: {}", bean_index);
+    }
+
+    /* match taxonomy.get(bean_index) {
         Some(_bean) => {
             let desired_rank_position =
                 taxonomy.to_owned().into_iter().position(|item| {
@@ -90,7 +116,8 @@ pub(super) fn build_blast_consensus_identity(
                 taxonomy.to_owned(),
             );
 
-            bean.mutated = true;
+            println!("Filtered taxonomy: {:?}", filtered_taxonomy);
+
             bean.identifier = _bean.identifier.to_owned();
             bean.taxonomy = Some(
                 filtered_taxonomy
@@ -109,10 +136,10 @@ pub(super) fn build_blast_consensus_identity(
                 .to_owned()
                 .position(|i| match i {
                     RankedLinnaeanIdentity::DefaultRank(rank, _) => {
-                        rank == bean.rank
+                        rank == bean.reached_rank
                     }
                     RankedLinnaeanIdentity::NonDefaultRank(rank, _) => {
-                        LinnaeanRank::Other(rank) == bean.rank
+                        LinnaeanRank::Other(rank) == bean.reached_rank
                     }
                 });
 
@@ -124,7 +151,6 @@ pub(super) fn build_blast_consensus_identity(
             let lower_taxonomy = filtered_taxonomy.last();
 
             if lower_taxonomy.is_some() {
-                bean.mutated = true;
                 bean.identifier = lower_taxonomy.unwrap().identifier.to_owned();
                 bean.taxonomy = Some(
                     filtered_taxonomy
@@ -135,7 +161,7 @@ pub(super) fn build_blast_consensus_identity(
                 );
             }
         }
-    }
+    } */
 
     QueryWithConsensus {
         query,

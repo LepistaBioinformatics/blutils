@@ -461,16 +461,7 @@ pub(super) fn build_taxonomy_database(
             Err(_) => slugify!(ranked_tax_id.rank.as_str(), separator = "-"),
         };
 
-        //
-        // Write the names based taxonomies to the output files
-        //
-        let ranked_names = lineage
-            .iter()
-            .map(|(_, ranked_name)| ranked_name.to_string())
-            .collect::<Vec<String>>()
-            .join(";");
-
-        match write_or_append_to_file(format!(
+        /* match write_or_append_to_file(format!(
             "{header}\t{ranked_names};{rank}__{name}\n",
             header = header,
             ranked_names = ranked_names,
@@ -483,24 +474,42 @@ pub(super) fn build_taxonomy_database(
                     "Unexpected error detected on write names taxonomy file: {err}"
                 );
             }
-        };
+        }; */
 
         //
         // Write the taxi-ds based taxonomies to the output files
         //
-        let ranked_taxids = lineage
+        let mut ranked_taxids = lineage
             .iter()
             .map(|(ranked_taxid,_)| ranked_taxid.to_string())
             .collect::<Vec<String>>()
             .join(";");
 
-            taxonomies.push(TaxonomyMapUnit {
-                taxid: tax_id,
-                rank: slug_rank,
-                numeric_lineage: ranked_taxids,
-                text_lineage: ranked_names,
-                accessions: accessions.to_owned(),
-            });
+        ranked_taxids = format!("{};{}__{}", ranked_taxids, slug_rank, tax_id);
+
+        //
+        // Write the names based taxonomies to the output files
+        //
+        let mut ranked_names = lineage
+            .iter()
+            .map(|(_, ranked_name)| ranked_name.to_string())
+            .collect::<Vec<String>>()
+            .join(";");
+
+        ranked_names = format!(
+            "{};{}__{}", 
+            ranked_names, 
+            slug_rank, 
+            slugify!(ranked_tax_id.name.as_str()).replace("__", "_")
+        );
+
+        taxonomies.push(TaxonomyMapUnit {
+            taxid: tax_id,
+            rank: slug_rank,
+            numeric_lineage: ranked_taxids,
+            text_lineage: ranked_names,
+            accessions: accessions.to_owned(),
+        });
     });
 
     let mut file = match File::create(output_database_file) {

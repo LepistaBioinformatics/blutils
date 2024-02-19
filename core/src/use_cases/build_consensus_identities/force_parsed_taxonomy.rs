@@ -1,4 +1,4 @@
-use crate::domain::dtos::taxonomy::{Taxonomy, TaxonomyBean};
+use crate::domain::dtos::taxonomy_bean::{Taxonomy, TaxonomyBean};
 
 pub(super) fn force_parsed_taxonomy(taxonomy: Taxonomy) -> Vec<TaxonomyBean> {
     match taxonomy {
