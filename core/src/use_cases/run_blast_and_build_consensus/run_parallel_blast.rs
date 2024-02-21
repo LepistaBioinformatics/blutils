@@ -6,7 +6,7 @@ use crate::{
         },
         entities::execute_blastn::{ExecuteBlastn, ExecutionResponse},
     },
-    use_cases::shared::write_or_append_to_file,
+    use_cases::shared::{validate_blast_database, write_or_append_to_file},
 };
 
 use mycelium_base::utils::errors::{execution_err, MappedErrors};
@@ -14,7 +14,7 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::{
     fs::{create_dir, remove_file, File},
     io::{BufRead, BufReader},
-    path::Path,
+    path::{Path, PathBuf},
 };
 use tracing::{debug, info, warn};
 
@@ -95,6 +95,10 @@ pub(super) fn run_parallel_blast(
     // ? Execute parallel BlastN and persist output
     // ? ----------------------------------------------------------------------
 
+    validate_blast_database(&PathBuf::from(
+        blast_config.subject_reads.to_owned(),
+    ))?;
+
     // ? Build thread pool
 
     let pool = rayon::ThreadPoolBuilder::new()
@@ -132,12 +136,9 @@ pub(super) fn run_parallel_blast(
 
     // ? Processing sequences as chunks
 
-    //let chunk_size = source_sequences.len() / threads;
-    //let chunk_size = if chunk_size == 0 { 1 } else { chunk_size };
     let chunk_size = 50;
     debug!("Total Sequences: {}", source_sequences.len());
     debug!("Number of Threads: {}", threads);
-    //debug!("Chunk Size: {}", chunk_size);
 
     source_sequences
         .chunks(chunk_size)

@@ -1,3 +1,5 @@
+use crate::use_cases::shared::validate_blast_database;
+
 use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use std::{
     collections::HashMap,
@@ -21,31 +23,7 @@ pub(super) fn build_accessions_map(
     // ? Validate blast database
     // ? -----------------------------------------------------------------------
 
-    let mut copy_blast_database_path =
-        PathBuf::from(blast_database_path.to_owned());
-
-    copy_blast_database_path.set_extension("nsq");
-
-    if !copy_blast_database_path.exists() {
-        return execution_err(format!(
-            "Blast database not found: {:?}",
-            copy_blast_database_path
-        ))
-        .as_error();
-    }
-
-    let copy_taxdb_path = copy_blast_database_path
-        .parent()
-        .unwrap_or(&PathBuf::from(blast_database_path))
-        .join("taxdb.btd");
-
-    if !copy_taxdb_path.exists() {
-        return execution_err(format!(
-            "Taxdb not found: {:?}",
-            copy_taxdb_path
-        ))
-        .as_error();
-    }
+    validate_blast_database(&PathBuf::from(blast_database_path))?;
 
     // ? -----------------------------------------------------------------------
     // ? Extract identifiers from blast database

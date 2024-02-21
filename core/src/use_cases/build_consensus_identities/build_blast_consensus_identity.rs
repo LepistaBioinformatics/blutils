@@ -93,75 +93,9 @@ pub(super) fn build_blast_consensus_identity(
                 .collect::<Vec<String>>()
                 .join(";"),
         )
-        //bean.taxonomy = Some(
-        //    filtered_taxonomy
-        //        .into_iter()
-        //        .map(|i| i.taxonomy_to_string())
-        //        .collect::<Vec<String>>()
-        //        .join(";"),
-        //);
     } else {
         panic!("No taxonomy found for bean at index: {}", bean_index);
     }
-
-    /* match taxonomy.get(bean_index) {
-        Some(_bean) => {
-            let desired_rank_position =
-                taxonomy.to_owned().into_iter().position(|item| {
-                    item.identifier == _bean.identifier.to_owned()
-                });
-
-            let filtered_taxonomy = get_taxonomy_from_position(
-                desired_rank_position.unwrap(),
-                taxonomy.to_owned(),
-            );
-
-            println!("Filtered taxonomy: {:?}", filtered_taxonomy);
-
-            bean.identifier = _bean.identifier.to_owned();
-            bean.taxonomy = Some(
-                filtered_taxonomy
-                    .into_iter()
-                    .map(|i| i.taxonomy_to_string())
-                    .collect::<Vec<String>>()
-                    .join(";"),
-            );
-        }
-        None => {
-            let desired_rank_position = interpolated_taxonomy
-                .interpolation()
-                .to_owned()
-                .into_iter()
-                .rev()
-                .to_owned()
-                .position(|i| match i {
-                    RankedLinnaeanIdentity::DefaultRank(rank, _) => {
-                        rank == bean.reached_rank
-                    }
-                    RankedLinnaeanIdentity::NonDefaultRank(rank, _) => {
-                        LinnaeanRank::Other(rank) == bean.reached_rank
-                    }
-                });
-
-            let filtered_taxonomy = get_taxonomy_from_position(
-                desired_rank_position.unwrap(),
-                taxonomy.to_owned(),
-            );
-
-            let lower_taxonomy = filtered_taxonomy.last();
-
-            if lower_taxonomy.is_some() {
-                bean.identifier = lower_taxonomy.unwrap().identifier.to_owned();
-                bean.taxonomy = Some(
-                    filtered_taxonomy
-                        .into_iter()
-                        .map(|i| i.taxonomy_to_string())
-                        .collect::<Vec<String>>()
-                        .join(";"),
-                );
-            }
-        }
-    } */
 
     QueryWithConsensus {
         query,

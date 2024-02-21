@@ -1,4 +1,4 @@
-use super::shared::write_or_append_to_file;
+use super::shared::{validate_blast_database, write_or_append_to_file};
 use crate::domain::dtos::taxonomies_map::TaxonomiesMap;
 
 use mycelium_base::utils::errors::{execution_err, MappedErrors};
@@ -77,36 +77,10 @@ pub fn build_qiime_db_from_blutils_db(
         });
 
     // ? -----------------------------------------------------------------------
-    // ? Validate blast database
+    // ? Validate and parse the blast database
     // ? -----------------------------------------------------------------------
 
-    let mut copy_blast_database_path = blast_database_path.to_owned();
-    copy_blast_database_path.set_extension("nsq");
-
-    if !copy_blast_database_path.exists() {
-        return execution_err(format!(
-            "Blast database not found: {:?}",
-            copy_blast_database_path
-        ))
-        .as_error();
-    }
-
-    let copy_taxdb_path = copy_blast_database_path
-        .parent()
-        .unwrap_or(blast_database_path)
-        .join("taxdb.btd");
-
-    if !copy_taxdb_path.exists() {
-        return execution_err(format!(
-            "Taxdb not found: {:?}",
-            copy_taxdb_path
-        ))
-        .as_error();
-    }
-
-    // ? -----------------------------------------------------------------------
-    // ? Parse the blast database
-    // ? -----------------------------------------------------------------------
+    validate_blast_database(blast_database_path)?;
 
     output_sequences_file.set_extension("fna");
     let invalid_line = "null";
