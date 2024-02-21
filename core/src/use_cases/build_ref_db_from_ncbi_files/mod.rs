@@ -37,6 +37,7 @@ pub fn build_ref_db_from_ncbi_files(
     ignore_taxids: Option<Vec<u64>>,
     replace_rank: Option<HashMap<String, String>>,
     drop_non_linnaean_taxonomies: Option<bool>,
+    output_file_path: PathBuf,
 ) -> Result<(), MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Build blast database
@@ -76,6 +77,7 @@ pub fn build_ref_db_from_ncbi_files(
         replace_rank,
         drop_non_linnaean_taxonomies,
         blast_database_path.to_string(),
+        output_file_path,
     )?;
 
     info!("Taxonomy database built successfully");

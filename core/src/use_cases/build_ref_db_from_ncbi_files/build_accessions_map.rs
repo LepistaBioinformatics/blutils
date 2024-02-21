@@ -2,6 +2,7 @@ use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use std::{
     collections::HashMap,
     io::{BufRead, BufReader},
+    path::PathBuf,
 };
 use subprocess::Exec;
 use tracing::warn;
@@ -15,6 +16,40 @@ pub(super) fn build_accessions_map(
 
     let mut taxids_map = HashMap::<u64, Vec<String>>::new();
     let invalid_line = "null";
+
+    // ? -----------------------------------------------------------------------
+    // ? Validate blast database
+    // ? -----------------------------------------------------------------------
+
+    let mut copy_blast_database_path =
+        PathBuf::from(blast_database_path.to_owned());
+
+    copy_blast_database_path.set_extension("nsq");
+
+    if !copy_blast_database_path.exists() {
+        return execution_err(format!(
+            "Blast database not found: {:?}",
+            copy_blast_database_path
+        ))
+        .as_error();
+    }
+
+    let copy_taxdb_path = copy_blast_database_path
+        .parent()
+        .unwrap_or(&PathBuf::from(blast_database_path))
+        .join("taxdb.btd");
+
+    if !copy_taxdb_path.exists() {
+        return execution_err(format!(
+            "Taxdb not found: {:?}",
+            copy_taxdb_path
+        ))
+        .as_error();
+    }
+
+    // ? -----------------------------------------------------------------------
+    // ? Extract identifiers from blast database
+    // ? -----------------------------------------------------------------------
 
     match Exec::cmd("blastdbcmd")
         .arg("-entry")

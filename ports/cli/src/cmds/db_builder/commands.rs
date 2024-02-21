@@ -1,8 +1,4 @@
-use blul_core::use_cases::{
-    build_ref_db_from_ncbi_files, check_host_requirements,
-};
 use clap::{ArgAction, Parser};
-use core::panic;
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -13,12 +9,15 @@ pub(crate) struct Arguments {
 
 #[derive(Parser, Debug)]
 pub(crate) enum Commands {
-    /// Run blast and generate consensus identities.
-    BlutilsDatabase(BuildDatabaseArguments),
+    /// Build the Blutils database.
+    Blu(BuildBlutilsDatabaseArguments),
+
+    /// Build QIIME database from the Blutils database.
+    Qiime(BuildQiimeDatabaseArguments),
 }
 
 #[derive(Parser, Debug)]
-pub(crate) struct BuildDatabaseArguments {
+pub(crate) struct BuildBlutilsDatabaseArguments {
     /// The path to the blast database
     ///
     /// The path to the blast database that will be used to build the consensus
@@ -26,7 +25,7 @@ pub(crate) struct BuildDatabaseArguments {
     /// database should be created using the makeblastdb command from the blast
     /// package.
     ///
-    blast_database_path: String,
+    pub(super) blast_database_path: String,
 
     /// The path to the taxdump directory
     ///
@@ -35,7 +34,12 @@ pub(crate) struct BuildDatabaseArguments {
     /// taxonomy database. The taxdump should be downloaded from the NCBI and
     /// uncompressed.
     ///
-    taxdump_directory_path: PathBuf,
+    pub(super) taxdump_directory_path: PathBuf,
+
+    /// The path where the output file will be saved
+    ///
+    /// The output file is a JSON file that contains the taxonomies database.
+    pub(super) output_file_path: PathBuf,
 
     /// Drop non Linnaean taxonomies
     ///
@@ -45,7 +49,7 @@ pub(crate) struct BuildDatabaseArguments {
     /// false.
     ///
     #[arg(short, long, action=ArgAction::SetTrue)]
-    drop_non_linnaean_taxonomies: Option<bool>,
+    pub(super) drop_non_linnaean_taxonomies: Option<bool>,
 
     /// Specify taxids to be skipped
     /// Example: --skip-taxid 131567
@@ -55,7 +59,7 @@ pub(crate) struct BuildDatabaseArguments {
     /// Example: --skip-taxid 131567 --skip-taxid 2
     ///
     #[arg(short, long)]
-    skip_taxid: Option<Vec<u64>>,
+    pub(super) skip_taxid: Option<Vec<u64>>,
 
     /// Replace a rank by another
     /// Example: --replace-rank 'superkingdom=d'. It is common to use this
@@ -65,37 +69,27 @@ pub(crate) struct BuildDatabaseArguments {
     /// Example: --replace-rank 'superkingdom=d' --replace-rank 'clade=cl'
     ///
     #[arg(short, long)]
-    replace_rank: Option<Vec<String>>,
+    pub(super) replace_rank: Option<Vec<String>>,
 }
 
-pub(crate) fn run_blast_and_build_consensus_cmd(args: BuildDatabaseArguments) {
-    // Execute system checks before running the blast
-    if let Err(err) = check_host_requirements(Some("debug")) {
-        panic!("{err}");
-    }
+#[derive(Parser, Debug)]
+pub(crate) struct BuildQiimeDatabaseArguments {
+    /// The path to the blutils taxonomy database
+    pub(super) taxonomies_database_path: PathBuf,
 
-    match build_ref_db_from_ncbi_files(
-        &args.blast_database_path,
-        args.taxdump_directory_path,
-        args.skip_taxid,
-        match args.replace_rank {
-            Some(ranks) => {
-                let mut replace_rank = std::collections::HashMap::new();
-                for rank in ranks {
-                    let splitted: Vec<&str> = rank.split("=").collect();
-                    if splitted.len() != 2 {
-                        panic!("Invalid replace rank option: {:?}", rank);
-                    }
-                    replace_rank
-                        .insert(splitted[0].to_owned(), splitted[1].to_owned());
-                }
-                Some(replace_rank)
-            }
-            None => None,
-        },
-        args.drop_non_linnaean_taxonomies,
-    ) {
-        Err(err) => panic!("{err}"),
-        Ok(_) => (),
-    };
+    /// The path to the QIIME output taxonomies file
+    pub(super) output_taxonomies_file: PathBuf,
+
+    /// The path to the blast database
+    pub(super) blast_database_path: PathBuf,
+
+    /// The path to the QIIME output sequences file
+    pub(super) output_sequences_file: PathBuf,
+
+    /// Use taxid instead of taxonomy
+    ///
+    /// If true, the consensus will be based on the taxid instead of the
+    /// taxonomy itself.
+    #[arg(short, long, default_value = "false")]
+    pub(super) use_taxid: bool,
 }

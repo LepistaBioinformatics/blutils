@@ -57,6 +57,7 @@ pub(super) fn build_taxonomy_database(
     replace_rank: Option<HashMap<String, String>>,
     drop_non_linnaean_taxonomies: Option<bool>,
     database: String,
+    output_file_path: PathBuf,
 ) -> Result<(), MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Validate arguments
@@ -239,7 +240,8 @@ pub(super) fn build_taxonomy_database(
     // ? Build output files
     // ? -----------------------------------------------------------------------
 
-    let output_path = PathBuf::from(database.to_owned());
+    let mut output_path = output_file_path;
+    output_path.set_extension("json");
 
     //
     // Create the main output file path
@@ -460,21 +462,6 @@ pub(super) fn build_taxonomy_database(
             },
             Err(_) => slugify!(ranked_tax_id.rank.as_str(), separator = "-"),
         };
-
-        /* match write_or_append_to_file(format!(
-            "{header}\t{ranked_names};{rank}__{name}\n",
-            header = header,
-            ranked_names = ranked_names,
-            rank = slug_rank,
-            name = slugify!(ranked_tax_id.name.as_str()).replace("__", "_")
-        ), text_taxonomies_file_binding) {
-            Ok(_) => (),
-            Err(err) => {
-                panic!(
-                    "Unexpected error detected on write names taxonomy file: {err}"
-                );
-            }
-        }; */
 
         //
         // Write the taxi-ds based taxonomies to the output files

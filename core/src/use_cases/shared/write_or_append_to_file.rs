@@ -16,10 +16,10 @@ pub(crate) fn write_or_append_to_file(
     {
         Err(err) => {
             error!("Unexpected error detected: {}", err);
-            return execution_err(String::from(
+            execution_err(String::from(
                 "Unexpected error detected on write file.",
             ))
-            .as_error();
+            .as_error()
         }
         Ok(_) => Ok(true),
     }
