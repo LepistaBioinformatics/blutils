@@ -1,3 +1,9 @@
+## v7.1.2 (2024-02-21)
+
+### Fix
+
+- **gh:issue4**: include exceptions to enable the validation of chunked blast databases
+
 ## v7.1.1 (2024-02-21)
 
 ### Fix
