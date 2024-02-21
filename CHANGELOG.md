@@ -1,3 +1,9 @@
+## v7.1.0 (2024-02-20)
+
+### Feat
+
+- implements a converter to build the qiime database from the blutils one
+
 ## v7.0.5 (2024-02-18)
 
 ### Fix
