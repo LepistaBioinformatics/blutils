@@ -43,6 +43,11 @@ pub fn build_qiime_db_from_blutils_db(
         Ok(res) => res,
     };
 
+    write_or_append_to_file(
+        format!("Feature ID\tTaxon\n"),
+        &output_taxonomies_file,
+    )?;
+
     //
     // Write the output file
     //
