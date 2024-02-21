@@ -1,3 +1,9 @@
+## v7.1.1 (2024-02-21)
+
+### Fix
+
+- **gh:issue3**: The qiime default header was included into the generated qiime database
+
 ## v7.1.0 (2024-02-20)
 
 ### Feat
