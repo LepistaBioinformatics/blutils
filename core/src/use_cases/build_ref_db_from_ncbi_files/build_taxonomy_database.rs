@@ -255,40 +255,6 @@ pub(super) fn build_taxonomy_database(
     };
 
     //
-    // Create the textual taxonomies file
-    //
-    let text_taxonomies_file = match output_path.parent() {
-        Some(parent) => parent.join(format!(
-            "{}.text.taxonomies.tsv",
-            output_path.file_stem().unwrap().to_str().unwrap()
-        )),
-        None => PathBuf::from("text.taxonomies.tsv"),
-    };
-
-    let text_taxonomies_file_binding = text_taxonomies_file.as_path();
-
-    if text_taxonomies_file_binding.exists() {
-        remove_file(text_taxonomies_file_binding).unwrap();
-    }
-
-    //
-    // Create the numeric taxonomies file
-    //
-    let numeric_taxonomies_file = match output_path.parent() {
-        Some(parent) => parent.join(format!(
-            "{}.numeric.taxonomies.tsv",
-            output_path.file_stem().unwrap().to_str().unwrap()
-        )),
-        None => PathBuf::from("numeric.taxonomies.tsv"),
-    };
-
-    let numeric_taxonomies_file_binding = numeric_taxonomies_file.as_path();
-
-    if numeric_taxonomies_file_binding.exists() {
-        remove_file(numeric_taxonomies_file_binding).unwrap();
-    }
-
-    //
     // Create a file to include not mapped tax_ids
     //
     let non_mapped_file = match output_path.parent() {
@@ -304,6 +270,9 @@ pub(super) fn build_taxonomy_database(
     if non_mapped_file_file_binding.exists() {
         remove_file(non_mapped_file_file_binding).unwrap();
     }
+
+    let (non_mapped_writer, non_mapped_file) =
+        write_or_append_to_file(&non_mapped_file_file_binding);
 
     // ? -----------------------------------------------------------------------
     // ? Hydrate lineages and Build the output taxonomies dataframe
@@ -322,9 +291,11 @@ pub(super) fn build_taxonomy_database(
                 // taxdump files and is a deleted node.
                 //
                 if del_nodes_vector.contains(&tax_id) {
-                    match write_or_append_to_file(
+                    match non_mapped_writer(
                         format!("{}\t{}\n", header, "deleted"),
-                        non_mapped_file_file_binding,
+                        non_mapped_file
+                            .try_clone()
+                            .expect("Unexpected error detected on write non-mapped file"),
                     ) {
                         Ok(_) => (),
                         Err(err) => panic!("{err}")
@@ -342,9 +313,11 @@ pub(super) fn build_taxonomy_database(
                         Some(res) => res,
                         None => {
 
-                            match write_or_append_to_file(
+                            match non_mapped_writer(
                                 format!("{}\t{}\n", header, "merged"),
-                                non_mapped_file_file_binding,
+                                non_mapped_file
+                                    .try_clone()
+                                    .expect("Unexpected error detected on write non-mapped file"),
                             ) {
                                 Ok(_) => (),
                                 Err(err) => panic!("{err}")
@@ -354,10 +327,11 @@ pub(super) fn build_taxonomy_database(
                         }
                     }
                 } else {
-                    match write_or_append_to_file(
-                        format!("{}\t{}\n", header, "unknown"
-                    ),
-                        non_mapped_file_file_binding,
+                    match non_mapped_writer(
+                        format!("{}\t{}\n", header, "unknown"),
+                        non_mapped_file
+                            .try_clone()
+                            .expect("Unexpected error detected on write non-mapped file"),
                     ) {
                         Ok(_) => (),
                         Err(err) => panic!("{err}")

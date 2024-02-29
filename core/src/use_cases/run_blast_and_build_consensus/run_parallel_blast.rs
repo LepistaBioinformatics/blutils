@@ -140,6 +140,8 @@ pub(super) fn run_parallel_blast(
     debug!("Total Sequences: {}", source_sequences.len());
     debug!("Number of Threads: {}", threads);
 
+    let (writer, file) = write_or_append_to_file(output_file.as_path());
+
     source_sequences
         .chunks(chunk_size)
         .enumerate()
@@ -169,7 +171,12 @@ pub(super) fn run_parallel_blast(
                     panic!("Unexpected error on process chunk {index}: {err}");
                 }
                 ExecutionResponse::Success(res) => {
-                    match write_or_append_to_file(res, output_file.as_path()) {
+                    match writer(
+                        res,
+                        file.try_clone().expect(
+                            "Unexpected error detected on write blast result",
+                        ),
+                    ) {
                         Err(err) => {
                             panic!(
                                 "Unexpected error on persist chunk {}: {}",

@@ -43,9 +43,14 @@ pub fn build_qiime_db_from_blutils_db(
         Ok(res) => res,
     };
 
-    write_or_append_to_file(
+    let (tax_writer, tax_file) =
+        write_or_append_to_file(&output_taxonomies_file);
+
+    tax_writer(
         format!("Feature ID\tTaxon\n"),
-        &output_taxonomies_file,
+        tax_file
+            .try_clone()
+            .expect("Unexpected error detected on write taxonomies database"),
     )?;
 
     //
@@ -69,8 +74,9 @@ pub fn build_qiime_db_from_blutils_db(
             })
         })
         .for_each(|line| {
-            if let Err(err) =
-                write_or_append_to_file(line, &output_taxonomies_file)
+            if let Err(err) = tax_writer(line, tax_file
+                .try_clone()
+                .expect("Unexpected error detected on write taxonomies database"))
             {
                 panic!("Unexpected error detected on write taxonomies database: {err}");
             };
@@ -80,14 +86,18 @@ pub fn build_qiime_db_from_blutils_db(
     // ? Validate and parse the blast database
     // ? -----------------------------------------------------------------------
 
+    let er_msg = "Invalid line detected on blastdbcmd response";
+
     validate_blast_database(blast_database_path)?;
 
     output_sequences_file.set_extension("fna");
-    let invalid_line = "null";
 
     if output_sequences_file.exists() {
         remove_file(output_sequences_file.to_owned()).unwrap();
     }
+
+    let (fna_writer, fna_file) =
+        write_or_append_to_file(&output_sequences_file);
 
     match Exec::cmd("blastdbcmd")
         .arg("-entry")
@@ -95,7 +105,7 @@ pub fn build_qiime_db_from_blutils_db(
         .arg("-db")
         .arg(blast_database_path)
         .arg("-outfmt")
-        .arg("%a  %T  %s")
+        .arg("%a  %T  %t  %s")
         .stream_stdout()
     {
         Err(err) => {
@@ -115,26 +125,18 @@ pub fn build_qiime_db_from_blutils_db(
 
                 let mut line = buf_line.split("  ");
 
-                let (accession, taxid, sequence) = (
-                    line.next()
-                        .unwrap_or(invalid_line)
-                        .split(".")
-                        .next()
-                        .unwrap_or(invalid_line),
-                    line.next().unwrap_or(invalid_line).trim(),
-                    line.next().unwrap_or(invalid_line).trim(),
+                let (accession, taxid, sci_title, sequence) = (
+                    line.next().expect(er_msg).split(".").next().expect(er_msg),
+                    line.next().expect(er_msg).trim(),
+                    line.next().expect(er_msg).trim(),
+                    line.next().expect(er_msg).trim(),
                 );
 
-                if accession == invalid_line ||
-                    taxid == invalid_line ||
-                    sequence == invalid_line
-                {
-                    panic!("Invalid line detected on blastdbcmd response");
-                }
-
-                if let Err(err) = write_or_append_to_file(
-                    format!(">{}.{}\n{}\n", accession, taxid, sequence),
-                    &output_sequences_file,
+                if let Err(err) = fna_writer(
+                    format!(">{accession}.{taxid} {sci_title}\n{sequence}\n"),
+                    fna_file.try_clone().expect(
+                        "Unexpected error detected on write sequences database",
+                    ),
                 ) {
                     panic!("Unexpected error detected on write sequences database: {err}");
                 };
