@@ -130,7 +130,7 @@ pub(super) fn find_single_query_consensus(
                 query,
                 taxon: Some(TaxonomyBean {
                     single_match: true,
-                    identifier: target_blast_match.subject_taxid.to_string(),
+                    identifier: target_bean.identifier.to_owned(),
                     taxonomy: Some(
                         identity_adjusted_taxonomy
                             .into_iter()

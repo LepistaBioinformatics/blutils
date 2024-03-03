@@ -97,7 +97,7 @@ impl BlastBuilder {
             blutils_version: env!("CARGO_PKG_VERSION").to_string(),
             subject_reads: subject_reads.to_string(),
             taxon,
-            out_format: "6 qseqid sacc staxid pident length mismatch gapopen qstart qend sstart send evalue bitscore".to_string(),
+            out_format: "6 qseqid saccver staxid pident length mismatch gapopen qstart qend sstart send evalue bitscore".to_string(),
             max_target_seqs: 10,
             perc_identity: 80,
             query_cov: 80,

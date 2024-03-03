@@ -5,7 +5,7 @@ use super::{
 use crate::{
     domain::dtos::{
         linnaean_ranks::LinnaeanRank,
-        taxonomies_map::{TaxonomiesMap, TaxonomyMapUnit},
+        taxonomies_map::{Accession, TaxonomiesMap, TaxonomyMapUnit},
     },
     use_cases::shared::write_or_append_to_file,
 };
@@ -52,7 +52,7 @@ pub(super) fn build_taxonomy_database(
     lineage_path: PathBuf,
     del_nodes_path: PathBuf,
     merged_path: PathBuf,
-    accessions_map: HashMap<u64, Vec<String>>,
+    accessions_map: HashMap<u64, Vec<Accession>>,
     ignore_taxids: Option<Vec<u64>>,
     replace_rank: Option<HashMap<String, String>>,
     drop_non_linnaean_taxonomies: Option<bool>,

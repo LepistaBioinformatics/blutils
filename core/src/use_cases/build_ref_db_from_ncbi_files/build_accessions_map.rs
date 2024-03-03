@@ -1,4 +1,7 @@
-use crate::use_cases::shared::validate_blast_database;
+use crate::{
+    domain::dtos::taxonomies_map::Accession,
+    use_cases::shared::validate_blast_database,
+};
 
 use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use std::{
@@ -7,21 +10,11 @@ use std::{
     path::PathBuf,
 };
 use subprocess::Exec;
-use tracing::warn;
 
 pub(super) fn build_accessions_map(
     blast_database_path: &str,
-) -> Result<HashMap<u64, Vec<String>>, MappedErrors> {
-    // ? -----------------------------------------------------------------------
-    // ? Create output files
-    // ? -----------------------------------------------------------------------
-
-    let mut taxids_map = HashMap::<u64, Vec<String>>::new();
-    let invalid_line = "null";
-
-    // ? -----------------------------------------------------------------------
-    // ? Validate blast database
-    // ? -----------------------------------------------------------------------
+) -> Result<HashMap<u64, Vec<Accession>>, MappedErrors> {
+    let mut taxids_map = HashMap::<u64, Vec<Accession>>::new();
 
     validate_blast_database(&PathBuf::from(blast_database_path))?;
 
@@ -29,13 +22,15 @@ pub(super) fn build_accessions_map(
     // ? Extract identifiers from blast database
     // ? -----------------------------------------------------------------------
 
+    let er_msg = "Invalid line detected on blastdbcmd response";
+
     match Exec::cmd("blastdbcmd")
         .arg("-entry")
         .arg("all")
         .arg("-db")
         .arg(blast_database_path)
         .arg("-outfmt")
-        .arg("%a  %T")
+        .arg("%a  %T  %o")
         .stream_stdout()
     {
         Err(err) => {
@@ -55,19 +50,11 @@ pub(super) fn build_accessions_map(
 
                 let mut line = buf_line.split("  ");
 
-                let (accession, taxid) = (
-                    line.next()
-                        .unwrap_or(invalid_line)
-                        .split(".")
-                        .next()
-                        .unwrap_or(invalid_line),
-                    line.next().unwrap_or(invalid_line).trim(),
+                let (accession, taxid, sequence_oid) = (
+                    line.next().expect(er_msg).trim(),
+                    line.next().expect(er_msg).trim(),
+                    line.next().expect(er_msg).trim(),
                 );
-
-                if accession == invalid_line || taxid == invalid_line {
-                    warn!("Invalid line detected on blastdbcmd response");
-                    continue;
-                }
 
                 let taxid = match taxid.parse::<i64>() {
                     Ok(res) => res,
@@ -79,7 +66,10 @@ pub(super) fn build_accessions_map(
                 taxids_map
                     .entry(taxid as u64)
                     .or_insert_with(Vec::new)
-                    .push(accession.to_string());
+                    .push(Accession {
+                        accession: accession.to_string(),
+                        oid: sequence_oid.to_string(),
+                    });
 
                 buf_line.clear();
             }

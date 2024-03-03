@@ -62,9 +62,10 @@ pub fn build_qiime_db_from_blutils_db(
         .flat_map(|record| {
             record.accessions.iter().map(move |accession| {
                 format!(
-                    "{}.{}\t{}\n",
-                    accession,
+                    "{}-{}-{}\t{}\n",
                     record.taxid,
+                    accession.oid,
+                    accession.accession,
                     if let Some(true) = use_taxid {
                         record.numeric_lineage.to_owned()
                     } else {
@@ -105,7 +106,7 @@ pub fn build_qiime_db_from_blutils_db(
         .arg("-db")
         .arg(blast_database_path)
         .arg("-outfmt")
-        .arg("%a  %T  %t  %s")
+        .arg("%a  %T  %o  %s")
         .stream_stdout()
     {
         Err(err) => {
@@ -125,15 +126,17 @@ pub fn build_qiime_db_from_blutils_db(
 
                 let mut line = buf_line.split("  ");
 
-                let (accession, taxid, sci_title, sequence) = (
-                    line.next().expect(er_msg).split(".").next().expect(er_msg),
+                let (accession, taxid, sequence_hash, sequence) = (
+                    line.next().expect(er_msg).trim(),
                     line.next().expect(er_msg).trim(),
                     line.next().expect(er_msg).trim(),
                     line.next().expect(er_msg).trim(),
                 );
 
                 if let Err(err) = fna_writer(
-                    format!(">{accession}.{taxid} {sci_title}\n{sequence}\n"),
+                    format!(
+                        ">{taxid}-{sequence_hash}-{accession}\n{sequence}\n"
+                    ),
                     fna_file.try_clone().expect(
                         "Unexpected error detected on write sequences database",
                     ),

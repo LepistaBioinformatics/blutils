@@ -353,10 +353,10 @@ fn load_named_dataframe(
     match CsvReader::from_path(path) {
         Err(err) => {
             error!("Unexpected error detected on read `blast_output`: {}", err);
-            return execution_err(String::from(
+            execution_err(String::from(
                 "Unexpected error occurred on load table.",
             ))
-            .as_error();
+            .as_error()
         }
         Ok(res) => Ok(res
             .with_separator(b'\t')
