@@ -1,3 +1,9 @@
+## v7.2.0 (2024-03-03)
+
+### Feat
+
+- implements a cli command to convert the default blutils json result into a tabular result
+
 ## v7.1.3 (2024-03-03)
 
 ### Fix
