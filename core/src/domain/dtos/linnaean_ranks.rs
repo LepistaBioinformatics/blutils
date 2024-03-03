@@ -5,13 +5,13 @@ use crate::domain::utils::round;
 
 use core::fmt;
 use mycelium_base::utils::errors::MappedErrors;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use slugify::slugify;
 use std::collections::HashMap;
 use std::slice::Iter;
 use std::str::FromStr;
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum LinnaeanRank {
     Undefined,
@@ -85,6 +85,24 @@ impl fmt::Display for LinnaeanRank {
             Undefined => write!(f, "u"),
             Other(other) => write!(f, "{}", other),
         }
+    }
+}
+
+impl LinnaeanRank {
+    pub(crate) fn as_full_rank_string(&self) -> String {
+        match self {
+            Domain => "domain",
+            Kingdom => "kingdom",
+            Phylum => "phylum",
+            Class => "class",
+            Order => "order",
+            Family => "family",
+            Genus => "genus",
+            Species => "species",
+            Undefined => "undefined",
+            Other(other) => other,
+        }
+        .to_string()
     }
 }
 

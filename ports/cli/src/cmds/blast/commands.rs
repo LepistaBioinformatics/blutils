@@ -17,6 +17,9 @@ pub(crate) enum Commands {
 
     /// Generate consensus from blast results.
     BuildConsensus(BuildConsensusArguments),
+
+    /// Build tabular output.
+    BuildTabular(BuildTabularArguments),
 }
 
 #[derive(Parser, Debug)]
@@ -115,4 +118,13 @@ pub(crate) struct BuildConsensusArguments {
     /// taxonomy itself.
     #[arg(short, long, default_value = "false")]
     pub(super) use_taxid: bool,
+}
+
+#[derive(Parser, Debug)]
+pub(crate) struct BuildTabularArguments {
+    /// The blutils output file
+    pub(super) blu_result: String,
+
+    /// The tabular output file
+    pub(super) tabular_output: String,
 }

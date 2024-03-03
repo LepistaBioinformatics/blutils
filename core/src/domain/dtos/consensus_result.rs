@@ -1,23 +1,22 @@
-use std::collections::HashMap;
-
 use super::{linnaean_ranks::LinnaeanRank, taxonomy_bean::TaxonomyBean};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QueryWithConsensus {
     pub query: String,
     pub taxon: Option<TaxonomyBean>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QueryWithoutConsensus {
     pub query: String,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ConsensusResult {
     /// No consensus option
@@ -33,7 +32,7 @@ pub enum ConsensusResult {
     ConsensusFound(QueryWithConsensus),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConsensusBean {
     pub rank: LinnaeanRank,

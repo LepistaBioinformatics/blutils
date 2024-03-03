@@ -11,11 +11,14 @@ use blul_core::{
     },
     use_cases::{
         build_consensus_identities, check_host_requirements,
-        run_blast_and_build_consensus, write_blutils_output,
+        parse_consensus_as_tabular, run_blast_and_build_consensus,
+        write_blutils_output,
     },
 };
 use blul_proc::execute_blast::ExecuteBlastnProcRepository;
 use std::path::{Path, PathBuf};
+
+use self::commands::BuildTabularArguments;
 
 pub(crate) fn run_blast_and_build_consensus_cmd(
     args: RunBlastAndBuildConsensusArguments,
@@ -95,4 +98,14 @@ pub(crate) fn build_consensus_cmd(args: BuildConsensusArguments) {
         None,
         Path::new(&args.out_dir).to_path_buf(),
     );
+}
+
+pub(crate) fn build_tabular_cmd(args: BuildTabularArguments) {
+    match parse_consensus_as_tabular(
+        PathBuf::from(args.blu_result),
+        PathBuf::from(args.tabular_output),
+    ) {
+        Ok(_) => (),
+        Err(err) => panic!("{err}"),
+    };
 }

@@ -64,6 +64,9 @@ fn main() {
                 blast::Commands::BuildConsensus(args) => {
                     blast::build_consensus_cmd(args)
                 }
+                blast::Commands::BuildTabular(args) => {
+                    blast::build_tabular_cmd(args)
+                }
             };
         }
         Cli::Check(check_args) => {

@@ -1,8 +1,8 @@
 use super::{consensus_result::ConsensusBean, linnaean_ranks::LinnaeanRank};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaxonomyBean {
     pub reached_rank: LinnaeanRank,

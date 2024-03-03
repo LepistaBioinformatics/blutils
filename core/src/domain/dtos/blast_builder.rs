@@ -54,7 +54,7 @@ impl FromStr for Taxon {
     }
 }
 
-#[derive(Clone, Debug, Serialize, clap::ValueEnum)]
+#[derive(Clone, Debug, Serialize, clap::ValueEnum, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Strand {
     Both,
@@ -72,7 +72,7 @@ impl fmt::Display for Strand {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlastBuilder {
     pub(crate) blutils_version: String,
