@@ -1,3 +1,10 @@
+## v7.1.3 (2024-03-03)
+
+### Fix
+
+- fix the consensus generation to replace the sequence hash by the original id during the blutils database generation
+- improve the write or append to file auxiliary function to allow write to file with it oppened
+
 ## v7.1.2 (2024-02-21)
 
 ### Fix
