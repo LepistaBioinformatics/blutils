@@ -54,13 +54,13 @@ pub fn parse_consensus_as_tabular(
     let columns = vec![
         "query",
         "rank",
+        "type",
         "identifier",
         "perc-identity",
         "bit-score",
         "taxonomy",
         "mutated",
         "single-match",
-        "type",
         "occurrences",
         "accessions",
     ];
