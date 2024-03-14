@@ -1,3 +1,9 @@
+## v8.1.2 (2024-03-14)
+
+### Fix
+
+- **create-kraken2-db**: allow deletion of files and dirs on check the path for the ouput of kraken database
+
 ## v8.1.1 (2024-03-14)
 
 ### Fix
