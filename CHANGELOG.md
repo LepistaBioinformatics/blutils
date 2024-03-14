@@ -1,3 +1,9 @@
+## v8.0.1 (2024-03-14)
+
+### Fix
+
+- **write-to-stdout**: fix cli methods related to read and write data from stdin and stdout
+
 ## v8.0.0 (2024-03-14)
 
 ### BREAKING CHANGE
