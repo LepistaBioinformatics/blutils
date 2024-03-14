@@ -1,3 +1,13 @@
+## v8.1.0 (2024-03-14)
+
+### Feat
+
+- implements the kraken database custom source files generator from a blast database
+
+### Refactor
+
+- renament blutils database generator use-case
+
 ## v8.0.1 (2024-03-14)
 
 ### Fix
