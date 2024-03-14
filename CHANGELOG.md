@@ -1,3 +1,18 @@
+## v8.0.0 (2024-03-14)
+
+### BREAKING CHANGE
+
+- main
+
+### Feat
+
+- allow stdin and stdout redirects
+- replace all positional arguments of the cli by nominal arguments with exception of the query sequences
+
+### Fix
+
+- **tabular-result**: fix the tabular columns order
+
 ## v7.2.0 (2024-03-03)
 
 ### Feat
