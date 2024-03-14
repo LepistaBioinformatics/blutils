@@ -3,6 +3,7 @@ pub mod blast_result;
 pub mod blutils_output;
 pub mod consensus_result;
 pub mod consensus_strategy;
+pub mod file_or_stdin;
 pub mod linnaean_ranks;
 pub mod parallel_blast_output;
 pub mod taxonomies_map;

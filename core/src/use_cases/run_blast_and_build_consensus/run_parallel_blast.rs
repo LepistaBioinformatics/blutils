@@ -2,6 +2,7 @@ use crate::{
     domain::{
         dtos::{
             blast_builder::BlastBuilder,
+            file_or_stdin::{FileOrStdin, Sequence},
             parallel_blast_output::ParallelBlastOutput,
         },
         entities::execute_blastn::{ExecuteBlastn, ExecutionResponse},
@@ -9,11 +10,10 @@ use crate::{
     use_cases::shared::{validate_blast_database, write_or_append_to_file},
 };
 
-use mycelium_base::utils::errors::{execution_err, MappedErrors};
+use mycelium_base::utils::errors::MappedErrors;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::{
-    fs::{create_dir, remove_file, File},
-    io::{BufRead, BufReader},
+    fs::{create_dir, remove_file},
     path::{Path, PathBuf},
 };
 use tracing::{debug, info, warn};
@@ -34,7 +34,7 @@ use tracing::{debug, info, warn};
     )
 )]
 pub(super) fn run_parallel_blast(
-    input_sequences: &str,
+    input_sequences: FileOrStdin,
     out_dir: &str,
     blast_config: BlastBuilder,
     blast_execution_repo: &dyn ExecuteBlastn,
@@ -42,71 +42,25 @@ pub(super) fn run_parallel_blast(
     threads: usize,
 ) -> Result<ParallelBlastOutput, MappedErrors> {
     // ? ----------------------------------------------------------------------
-    // ? Load blast file input
-    // ? ----------------------------------------------------------------------
-
-    let input_file = match File::open(input_sequences) {
-        Err(err) => return execution_err(
-            format!(
-                "Unexpected error on try to initialize input file connection: {err}",
-            )
-        ).as_error(),
-        Ok(res) => res,
-    };
-
-    // ? ----------------------------------------------------------------------
-    // ? Load content
-    // ? ----------------------------------------------------------------------
-
-    let reader = BufReader::new(input_file);
-    let mut lines = reader.lines();
-    let mut source_sequences: Vec<String> = vec![];
-    let mut headers: Vec<String> = Vec::new();
-
-    while let (Some(header), Some(sequence)) = (lines.next(), lines.next()) {
-        if header.is_err() {
-            return execution_err(format!(
-                "Unexpected error on try to read sequence header of sequences file: {}",
-                header.unwrap_err(),
-            ))
-            .as_error();
-        }
-
-        if sequence.is_err() {
-            return execution_err(format!(
-                "Unexpected error on try to read nucleotide of sequences file: {}",
-                sequence.unwrap_err(),
-            ))
-            .as_error();
-        }
-
-        let header = header.unwrap();
-
-        headers.push(header.replace(">", "").to_owned());
-
-        source_sequences.push(
-            format!("{}\n{}\n", header, sequence.unwrap())
-                .as_str()
-                .to_owned(),
-        );
-    }
-
-    // ? ----------------------------------------------------------------------
-    // ? Execute parallel BlastN and persist output
+    // ? Validate blast database
     // ? ----------------------------------------------------------------------
 
     validate_blast_database(&PathBuf::from(
         blast_config.subject_reads.to_owned(),
     ))?;
 
+    // ? ----------------------------------------------------------------------
     // ? Build thread pool
+    // ? ----------------------------------------------------------------------
 
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(threads)
         .build()
         .unwrap();
 
+    // ? ----------------------------------------------------------------------
     // ? Build output file
+    // ? ----------------------------------------------------------------------
 
     let out_dir_path = Path::new(out_dir);
 
@@ -134,44 +88,60 @@ pub(super) fn run_parallel_blast(
         };
     };
 
-    // ? Processing sequences as chunks
+    // ? ----------------------------------------------------------------------
+    // ? Process input sequences
+    // ? ----------------------------------------------------------------------
 
     let chunk_size = 50;
-    debug!("Total Sequences: {}", source_sequences.len());
-    debug!("Number of Threads: {}", threads);
-
     let (writer, file) = write_or_append_to_file(output_file.as_path());
+    let mut headers: Vec<String> = Vec::new();
 
-    source_sequences
-        .chunks(chunk_size)
-        .enumerate()
-        .par_bridge()
-        .for_each(|(index, chunk)| {
-            debug!(
-                "Processing chunk {} of {:?}",
-                index + 1,
-                source_sequences.len() / chunk_size
-            );
+    match input_sequences.content() {
+        Ok(source_sequences) => source_sequences
+            .to_owned()
+            .into_iter()
+            .map(|sequence| {
+                headers.push(sequence.blast_header().to_owned());
+                sequence
+            })
+            .collect::<Vec<Sequence>>()
+            .chunks(chunk_size)
+            .enumerate()
+            .par_bridge()
+            .for_each(|(index, chunk)| {
+                debug!(
+                    "Processing chunk {} of {:?}",
+                    index + 1,
+                    source_sequences.len() / chunk_size
+                );
 
-            let response = match pool.install(|| {
-                blast_execution_repo.run(
-                    chunk.join(""),
-                    blast_config.clone(),
-                    threads,
-                )
-            }) {
-                Err(err) => {
-                    panic!("Unexpected error detected on execute blast: {err}")
-                }
-                Ok(res) => res,
-            };
+                let response = match pool.install(|| {
+                    blast_execution_repo.run(
+                        chunk
+                            .into_iter()
+                            .map(|i| i.to_fasta())
+                            .collect::<Vec<String>>()
+                            .join(""),
+                        blast_config.clone(),
+                        threads,
+                    )
+                }) {
+                    Err(err) => {
+                        panic!(
+                            "Unexpected error detected on execute blast: {err}"
+                        )
+                    }
+                    Ok(res) => res,
+                };
 
-            match response {
-                ExecutionResponse::Fail(err) => {
-                    panic!("Unexpected error on process chunk {index}: {err}");
-                }
-                ExecutionResponse::Success(res) => {
-                    match writer(
+                match response {
+                    ExecutionResponse::Fail(err) => {
+                        panic!(
+                            "Unexpected error on process chunk {index}: {err}"
+                        );
+                    }
+                    ExecutionResponse::Success(res) => {
+                        match writer(
                         res,
                         file.try_clone().expect(
                             "Unexpected error detected on write blast result",
@@ -185,9 +155,11 @@ pub(super) fn run_parallel_blast(
                         }
                         Ok(_) => (),
                     };
-                }
-            };
-        });
+                    }
+                };
+            }),
+        Err(err) => panic!("{err}"),
+    };
 
     Ok(ParallelBlastOutput {
         output_file,

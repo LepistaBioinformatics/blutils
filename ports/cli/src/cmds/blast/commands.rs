@@ -1,3 +1,4 @@
+use blul_core::domain::dtos::file_or_stdin::FileOrStdin;
 pub(crate) use blul_core::domain::dtos::{
     blast_builder::{Strand, Taxon},
     consensus_strategy::ConsensusStrategy,
@@ -25,15 +26,21 @@ pub(crate) enum Commands {
 #[derive(Parser, Debug)]
 pub(crate) struct RunBlastAndBuildConsensusArguments {
     /// The query sequences system file path
-    pub(super) query: String,
+    //pub(super) query: String,
+
+    #[clap(default_value = "-")]
+    pub(super) query: FileOrStdin,
 
     /// The reference sequences system file path
+    #[arg(short, long)]
     pub(super) database: String,
 
     /// The taxonomy system file path
+    #[arg(short, long)]
     pub(super) tax_file: String,
 
     /// The output directory
+    #[arg(short, long)]
     pub(super) out_dir: String,
 
     /// This option checks the higher taxon which the consensus search should be
@@ -61,7 +68,7 @@ pub(crate) struct RunBlastAndBuildConsensusArguments {
     pub(super) force_overwrite: bool,
 
     /// The number of threads to be used. Default is 1.
-    #[arg(short, long)]
+    #[arg(long)]
     pub(super) threads: Option<usize>,
 
     /// The max target sequences to be used. Default is 10.

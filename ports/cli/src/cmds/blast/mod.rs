@@ -1,5 +1,6 @@
 mod commands;
 
+use self::commands::BuildTabularArguments;
 pub(crate) use commands::{
     Arguments, BuildConsensusArguments, Commands,
     RunBlastAndBuildConsensusArguments,
@@ -17,8 +18,6 @@ use blul_core::{
 };
 use blul_proc::execute_blast::ExecuteBlastnProcRepository;
 use std::path::{Path, PathBuf};
-
-use self::commands::BuildTabularArguments;
 
 pub(crate) fn run_blast_and_build_consensus_cmd(
     args: RunBlastAndBuildConsensusArguments,
@@ -64,7 +63,7 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
     };
 
     if let Err(err) = run_blast_and_build_consensus(
-        &args.query,
+        args.query,
         &args.tax_file,
         &args.out_dir,
         config,

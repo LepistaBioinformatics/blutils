@@ -6,6 +6,7 @@ use super::{build_consensus_identities, write_blutils_output};
 use crate::domain::{
     dtos::{
         blast_builder::BlastBuilder, consensus_strategy::ConsensusStrategy,
+        file_or_stdin::FileOrStdin,
     },
     entities::execute_blastn::ExecuteBlastn,
 };
@@ -19,7 +20,7 @@ use std::path::Path;
     skip(blast_execution_repo, blast_config, overwrite, strategy, use_taxid)
 )]
 pub fn run_blast_and_build_consensus(
-    input_sequences: &str,
+    input_sequences: FileOrStdin,
     input_taxonomies: &str,
     out_dir: &str,
     blast_config: BlastBuilder,

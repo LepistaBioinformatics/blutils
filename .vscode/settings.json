@@ -17,7 +17,8 @@
     "structopt",
     "taxdump",
     "taxid",
-    "taxids"
+    "taxids",
+    "thiserror"
   ],
   "rust-analyzer.linkedProjects": [
     "./core/Cargo.toml",
