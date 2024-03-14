@@ -159,18 +159,23 @@ pub fn write_blutils_output(
 
                 Ok(())
             } else {
-                if let Err(err) =
-                    serde_json::to_writer(std::io::stdout().lock(), &config)
+                let mut stdout = std::io::stdout();
+
+                if let Err(err) = serde_json::to_writer(stdout.lock(), &config)
                 {
                     panic!("{err}");
                 }
 
+                stdout.write(b"\n").unwrap();
+
                 for record in &consensus_type_results {
                     if let Err(err) =
-                        serde_json::to_writer(std::io::stdout().lock(), &record)
+                        serde_json::to_writer(stdout.lock(), &record)
                     {
                         panic!("{err}");
                     }
+
+                    stdout.write(b"\n").unwrap();
                 }
 
                 Ok(())
