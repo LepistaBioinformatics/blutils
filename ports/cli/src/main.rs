@@ -26,7 +26,7 @@ fn get_arguments() {
 }
 
 fn main() {
-    let log_level = std::env::var("RUST_LOG").unwrap_or("info".to_string());
+    let log_level = std::env::var("RUST_LOG").unwrap_or("error".to_string());
 
     let tracing_config = tracing_subscriber::fmt()
         .event_format(

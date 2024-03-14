@@ -27,9 +27,8 @@ pub(crate) enum Commands {
 
 #[derive(Parser, Debug)]
 pub(crate) struct RunBlastAndBuildConsensusArguments {
-    /// The query sequences system file path
-    //pub(super) query: String,
-
+    /// If the value is "-", the STDIN will be used and this command will expect
+    /// to receive the blutils output from the STDIN.
     #[clap(default_value = "-")]
     pub(super) query: FileOrStdin,
 
@@ -49,7 +48,7 @@ pub(crate) struct RunBlastAndBuildConsensusArguments {
     #[arg(long)]
     pub(super) blutils_out_file: Option<String>,
 
-    /// The output directory
+    /// The output file format
     #[arg(long, default_value = "json")]
     pub(super) out_format: OutputFormat,
 
@@ -138,14 +137,17 @@ pub(crate) struct BuildConsensusArguments {
     #[arg(short, long, default_value = "false")]
     pub(super) use_taxid: bool,
 
-    /// The output directory
-    #[arg(long, default_value = "Json")]
+    /// The output file format
+    #[arg(long, default_value = "json")]
     pub(super) out_format: OutputFormat,
 }
 
 #[derive(Parser, Debug)]
 pub(crate) struct BuildTabularArguments {
-    /// The blutils output file
+    /// The blutils output file path or STDIN
+    ///
+    /// If the value is "-", the STDIN will be used and this command will expect
+    /// to receive the blutils output from the STDIN.
     #[clap(default_value = "-")]
     pub(super) blu_result: FileOrStdin,
 
@@ -153,7 +155,7 @@ pub(crate) struct BuildTabularArguments {
     #[arg(short, long)]
     pub(super) output_file: Option<String>,
 
-    /// The output directory
-    #[arg(short, long)]
+    /// The input file format
+    #[arg(short, long, default_value = "json")]
     pub(super) input_format: OutputFormat,
 }

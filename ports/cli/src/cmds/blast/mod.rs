@@ -22,6 +22,12 @@ use std::path::{Path, PathBuf};
 pub(crate) fn run_blast_and_build_consensus_cmd(
     args: RunBlastAndBuildConsensusArguments,
 ) {
+    // If blutils_out_file the output will be redirect to stdout. Than, the
+    // RUST_LOG environment variable will be set to none.
+    if let None = args.blutils_out_file {
+        std::env::set_var("RUST_LOG", "none");
+    }
+
     // Execute system checks before running the blast
     if let Err(err) = check_host_requirements(Some("debug")) {
         panic!("{err}");
@@ -80,6 +86,12 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
 }
 
 pub(crate) fn build_consensus_cmd(args: BuildConsensusArguments) {
+    // If blutils_out_file the output will be redirect to stdout. Than, the
+    // RUST_LOG environment variable will be set to none.
+    if let None = args.blutils_out_file {
+        std::env::set_var("RUST_LOG", "none");
+    }
+
     let blast_output = match build_consensus_identities(
         ParallelBlastOutput {
             output_file: PathBuf::from(args.blast_out),
@@ -105,6 +117,12 @@ pub(crate) fn build_consensus_cmd(args: BuildConsensusArguments) {
 }
 
 pub(crate) fn build_tabular_cmd(args: BuildTabularArguments) {
+    // If output_file the output will be redirect to stdout. Than, the
+    // RUST_LOG environment variable will be set to none.
+    if let None = args.output_file {
+        std::env::set_var("RUST_LOG", "none");
+    }
+
     match parse_consensus_as_tabular(
         args.blu_result,
         match args.output_file {

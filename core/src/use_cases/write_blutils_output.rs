@@ -118,16 +118,17 @@ pub fn write_blutils_output(
 
                 Ok(())
             } else {
-                println!(
-                    "{}",
-                    serde_json::to_string_pretty(&BlutilsOutput {
+                if let Err(err) = serde_json::to_writer(
+                    std::io::stdout().lock(),
+                    &BlutilsOutput {
                         results: consensus_type_results,
                         config,
-                    })
-                    .unwrap()
-                );
-
-                Ok(())
+                    },
+                ) {
+                    panic!("{err}");
+                } else {
+                    Ok(())
+                }
             }
         }
         OutputFormat::Jsonl => {
@@ -158,9 +159,18 @@ pub fn write_blutils_output(
 
                 Ok(())
             } else {
-                println!("{}", serde_json::to_string(&config).unwrap());
+                if let Err(err) =
+                    serde_json::to_writer(std::io::stdout().lock(), &config)
+                {
+                    panic!("{err}");
+                }
+
                 for record in &consensus_type_results {
-                    println!("{}", serde_json::to_string(&record).unwrap());
+                    if let Err(err) =
+                        serde_json::to_writer(std::io::stdout().lock(), &record)
+                    {
+                        panic!("{err}");
+                    }
                 }
 
                 Ok(())
