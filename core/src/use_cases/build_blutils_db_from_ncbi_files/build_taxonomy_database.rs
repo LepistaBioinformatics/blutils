@@ -46,7 +46,7 @@ pub(crate) struct RankedTaxidUnit {
         drop_non_linnaean_taxonomies,
     )
 )]
-pub(build_blutils_db_from_ncbi_files) fn build_taxonomy_database(
+pub(crate) fn build_taxonomy_database(
     names_path: PathBuf,
     nodes_path: PathBuf,
     lineage_path: PathBuf,

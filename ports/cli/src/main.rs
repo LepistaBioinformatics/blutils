@@ -52,8 +52,11 @@ fn main() {
             db_builder::Commands::Blu(args) => {
                 db_builder::run_blast_and_build_consensus_cmd(args)
             }
-            db_builder::Commands::Qiime(args) => {
+            db_builder::Commands::Qiime2(args) => {
                 db_builder::build_qiime_db_from_blutils_db_cmd(args)
+            }
+            db_builder::Commands::Kraken2(args) => {
+                db_builder::build_kraken_db_from_ncbi_files_cmd(args)
             }
         },
         Cli::Blastn(blast_args) => {

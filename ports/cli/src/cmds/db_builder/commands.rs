@@ -13,7 +13,10 @@ pub(crate) enum Commands {
     Blu(BuildBlutilsDatabaseArguments),
 
     /// Build QIIME database from the Blutils database.
-    Qiime(BuildQiimeDatabaseArguments),
+    Qiime2(BuildQiimeDatabaseArguments),
+
+    /// Build Kraken2 database from the Blutils database.
+    Kraken2(BuildKraken2DatabaseArguments),
 }
 
 #[derive(Parser, Debug)]
@@ -92,4 +95,14 @@ pub(crate) struct BuildQiimeDatabaseArguments {
     /// taxonomy itself.
     #[arg(short, long, default_value = "false")]
     pub(super) use_taxid: bool,
+}
+
+#[derive(Parser, Debug)]
+pub(crate) struct BuildKraken2DatabaseArguments {
+    /// The path to the blast database
+    pub(super) blast_database_path: PathBuf,
+
+    /// The path to the QIIME output taxonomies file
+    #[arg(short, long)]
+    pub(super) output_directory: PathBuf,
 }
