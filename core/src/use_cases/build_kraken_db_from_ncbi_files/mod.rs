@@ -6,7 +6,7 @@ use generate_taxonomies_file::*;
 
 use mycelium_base::utils::errors::MappedErrors;
 use std::{
-    fs::{create_dir_all, remove_file},
+    fs::{create_dir_all, remove_dir_all, remove_file},
     path::PathBuf,
 };
 use tracing::warn;
@@ -21,7 +21,12 @@ pub fn build_kraken_db_from_ncbi_files(
 
     if output_directory.exists() {
         warn!("Output directory already exists. Removing it.");
-        remove_file(output_directory.to_owned()).unwrap();
+
+        if output_directory.is_dir() {
+            remove_dir_all(output_directory.to_owned()).unwrap();
+        } else if output_directory.is_file() {
+            remove_file(output_directory.to_owned()).unwrap();
+        }
     }
 
     if !output_directory.is_dir() {
