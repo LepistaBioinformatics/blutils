@@ -1,3 +1,9 @@
+## v8.1.1 (2024-03-14)
+
+### Fix
+
+- **jsonl-output**: include line breaks on write jsonl file
+
 ## v8.1.0 (2024-03-14)
 
 ### Feat
