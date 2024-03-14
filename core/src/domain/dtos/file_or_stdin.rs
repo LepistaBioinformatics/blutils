@@ -5,11 +5,14 @@
 /// implementation.
 ///
 ///
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, Read};
 use std::marker::PhantomData;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use thiserror::Error;
+
+use super::blutils_output::BlutilsOutput;
+use super::consensus_result::QueryWithConsensus;
 
 static STDIN_HAS_BEEN_USED: AtomicBool = AtomicBool::new(false);
 
@@ -89,13 +92,77 @@ impl Sequence {
     }
 }
 
-impl<T> FileOrStdin<T> {
+impl FileOrStdin {
+    pub fn json_content<T>(self) -> Result<T, StdinError>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let mut reader = self.into_reader()?;
+        let mut buf = String::new();
+
+        reader.read_to_string(&mut buf)?;
+
+        match serde_json::from_str(&buf) {
+            Ok(value) => Ok(value),
+            Err(err) => Err(StdinError::FromStr(format!(
+                "unable to parse content as JSON: {}",
+                err
+            ))),
+        }
+    }
+
+    pub fn json_line_content(self) -> Result<BlutilsOutput, StdinError> {
+        let reader = self.into_chunked_reader()?;
+
+        let content = Vec::<QueryWithConsensus>::new();
+        let mut output = BlutilsOutput {
+            results: content.to_owned(),
+            config: None,
+        };
+
+        for line in reader.lines() {
+            let line = line?;
+
+            if line.is_empty() {
+                continue;
+            }
+
+            if line.contains("isConfig") {
+                let config = match serde_json::from_str(&line) {
+                    Ok(value) => value,
+                    Err(err) => {
+                        return Err(StdinError::FromStr(format!(
+                            "unable to parse line as JSON: {}",
+                            err
+                        )));
+                    }
+                };
+
+                output.config = Some(config);
+            } else {
+                let value = match serde_json::from_str(&line) {
+                    Ok(value) => value,
+                    Err(err) => {
+                        return Err(StdinError::FromStr(format!(
+                            "unable to parse line as JSON: {}",
+                            err
+                        )));
+                    }
+                };
+
+                output.results.push(value);
+            };
+        }
+
+        Ok(output)
+    }
+
     /// Read content and build a fasta sequence
     ///
     /// Content should be a multi fasta file. Each fasta record can contain a
     /// fasta header starting with `>` and a sequence of a single line or
     /// multiline sequence.
-    pub fn content(self) -> Result<Vec<Sequence>, StdinError> {
+    pub fn sequence_content(self) -> Result<Vec<Sequence>, StdinError> {
         let reader = self.into_chunked_reader()?;
 
         let mut sequences = Vec::<Sequence>::new();
@@ -135,9 +202,19 @@ impl<T> FileOrStdin<T> {
         Ok(sequences)
     }
 
-    pub fn into_chunked_reader(
-        &self,
-    ) -> Result<impl std::io::BufRead, StdinError> {
+    fn into_reader(&self) -> Result<impl std::io::Read, StdinError> {
+        let input: Box<dyn std::io::Read + 'static> = match &self.source {
+            Source::Stdin => Box::new(std::io::stdin()),
+            Source::Arg(filepath) => {
+                let f = std::fs::File::open(filepath)?;
+                Box::new(f)
+            }
+        };
+
+        Ok(input)
+    }
+
+    fn into_chunked_reader(&self) -> Result<impl std::io::BufRead, StdinError> {
         let input: Box<dyn std::io::Read + 'static> = match &self.source {
             Source::Stdin => Box::new(std::io::stdin()),
             Source::Arg(filepath) => {

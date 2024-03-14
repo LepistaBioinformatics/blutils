@@ -96,6 +96,7 @@ pub(super) fn find_multi_taxa_consensus(
     let mut final_taxon = QueryWithConsensus {
         query: no_consensus_option.query.to_owned(),
         taxon: Some(lowest_taxonomy_of_higher_rank),
+        run_id: None,
     };
 
     // ? -----------------------------------------------------------------------

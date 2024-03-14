@@ -143,6 +143,7 @@ pub(super) fn find_single_query_consensus(
                     )),
                     ..target_bean
                 }),
+                run_id: None,
             }));
         }
         //

@@ -1,7 +1,9 @@
-use blul_core::domain::dtos::file_or_stdin::FileOrStdin;
 pub(crate) use blul_core::domain::dtos::{
     blast_builder::{Strand, Taxon},
     consensus_strategy::ConsensusStrategy,
+};
+use blul_core::{
+    domain::dtos::file_or_stdin::FileOrStdin, use_cases::OutputFormat,
 };
 use clap::Parser;
 
@@ -40,8 +42,16 @@ pub(crate) struct RunBlastAndBuildConsensusArguments {
     pub(super) tax_file: String,
 
     /// The output directory
-    #[arg(short, long)]
-    pub(super) out_dir: String,
+    #[arg(long)]
+    pub(super) blast_out_file: String,
+
+    /// The output file
+    #[arg(long)]
+    pub(super) blutils_out_file: Option<String>,
+
+    /// The output directory
+    #[arg(long, default_value = "json")]
+    pub(super) out_format: OutputFormat,
 
     /// This option checks the higher taxon which the consensus search should be
     /// based
@@ -102,10 +112,12 @@ pub(crate) struct BuildConsensusArguments {
     pub(super) blast_out: String,
 
     /// The taxonomy system file path
+    #[arg(short, long)]
     pub(super) tax_file: String,
 
-    /// The output directory
-    pub(super) out_dir: String,
+    /// The output file
+    #[arg(long)]
+    pub(super) blutils_out_file: Option<String>,
 
     /// This option checks the higher taxon which the consensus search should be
     /// based
@@ -125,13 +137,23 @@ pub(crate) struct BuildConsensusArguments {
     /// taxonomy itself.
     #[arg(short, long, default_value = "false")]
     pub(super) use_taxid: bool,
+
+    /// The output directory
+    #[arg(long, default_value = "Json")]
+    pub(super) out_format: OutputFormat,
 }
 
 #[derive(Parser, Debug)]
 pub(crate) struct BuildTabularArguments {
     /// The blutils output file
-    pub(super) blu_result: String,
+    #[clap(default_value = "-")]
+    pub(super) blu_result: FileOrStdin,
 
     /// The tabular output file
-    pub(super) tabular_output: String,
+    #[arg(short, long)]
+    pub(super) output_file: Option<String>,
+
+    /// The output directory
+    #[arg(short, long)]
+    pub(super) input_format: OutputFormat,
 }

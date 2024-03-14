@@ -100,5 +100,6 @@ pub(super) fn build_blast_consensus_identity(
     QueryWithConsensus {
         query,
         taxon: Some(bean),
+        run_id: None,
     }
 }

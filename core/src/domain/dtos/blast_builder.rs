@@ -1,6 +1,7 @@
 use md5;
 use serde::{Deserialize, Serialize};
 use std::{fmt, str::FromStr};
+use uuid::Uuid;
 
 // ? --------------------------------------------------------------------------
 // ? Wrapper for Query Sequences
@@ -75,6 +76,8 @@ impl fmt::Display for Strand {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlastBuilder {
+    pub(crate) is_config: bool,
+    pub(crate) run_id: Uuid,
     pub(crate) blutils_version: String,
 
     // ? IO related parameters
@@ -94,6 +97,8 @@ pub struct BlastBuilder {
 impl BlastBuilder {
     pub fn default(subject_reads: &str, taxon: Taxon) -> Self {
         BlastBuilder {
+            is_config: true,
+            run_id: Uuid::new_v4(),
             blutils_version: env!("CARGO_PKG_VERSION").to_string(),
             subject_reads: subject_reads.to_string(),
             taxon,

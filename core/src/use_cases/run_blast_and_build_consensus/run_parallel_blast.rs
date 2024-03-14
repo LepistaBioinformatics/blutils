@@ -14,7 +14,7 @@ use mycelium_base::utils::errors::MappedErrors;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::{
     fs::{create_dir, remove_file},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 use tracing::{debug, info, warn};
 
@@ -26,7 +26,7 @@ use tracing::{debug, info, warn};
     name = "Run Parallel Blast",
     skip(
         input_sequences,
-        out_dir,
+        blast_out_file,
         blast_config,
         blast_execution_repo,
         overwrite,
@@ -35,7 +35,7 @@ use tracing::{debug, info, warn};
 )]
 pub(super) fn run_parallel_blast(
     input_sequences: FileOrStdin,
-    out_dir: &str,
+    blast_out_file: &str,
     blast_config: BlastBuilder,
     blast_execution_repo: &dyn ExecuteBlastn,
     overwrite: &bool,
@@ -62,27 +62,28 @@ pub(super) fn run_parallel_blast(
     // ? Build output file
     // ? ----------------------------------------------------------------------
 
-    let out_dir_path = Path::new(out_dir);
+    let mut out_dir_path = PathBuf::from(blast_out_file);
+    out_dir_path.set_extension("out");
+    let out_dir = out_dir_path.parent().unwrap();
 
-    if !out_dir_path.exists() {
-        let _ = create_dir(out_dir_path);
+    if !out_dir.exists() {
+        let _ = create_dir(out_dir);
     }
 
-    let output_file = out_dir_path.join("blast.out");
     info!("");
     info!("Blast output file:");
-    info!("\t{:?}", output_file);
+    info!("\t{:?}", out_dir_path);
     info!("");
 
-    if output_file.exists() {
+    if out_dir_path.exists() {
         if !overwrite {
             panic!(
                 "Could not overwrite existing file {:?} when overwrite option is `false`.", 
-                output_file
+                out_dir_path
             );
         }
 
-        match remove_file(output_file.clone()) {
+        match remove_file(out_dir_path.clone()) {
             Err(err) => panic!("Could not remove file given {}", err),
             Ok(_) => warn!("Output file overwritten!"),
         };
@@ -93,10 +94,10 @@ pub(super) fn run_parallel_blast(
     // ? ----------------------------------------------------------------------
 
     let chunk_size = 50;
-    let (writer, file) = write_or_append_to_file(output_file.as_path());
+    let (writer, file) = write_or_append_to_file(out_dir_path.as_path());
     let mut headers: Vec<String> = Vec::new();
 
-    match input_sequences.content() {
+    match input_sequences.sequence_content() {
         Ok(source_sequences) => source_sequences
             .to_owned()
             .into_iter()
@@ -162,7 +163,7 @@ pub(super) fn run_parallel_blast(
     };
 
     Ok(ParallelBlastOutput {
-        output_file,
+        output_file: out_dir_path.to_path_buf(),
         headers: Some(headers),
     })
 }

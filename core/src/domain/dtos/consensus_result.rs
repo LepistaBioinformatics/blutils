@@ -2,10 +2,12 @@ use super::{linnaean_ranks::LinnaeanRank, taxonomy_bean::TaxonomyBean};
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use uuid::Uuid;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QueryWithConsensus {
+    pub run_id: Option<Uuid>,
     pub query: String,
     pub taxon: Option<TaxonomyBean>,
 }

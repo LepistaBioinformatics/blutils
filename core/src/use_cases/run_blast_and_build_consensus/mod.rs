@@ -2,7 +2,7 @@ mod run_parallel_blast;
 
 use run_parallel_blast::*;
 
-use super::{build_consensus_identities, write_blutils_output};
+use super::{build_consensus_identities, write_blutils_output, OutputFormat};
 use crate::domain::{
     dtos::{
         blast_builder::BlastBuilder, consensus_strategy::ConsensusStrategy,
@@ -22,13 +22,15 @@ use std::path::Path;
 pub fn run_blast_and_build_consensus(
     input_sequences: FileOrStdin,
     input_taxonomies: &str,
-    out_dir: &str,
+    blast_out_file: &str,
+    blutils_out_file: Option<String>,
     blast_config: BlastBuilder,
     blast_execution_repo: &dyn ExecuteBlastn,
     overwrite: &bool,
     threads: usize,
     strategy: ConsensusStrategy,
     use_taxid: Option<bool>,
+    out_format: OutputFormat,
 ) -> Result<bool, MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Execute parallel blast
@@ -36,7 +38,7 @@ pub fn run_blast_and_build_consensus(
 
     let output = run_parallel_blast(
         input_sequences,
-        out_dir,
+        blast_out_file,
         blast_config.to_owned(),
         blast_execution_repo,
         overwrite,
@@ -55,11 +57,14 @@ pub fn run_blast_and_build_consensus(
         use_taxid,
     )?;
 
-    write_blutils_output(
+    if let Err(err) = write_blutils_output(
         blast_output.to_owned(),
         Some(blast_config),
-        Path::new(out_dir).to_path_buf(),
-    );
+        blutils_out_file,
+        out_format,
+    ) {
+        return Err(err);
+    };
 
     Ok(true)
 }

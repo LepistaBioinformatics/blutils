@@ -6,7 +6,17 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct BlutilsOutput {
-    pub(crate) results: Vec<QueryWithConsensus>,
-    pub(crate) config: Option<BlastBuilder>,
+pub struct BlutilsOutput {
+    pub results: Vec<QueryWithConsensus>,
+    pub config: Option<BlastBuilder>,
+}
+
+// Implements Default for BlutilsOutput
+impl Default for BlutilsOutput {
+    fn default() -> Self {
+        BlutilsOutput {
+            results: Vec::new(),
+            config: None,
+        }
+    }
 }

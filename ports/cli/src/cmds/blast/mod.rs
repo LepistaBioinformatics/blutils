@@ -65,13 +65,15 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
     if let Err(err) = run_blast_and_build_consensus(
         args.query,
         &args.tax_file,
-        &args.out_dir,
+        &args.blast_out_file,
+        args.blutils_out_file,
         config,
         &repo,
         &args.force_overwrite,
         threads,
         args.strategy,
         Some(args.use_taxid),
+        args.out_format,
     ) {
         panic!("{err}")
     };
@@ -92,17 +94,24 @@ pub(crate) fn build_consensus_cmd(args: BuildConsensusArguments) {
         Err(err) => panic!("{err}"),
     };
 
-    write_blutils_output(
+    if let Err(err) = write_blutils_output(
         blast_output.to_owned(),
         None,
-        Path::new(&args.out_dir).to_path_buf(),
-    );
+        args.blutils_out_file,
+        args.out_format,
+    ) {
+        panic!("{err}");
+    };
 }
 
 pub(crate) fn build_tabular_cmd(args: BuildTabularArguments) {
     match parse_consensus_as_tabular(
-        PathBuf::from(args.blu_result),
-        PathBuf::from(args.tabular_output),
+        args.blu_result,
+        match args.output_file {
+            Some(file) => Some(PathBuf::from(file)),
+            None => None,
+        },
+        args.input_format,
     ) {
         Ok(_) => (),
         Err(err) => panic!("{err}"),
