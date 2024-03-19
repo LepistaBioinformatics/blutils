@@ -1,3 +1,9 @@
+## v8.1.4 (2024-03-19)
+
+### Fix
+
+- fix the output file writing after the consensus generation
+
 ## v8.1.3 (2024-03-19)
 
 ### Fix
