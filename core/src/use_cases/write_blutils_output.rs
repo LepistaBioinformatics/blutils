@@ -42,10 +42,21 @@ pub fn write_blutils_output(
 
             if output_file.exists() {
                 match remove_file(output_file.clone()) {
-                    Err(err) => panic!("Could not remove file given {}", err),
+                    Err(err) => panic!("Could not remove file given {err}"),
                     Ok(_) => warn!("Output file overwritten!"),
                 };
             };
+
+            if let Some(parent) = output_file.parent() {
+                if !parent.exists() {
+                    match std::fs::create_dir_all(parent) {
+                        Err(err) => {
+                            panic!("Could not create directory given {err}")
+                        }
+                        Ok(_) => (),
+                    };
+                }
+            }
 
             Some(output_file)
         }
@@ -99,8 +110,11 @@ pub fn write_blutils_output(
     match out_format {
         OutputFormat::Json => {
             if let Some(output_file) = blutils_out_file {
-                let mut file = match File::create(output_file) {
-                    Err(err) => panic!("{err}"),
+                let mut file = match File::create(output_file.to_owned()) {
+                    Err(err) => panic!(
+                        "Error on persist output results into {}: {err}",
+                        output_file.as_os_str().to_str().unwrap()
+                    ),
                     Ok(res) => res,
                 };
 
@@ -112,7 +126,9 @@ pub fn write_blutils_output(
                     .unwrap()
                     .as_bytes(),
                 ) {
-                    Err(err) => panic!("{err}"),
+                    Err(err) => panic!(
+                        "Unexpected error on write config to output file: {err}"
+                    ),
                     Ok(_) => (),
                 };
 
@@ -125,7 +141,7 @@ pub fn write_blutils_output(
                         config,
                     },
                 ) {
-                    panic!("{err}");
+                    panic!("Unexpected error on write JSON output: {err}");
                 } else {
                     Ok(())
                 }
@@ -163,7 +179,7 @@ pub fn write_blutils_output(
 
                 if let Err(err) = serde_json::to_writer(stdout.lock(), &config)
                 {
-                    panic!("{err}");
+                    panic!("Unexpected error on write JSONL output: {err}");
                 }
 
                 stdout.write(b"\n").unwrap();
@@ -172,7 +188,7 @@ pub fn write_blutils_output(
                     if let Err(err) =
                         serde_json::to_writer(stdout.lock(), &record)
                     {
-                        panic!("{err}");
+                        panic!("Unexpected error on write JSONL output: {err}");
                     }
 
                     stdout.write(b"\n").unwrap();
