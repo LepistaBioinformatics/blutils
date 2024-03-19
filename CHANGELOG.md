@@ -1,3 +1,9 @@
+## v8.1.3 (2024-03-19)
+
+### Fix
+
+- fix error during creation of the blutils output file if it not exists
+
 ## v8.1.2 (2024-03-14)
 
 ### Fix
