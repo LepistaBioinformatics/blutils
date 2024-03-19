@@ -32,22 +32,22 @@ pub fn write_blutils_output(
 ) -> Result<(), MappedErrors> {
     let blutils_out_file = match blutils_out_file {
         Some(file) => {
-            let path = PathBuf::from(file);
-            let output_file = path.join("blutils.consensus.json");
+            let mut path = PathBuf::from(file);
+            path.set_extension("json");
 
             info!("");
             info!("Blutils output file:");
-            info!("\t{:?}", output_file);
+            info!("\t{:?}", path);
             info!("");
 
-            if output_file.exists() {
-                match remove_file(output_file.clone()) {
+            if path.exists() {
+                match remove_file(path.clone()) {
                     Err(err) => panic!("Could not remove file given {err}"),
                     Ok(_) => warn!("Output file overwritten!"),
                 };
             };
 
-            if let Some(parent) = output_file.parent() {
+            if let Some(parent) = path.parent() {
                 if !parent.exists() {
                     match std::fs::create_dir_all(parent) {
                         Err(err) => {
@@ -58,7 +58,7 @@ pub fn write_blutils_output(
                 }
             }
 
-            Some(output_file)
+            Some(path)
         }
         None => None,
     };
