@@ -33,8 +33,8 @@ pub fn build_kraken_db_from_ncbi_files(
         create_dir_all(&output_directory).unwrap();
     }
 
-    let output_sequences_file = output_directory.join("sequences.fna");
-    let output_taxonomies_file = output_directory.join("taxonomies.tsv");
+    let output_sequences_file = output_directory.join("library.fna");
+    let output_taxonomies_file = output_directory.join("prelim_map.txt");
 
     // ? -----------------------------------------------------------------------
     // ? Generate sequences database
