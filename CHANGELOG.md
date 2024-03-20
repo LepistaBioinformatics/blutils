@@ -1,3 +1,9 @@
+## v8.1.5 (2024-03-19)
+
+### Fix
+
+- rename the default kraken files
+
 ## v8.1.4 (2024-03-19)
 
 ### Fix
