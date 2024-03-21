@@ -1,5 +1,5 @@
 [tool.commitizen]
-version = "8.1.5"
+version = "8.2.0"
 version_files = [
     "Cargo.toml",
     "core/Cargo.toml",

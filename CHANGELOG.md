@@ -1,3 +1,9 @@
+## v8.2.0 (2024-03-21)
+
+### Feat
+
+- implements the option to set custom taxon cutoffs allowing to extends default gene divergence cutoffs for any gene
+
 ## v8.1.5 (2024-03-19)
 
 ### Fix

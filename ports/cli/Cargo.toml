@@ -18,8 +18,8 @@ categories.workspace = true
 clap.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
-blutils-core = { version = "8.1.5", path = "../../core" }
-blutils-proc-adapter = { version = "8.1.5", path = "../../adapters/proc" }
+blutils-core = { version = "8.2.0", path = "../../core" }
+blutils-proc-adapter = { version = "8.2.0", path = "../../adapters/proc" }
 
 
 [[bin]]
