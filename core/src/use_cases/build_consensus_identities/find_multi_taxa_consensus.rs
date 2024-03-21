@@ -1,6 +1,5 @@
 use super::{build_blast_consensus_identity, force_parsed_taxonomy};
 use crate::domain::dtos::{
-    blast_builder::Taxon,
     blast_result::BlastResultRow,
     consensus_result::{
         ConsensusBean, ConsensusResult, QueryWithConsensus,
@@ -8,6 +7,7 @@ use crate::domain::dtos::{
     },
     consensus_strategy::ConsensusStrategy,
     linnaean_ranks::InterpolatedIdentity,
+    taxon::{CustomTaxon, Taxon},
     taxonomy_bean::{Taxonomy, TaxonomyBean},
 };
 
@@ -24,6 +24,7 @@ pub(super) fn find_multi_taxa_consensus(
     taxon: Taxon,
     no_consensus_option: QueryWithoutConsensus,
     strategy: ConsensusStrategy,
+    custom_taxon_values: Option<CustomTaxon>,
 ) -> Result<ConsensusResult, MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Collect the reference taxonomy vector
@@ -115,6 +116,7 @@ pub(super) fn find_multi_taxa_consensus(
             .into_iter()
             .map(|bean| bean.reached_rank)
             .collect(),
+        custom_taxon_values,
     )?;
 
     if interpolated_identities.interpolation().len() != reference_taxonomy.len()

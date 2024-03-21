@@ -6,5 +6,6 @@ pub mod consensus_strategy;
 pub mod file_or_stdin;
 pub mod linnaean_ranks;
 pub mod parallel_blast_output;
+pub mod taxon;
 pub mod taxonomies_map;
 pub mod taxonomy_bean;

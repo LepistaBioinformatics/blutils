@@ -20,7 +20,10 @@ use uuid::Uuid;
 #[derive(Clone, Debug, Serialize, Deserialize, clap::ValueEnum)]
 #[serde(rename_all = "camelCase")]
 pub enum OutputFormat {
+    /// JSON format
     Json,
+
+    /// JSONL format
     Jsonl,
 }
 
@@ -33,7 +36,14 @@ pub fn write_blutils_output(
     let blutils_out_file = match blutils_out_file {
         Some(file) => {
             let mut path = PathBuf::from(file);
-            path.set_extension("json");
+            match out_format {
+                OutputFormat::Jsonl => {
+                    path.set_extension("jsonl");
+                }
+                OutputFormat::Json => {
+                    path.set_extension("json");
+                }
+            }
 
             info!("");
             info!("Blutils output file:");

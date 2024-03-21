@@ -8,7 +8,9 @@ pub(crate) use commands::{
 
 use blul_core::{
     domain::dtos::{
-        blast_builder::BlastBuilder, parallel_blast_output::ParallelBlastOutput,
+        blast_builder::BlastBuilder,
+        parallel_blast_output::ParallelBlastOutput,
+        taxon::{CustomTaxon, Taxon},
     },
     use_cases::{
         build_consensus_identities, check_host_requirements,
@@ -36,7 +38,8 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
     let repo = ExecuteBlastnProcRepository {};
 
     // Create configuration DTO
-    let mut config = BlastBuilder::default(&args.database, args.taxon);
+    let mut config =
+        BlastBuilder::default(&args.database, args.taxon.to_owned());
 
     if args.max_target_seqs.is_some() {
         config = config.with_max_target_seqs(args.max_target_seqs.unwrap());
@@ -68,6 +71,17 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
         None => 1,
     };
 
+    let custom_taxon = match args.custom_taxon_cutoff_file {
+        Some(file) => Some(CustomTaxon::from_file(file)),
+        None => {
+            if let Taxon::Custom = args.taxon {
+                panic!("Custom taxon values are required when the custom taxon option is selected.");
+            }
+
+            None
+        }
+    };
+
     if let Err(err) = run_blast_and_build_consensus(
         args.query,
         &args.tax_file,
@@ -80,6 +94,7 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
         args.strategy,
         Some(args.use_taxid),
         args.out_format,
+        custom_taxon,
     ) {
         panic!("{err}")
     };
@@ -92,6 +107,17 @@ pub(crate) fn build_consensus_cmd(args: BuildConsensusArguments) {
         std::env::set_var("RUST_LOG", "none");
     }
 
+    let custom_taxon = match args.custom_taxon_cutoff_file {
+        Some(file) => Some(CustomTaxon::from_file(file)),
+        None => {
+            if let Taxon::Custom = args.taxon {
+                panic!("Custom taxon values are required when the custom taxon option is selected.");
+            }
+
+            None
+        }
+    };
+
     let blast_output = match build_consensus_identities(
         ParallelBlastOutput {
             output_file: PathBuf::from(args.blast_out),
@@ -101,6 +127,7 @@ pub(crate) fn build_consensus_cmd(args: BuildConsensusArguments) {
         args.taxon,
         args.strategy,
         Some(args.use_taxid),
+        custom_taxon,
     ) {
         Ok(results) => results,
         Err(err) => panic!("{err}"),

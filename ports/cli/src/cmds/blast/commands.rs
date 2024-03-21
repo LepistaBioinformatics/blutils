@@ -1,11 +1,12 @@
 pub(crate) use blul_core::domain::dtos::{
-    blast_builder::{Strand, Taxon},
-    consensus_strategy::ConsensusStrategy,
+    blast_builder::Strand, consensus_strategy::ConsensusStrategy, taxon::Taxon,
 };
+
 use blul_core::{
     domain::dtos::file_or_stdin::FileOrStdin, use_cases::OutputFormat,
 };
 use clap::Parser;
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 pub(crate) struct Arguments {
@@ -57,10 +58,10 @@ pub(crate) struct RunBlastAndBuildConsensusArguments {
     #[arg(long)]
     pub(super) taxon: Taxon,
 
+    #[arg(long, short)]
+    pub(super) custom_taxon_cutoff_file: Option<PathBuf>,
+
     /// The strategy to be used
-    ///
-    /// cautious: Select the shortest taxonomic path to find consensus from.
-    /// relaxed: Select the longest taxonomic path to find consensus from.
     #[arg(long)]
     pub(super) strategy: ConsensusStrategy,
 
@@ -122,6 +123,9 @@ pub(crate) struct BuildConsensusArguments {
     /// based
     #[arg(long)]
     pub(super) taxon: Taxon,
+
+    #[arg(long, short)]
+    pub(super) custom_taxon_cutoff_file: Option<PathBuf>,
 
     /// The strategy to be used
     ///

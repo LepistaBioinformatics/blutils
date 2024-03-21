@@ -6,7 +6,7 @@ use super::{build_consensus_identities, write_blutils_output, OutputFormat};
 use crate::domain::{
     dtos::{
         blast_builder::BlastBuilder, consensus_strategy::ConsensusStrategy,
-        file_or_stdin::FileOrStdin,
+        file_or_stdin::FileOrStdin, taxon::CustomTaxon,
     },
     entities::execute_blastn::ExecuteBlastn,
 };
@@ -31,6 +31,7 @@ pub fn run_blast_and_build_consensus(
     strategy: ConsensusStrategy,
     use_taxid: Option<bool>,
     out_format: OutputFormat,
+    custom_taxon_values: Option<CustomTaxon>,
 ) -> Result<bool, MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Execute parallel blast
@@ -55,6 +56,7 @@ pub fn run_blast_and_build_consensus(
         blast_config.taxon.to_owned(),
         strategy,
         use_taxid,
+        custom_taxon_values,
     )?;
 
     if let Err(err) = write_blutils_output(

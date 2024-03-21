@@ -12,11 +12,11 @@ use polars_core::{
 };
 
 use crate::domain::dtos::{
-    blast_builder::Taxon,
     blast_result::{BlastQueryResult, BlastResultRow},
     consensus_result::{ConsensusResult, QueryWithoutConsensus},
     consensus_strategy::ConsensusStrategy,
     parallel_blast_output::ParallelBlastOutput,
+    taxon::{CustomTaxon, Taxon},
     taxonomies_map::TaxonomiesMap,
     taxonomy_bean::Taxonomy,
 };
@@ -43,6 +43,7 @@ pub fn build_consensus_identities(
     taxon: Taxon,
     strategy: ConsensusStrategy,
     use_taxid: Option<bool>,
+    custom_taxon_values: Option<CustomTaxon>,
 ) -> Result<Vec<ConsensusResult>, MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Load blast output as lazy
@@ -116,6 +117,7 @@ pub fn build_consensus_identities(
                 result.results.unwrap(),
                 taxon.to_owned(),
                 strategy.to_owned(),
+                custom_taxon_values.to_owned(),
             ) {
                 Err(err) => {
                     panic!("Unexpected error on parse blast results: {err}")

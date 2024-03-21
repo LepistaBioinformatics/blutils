@@ -1,6 +1,8 @@
 /target
 /Cargo.lock
-assets
+assets/blast_db
+assets/blu_output
+assets/tax_dump
 
 test/mock/output/blast.out
 test/mock/output/blutils.consensus.json

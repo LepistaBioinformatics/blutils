@@ -1,5 +1,5 @@
 use self::{LinnaeanRank::*, RankedLinnaeanIdentity::*};
-use super::blast_builder::Taxon::{self, *};
+use super::taxon::{CustomTaxon, Taxon};
 use super::taxonomy_bean::TaxonomyBean;
 use crate::domain::utils::round;
 
@@ -154,8 +154,10 @@ impl InterpolatedIdentity {
     pub(crate) fn new(
         taxon: Taxon,
         taxonomy: Vec<LinnaeanRank>,
+        custom_taxon_values: Option<CustomTaxon>,
     ) -> Result<Self, MappedErrors> {
-        let interpolation = Self::interpolate_identities(taxon, taxonomy)?;
+        let interpolation =
+            Self::interpolate_identities(taxon, taxonomy, custom_taxon_values)?;
         Ok(Self { interpolation })
     }
 
@@ -218,6 +220,7 @@ impl InterpolatedIdentity {
     fn interpolate_identities(
         taxon: Taxon,
         taxonomy: Vec<LinnaeanRank>,
+        custom_taxon_values: Option<CustomTaxon>,
     ) -> Result<Vec<RankedLinnaeanIdentity>, MappedErrors> {
         //
         // Collect the backbone for the taxon
@@ -225,7 +228,7 @@ impl InterpolatedIdentity {
         // The backbone is a vector of `RankedLinnaeanIdentity` that contains
         // the identity cutoffs for the default Linnaeus taxon ranks.
         //
-        let backbone = Self::get_taxon_cutoff(taxon);
+        let backbone = taxon.get_taxon_cutoff(custom_taxon_values);
         //
         // Map taxonomies to the backbone
         //
@@ -349,10 +352,6 @@ impl InterpolatedIdentity {
                 NonDefaultRank(_, _) => 100.0,
             };
 
-            /* if last_window_identity < first_window_identity {
-                panic!("Unexpected error. Last window identity is less than first window identity");
-            } */
-
             let window_weight = last_window_identity - first_window_identity;
             let window_size = (window.len() - 1) as f64;
 
@@ -381,58 +380,5 @@ impl InterpolatedIdentity {
                 _ => item,
             })
             .collect::<Vec<_>>())
-    }
-
-    fn get_taxon_cutoff(taxon: Taxon) -> Vec<RankedLinnaeanIdentity> {
-        match taxon {
-            Fungi => Self::get_fungal_cutoffs(),
-            Bacteria => Self::get_bacterial_cutoffs(),
-            Eukaryotes => Self::get_eukaryote_cutoffs(),
-        }
-    }
-
-    /// Filter fungi ranks by identity percentage
-    ///
-    /// TODO: Review the identity percentages and check a reference.
-    fn get_fungal_cutoffs() -> Vec<RankedLinnaeanIdentity> {
-        vec![
-            DefaultRank(Species, 97.0),
-            DefaultRank(Genus, 95.0),
-            DefaultRank(Family, 90.0),
-            DefaultRank(Order, 85.0),
-            DefaultRank(Class, 80.0),
-            DefaultRank(Phylum, 75.0),
-            DefaultRank(Domain, 60.0),
-        ]
-    }
-
-    /// Filter bacteria ranks by identity percentage
-    ///
-    /// TODO: Review the identity percentages and check a reference.
-    fn get_bacterial_cutoffs() -> Vec<RankedLinnaeanIdentity> {
-        vec![
-            DefaultRank(Species, 99.0),
-            DefaultRank(Genus, 97.0),
-            DefaultRank(Family, 92.0),
-            DefaultRank(Order, 85.0),
-            DefaultRank(Class, 80.0),
-            DefaultRank(Phylum, 75.0),
-            DefaultRank(Domain, 60.0),
-        ]
-    }
-
-    /// Filter general eukaryotes ranks by identity percentage
-    ///
-    /// TODO: Review the identity percentages and check a reference.
-    fn get_eukaryote_cutoffs() -> Vec<RankedLinnaeanIdentity> {
-        vec![
-            DefaultRank(Species, 97.0),
-            DefaultRank(Genus, 95.0),
-            DefaultRank(Family, 90.0),
-            DefaultRank(Order, 85.0),
-            DefaultRank(Class, 80.0),
-            DefaultRank(Phylum, 75.0),
-            DefaultRank(Domain, 60.0),
-        ]
     }
 }

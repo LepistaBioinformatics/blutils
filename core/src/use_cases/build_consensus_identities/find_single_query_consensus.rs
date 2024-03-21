@@ -1,6 +1,5 @@
 use super::{find_multi_taxa_consensus, force_parsed_taxonomy};
 use crate::domain::dtos::{
-    blast_builder::Taxon,
     blast_result::BlastResultRow,
     consensus_result::{
         ConsensusBean, ConsensusResult, QueryWithConsensus,
@@ -8,6 +7,7 @@ use crate::domain::dtos::{
     },
     consensus_strategy::ConsensusStrategy,
     linnaean_ranks::InterpolatedIdentity,
+    taxon::{CustomTaxon, Taxon},
     taxonomy_bean::{Taxonomy, TaxonomyBean},
 };
 
@@ -19,6 +19,7 @@ pub(super) fn find_single_query_consensus(
     result: Vec<BlastResultRow>,
     taxon: Taxon,
     strategy: ConsensusStrategy,
+    custom_taxon_values: Option<CustomTaxon>,
 ) -> Result<ConsensusResult, MappedErrors> {
     // ? -----------------------------------------------------------------------
     // ? Group results by bit-score
@@ -96,6 +97,7 @@ pub(super) fn find_single_query_consensus(
                     .into_iter()
                     .map(|bean| bean.reached_rank)
                     .collect(),
+                custom_taxon_values,
             )?;
             //
             // Fetch the adjusted taxonomy based on the interpolated identities.
@@ -155,6 +157,7 @@ pub(super) fn find_single_query_consensus(
                 taxon,
                 no_consensus.clone(),
                 strategy.to_owned(),
+                custom_taxon_values,
             ) {
                 Err(err) => panic!("{err}"),
                 Ok(res) => return Ok(res),

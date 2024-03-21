@@ -1,6 +1,8 @@
+use super::taxon::Taxon;
+
 use md5;
 use serde::{Deserialize, Serialize};
-use std::{fmt, str::FromStr};
+use std::fmt;
 use uuid::Uuid;
 
 // ? --------------------------------------------------------------------------
@@ -34,26 +36,6 @@ impl QuerySequence {
 // ? --------------------------------------------------------------------------
 // ? Wrapper for Blast Builder
 // ? --------------------------------------------------------------------------
-
-#[derive(Clone, Debug, Serialize, Deserialize, clap::ValueEnum)]
-#[serde(rename_all = "camelCase")]
-pub enum Taxon {
-    Fungi,
-    Bacteria,
-    Eukaryotes,
-}
-
-impl FromStr for Taxon {
-    type Err = ();
-
-    fn from_str(input: &str) -> Result<Taxon, Self::Err> {
-        match input {
-            "f" | "Fungi" | "fungi" => Ok(Taxon::Fungi),
-            "b" | "Bacteria" | "bacteria" => Ok(Taxon::Bacteria),
-            _ => Err(()),
-        }
-    }
-}
 
 #[derive(Clone, Debug, Serialize, clap::ValueEnum, Deserialize)]
 #[serde(rename_all = "camelCase")]
