@@ -57,6 +57,7 @@ All notable changes to this project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - *(cliff)* Add individual changelog files to the workspace project
+- Release
 
 ## [6.2.0] - 2023-09-12
 
