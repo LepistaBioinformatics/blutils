@@ -8,6 +8,11 @@ All notable changes to this project will be documented in this file.
 
 - *(tracing)* Improve the traccing instruments to disable log to the stdout
 
+### ⚙️ Miscellaneous Tasks
+
+- Release
+- *(cliff)* Add individual changelog files to the workspace project
+
 ## [8.2.0] - 2024-03-21
 
 ### 🚀 Features

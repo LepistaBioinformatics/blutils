@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [8.3.0] - 2025-05-20
+
+### ⚙️ Miscellaneous Tasks
+
+- Release
+- *(cliff)* Add individual changelog files to the workspace project
+
 ## [8.2.0] - 2024-03-21
 
 ### 💼 Other

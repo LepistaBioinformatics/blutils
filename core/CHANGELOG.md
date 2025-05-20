@@ -54,6 +54,10 @@ All notable changes to this project will be documented in this file.
 - Refacrore blat command to split commands from execution parts
 - Renament blutils database generator use-case
 
+### ⚙️ Miscellaneous Tasks
+
+- *(cliff)* Add individual changelog files to the workspace project
+
 ## [6.2.0] - 2023-09-12
 
 ### 🚀 Features
