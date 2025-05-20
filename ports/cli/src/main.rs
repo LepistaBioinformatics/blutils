@@ -1,14 +1,17 @@
 mod cmds;
+mod models;
 
-use clap::Parser;
+use anyhow::Result;
+use clap::Subcommand;
 use cmds::{blast, check, db_builder};
-use std::str::FromStr;
+use models::{cli_launcher::CliLauncher, log_format::LogFormat};
+use std::{path::PathBuf, str::FromStr};
 use tracing::debug;
 use tracing_subscriber::{fmt, EnvFilter};
 
-#[derive(Parser, Debug)]
+#[derive(Subcommand, Debug)]
 #[command(author, version, about, long_about = None)]
-enum Cli {
+enum Opts {
     /// Build the blast database as a pre-requisite for the blastn command.
     BuildDb(db_builder::Arguments),
 
@@ -19,36 +22,89 @@ enum Cli {
     Check(check::Arguments),
 }
 
-/// Get the command line arguments.
-fn get_arguments() {
+#[tracing::instrument(name = "expose_runtime_arguments")]
+pub fn expose_runtime_arguments() {
     let args: Vec<_> = std::env::args().collect();
     debug!("{:?}", args.join(" "));
 }
 
-fn main() {
-    let log_level = std::env::var("RUST_LOG").unwrap_or("error".to_string());
+fn main() -> Result<()> {
+    let args = CliLauncher::<Opts>::parse();
+
+    // ? -----------------------------------------------------------------------
+    // ? Configure logger
+    // ? -----------------------------------------------------------------------
+
+    let log_level = args.log_level.unwrap_or("error".to_string());
+
+    let (non_blocking, _guard) = match args.log_file {
+        //
+        // If no log file is provided, log to stderr
+        //
+        None => tracing_appender::non_blocking(std::io::stderr()),
+        //
+        // If a log file is provided, log to the file
+        //
+        Some(file) => {
+            let mut log_file = PathBuf::from(file);
+
+            let binding = log_file.to_owned();
+            let parent_dir = binding
+                .parent()
+                .expect("Log file parent directory not found");
+
+            match args.log_format {
+                LogFormat::Jsonl => {
+                    log_file.set_extension("jsonl");
+                }
+                LogFormat::Ansi => {
+                    log_file.set_extension("log");
+                }
+            };
+
+            if log_file.exists() {
+                std::fs::remove_file(&log_file)?;
+            }
+
+            let file_name =
+                log_file.file_name().expect("Log file name not found");
+
+            let file_appender =
+                tracing_appender::rolling::never(parent_dir, file_name);
+
+            tracing_appender::non_blocking(file_appender)
+        }
+    };
 
     let tracing_config = tracing_subscriber::fmt()
         .event_format(
             fmt::format()
-                // don't include levels in formatted output
                 .with_level(true)
-                // don't include targets
                 .with_target(false)
-                .compact(),
+                .with_thread_ids(true)
+                .with_file(false)
+                .with_line_number(false),
         )
+        .with_writer(non_blocking)
         .with_env_filter(EnvFilter::from_str(log_level.as_str()).unwrap());
 
-    if std::env::var("RUST_LOG_FORMAT").unwrap_or("".to_string()) == "json" {
-        tracing_config.json().init();
-    } else {
-        tracing_config.with_ansi(true).init();
-    }
+    match args.log_format {
+        LogFormat::Ansi => tracing_config.pretty().init(),
+        LogFormat::Jsonl => tracing_config.json().init(),
+    };
 
-    get_arguments();
+    // ? -----------------------------------------------------------------------
+    // ? Get command line arguments
+    // ? -----------------------------------------------------------------------
 
-    match Cli::parse() {
-        Cli::BuildDb(sub_args) => match sub_args.build {
+    expose_runtime_arguments();
+
+    // ? -----------------------------------------------------------------------
+    // ? Fire up the command
+    // ? -----------------------------------------------------------------------
+
+    match args.opts {
+        Opts::BuildDb(sub_args) => match sub_args.build {
             db_builder::Commands::Blu(args) => {
                 db_builder::run_blast_and_build_consensus_cmd(args)
             }
@@ -59,10 +115,13 @@ fn main() {
                 db_builder::build_kraken_db_from_ncbi_files_cmd(args)
             }
         },
-        Cli::Blastn(blast_args) => {
+        Opts::Blastn(blast_args) => {
             match blast_args.run_blast {
-                blast::Commands::RunWithConsensus(args) => {
-                    blast::run_blast_and_build_consensus_cmd(args)
+                blast::Commands::RunWithConsensus(sub_args) => {
+                    blast::run_blast_and_build_consensus_cmd(
+                        sub_args,
+                        args.threads,
+                    )
                 }
                 blast::Commands::BuildConsensus(args) => {
                     blast::build_consensus_cmd(args)
@@ -72,10 +131,12 @@ fn main() {
                 }
             };
         }
-        Cli::Check(check_args) => {
+        Opts::Check(check_args) => {
             match check_args.check_host {
                 check::Commands::Linux => check::check_host_requirements_cmd(),
             };
         }
     };
+
+    Ok(())
 }

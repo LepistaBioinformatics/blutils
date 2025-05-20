@@ -15,11 +15,16 @@ categories.workspace = true
 
 [dependencies]
 
+blutils-core = { version = "8.2.0", path = "../../core" }
+blutils-proc-adapter = { version = "8.2.0", path = "../../adapters/proc" }
+
 clap.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
-blutils-core = { version = "8.2.0", path = "../../core" }
-blutils-proc-adapter = { version = "8.2.0", path = "../../adapters/proc" }
+
+anyhow = "1"
+serde = "1.0"
+tracing-appender = "0.2"
 
 
 [[bin]]

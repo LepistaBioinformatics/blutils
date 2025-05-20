@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 
 pub(crate) fn run_blast_and_build_consensus_cmd(
     args: RunBlastAndBuildConsensusArguments,
+    threads: Option<usize>,
 ) {
     // If blutils_out_file the output will be redirect to stdout. Than, the
     // RUST_LOG environment variable will be set to none.
@@ -66,7 +67,7 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
     }
 
     // Set the default number of threads
-    let threads = match args.threads {
+    let threads = match threads {
         Some(n) => n,
         None => 1,
     };

@@ -77,10 +77,6 @@ pub(crate) struct RunBlastAndBuildConsensusArguments {
     #[arg(short, long, default_value = "false")]
     pub(super) force_overwrite: bool,
 
-    /// The number of threads to be used. Default is 1.
-    #[arg(long)]
-    pub(super) threads: Option<usize>,
-
     /// The max target sequences to be used. Default is 10.
     #[arg(short, long)]
     pub(super) max_target_seqs: Option<i32>,
