@@ -111,6 +111,24 @@ impl FileOrStdin {
         }
     }
 
+    pub fn yaml_content<T>(self) -> Result<T, StdinError>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let mut reader = self.into_reader()?;
+        let mut buf = String::new();
+
+        reader.read_to_string(&mut buf)?;
+
+        match serde_yaml::from_str(&buf) {
+            Ok(value) => Ok(value),
+            Err(err) => Err(StdinError::FromStr(format!(
+                "unable to parse content as YAML: {}",
+                err
+            ))),
+        }
+    }
+
     pub fn json_line_content(self) -> Result<BlutilsOutput, StdinError> {
         let reader = self.into_chunked_reader()?;
 

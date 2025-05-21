@@ -16,7 +16,6 @@ use std::{
     fs::{create_dir, remove_file},
     path::PathBuf,
 };
-use tracing::{debug, info, warn};
 
 /// Run blast in parallel mode
 ///
@@ -70,22 +69,24 @@ pub(super) fn run_parallel_blast(
         let _ = create_dir(out_dir);
     }
 
-    info!("");
-    info!("Blast output file:");
-    info!("\t{:?}", out_dir_path);
-    info!("");
+    tracing::info!("");
+    tracing::info!("Blast output file:");
+    tracing::info!("\t{:?}", out_dir_path);
+    tracing::info!("");
 
     if out_dir_path.exists() {
         if !overwrite {
-            panic!(
+            tracing::error!(
                 "Could not overwrite existing file {:?} when overwrite option is `false`.", 
                 out_dir_path
             );
+
+            std::process::exit(1);
         }
 
         match remove_file(out_dir_path.clone()) {
-            Err(err) => panic!("Could not remove file given {}", err),
-            Ok(_) => warn!("Output file overwritten!"),
+            Err(err) => panic!("Could not remove file given {err}"),
+            Ok(_) => tracing::warn!("Output file overwritten!"),
         };
     };
 
@@ -97,52 +98,52 @@ pub(super) fn run_parallel_blast(
     let (writer, file) = write_or_append_to_file(out_dir_path.as_path());
     let mut headers: Vec<String> = Vec::new();
 
-    match input_sequences.sequence_content() {
-        Ok(source_sequences) => source_sequences
-            .to_owned()
-            .into_iter()
-            .map(|sequence| {
-                headers.push(sequence.blast_header().to_owned());
-                sequence
-            })
-            .collect::<Vec<Sequence>>()
-            .chunks(chunk_size)
-            .enumerate()
-            .par_bridge()
-            .for_each(|(index, chunk)| {
-                debug!(
-                    "Processing chunk {} of {:?}",
-                    index + 1,
-                    source_sequences.len() / chunk_size
-                );
+    let source_sequences =
+        input_sequences.sequence_content().map_err(|err| {
+            panic!("Could not read input sequences: {err}");
+        })?;
 
-                let response = match pool.install(|| {
-                    blast_execution_repo.run(
-                        chunk
-                            .into_iter()
-                            .map(|i| i.to_fasta())
-                            .collect::<Vec<String>>()
-                            .join(""),
-                        blast_config.clone(),
-                        threads,
-                    )
-                }) {
-                    Err(err) => {
-                        panic!(
-                            "Unexpected error detected on execute blast: {err}"
-                        )
-                    }
-                    Ok(res) => res,
-                };
+    source_sequences
+        .to_owned()
+        .into_iter()
+        .map(|sequence| {
+            headers.push(sequence.blast_header().to_owned());
+            sequence
+        })
+        .collect::<Vec<Sequence>>()
+        .chunks(chunk_size)
+        .enumerate()
+        .par_bridge()
+        .for_each(|(index, chunk)| {
+            tracing::debug!(
+                "Processing chunk {} of {:?}",
+                index + 1,
+                source_sequences.len() / chunk_size
+            );
 
-                match response {
-                    ExecutionResponse::Fail(err) => {
-                        panic!(
-                            "Unexpected error on process chunk {index}: {err}"
-                        );
-                    }
-                    ExecutionResponse::Success(res) => {
-                        match writer(
+            let response = match pool.install(|| {
+                blast_execution_repo.run(
+                    chunk
+                        .into_iter()
+                        .map(|i| i.to_fasta())
+                        .collect::<Vec<String>>()
+                        .join(""),
+                    blast_config.clone(),
+                    threads,
+                )
+            }) {
+                Err(err) => {
+                    panic!("Unexpected error detected on execute blast: {err}")
+                }
+                Ok(res) => res,
+            };
+
+            match response {
+                ExecutionResponse::Fail(err) => {
+                    panic!("Unexpected error on process chunk {index}: {err}");
+                }
+                ExecutionResponse::Success(res) => {
+                    match writer(
                         res,
                         file.try_clone().expect(
                             "Unexpected error detected on write blast result",
@@ -156,11 +157,9 @@ pub(super) fn run_parallel_blast(
                         }
                         Ok(_) => (),
                     };
-                    }
-                };
-            }),
-        Err(err) => panic!("{err}"),
-    };
+                }
+            };
+        });
 
     Ok(ParallelBlastOutput {
         output_file: out_dir_path.to_path_buf(),

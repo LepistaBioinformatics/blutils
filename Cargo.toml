@@ -31,7 +31,7 @@ categories = ["science", "command-line-interface", "command-line-utilities"]
 [workspace.dependencies]
 
 clap = { version = "4", features = ["derive"] }
-mycelium-base = "4.9.0"
+mycelium-base = "7"
 subprocess = "0.2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.0", features = ["json", "env-filter"] }

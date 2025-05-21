@@ -25,6 +25,9 @@ pub enum OutputFormat {
 
     /// JSONL format
     Jsonl,
+
+    /// Yaml format
+    Yaml,
 }
 
 pub fn write_blutils_output(
@@ -42,6 +45,9 @@ pub fn write_blutils_output(
                 }
                 OutputFormat::Json => {
                     path.set_extension("json");
+                }
+                OutputFormat::Yaml => {
+                    path.set_extension("yaml");
                 }
             }
 
@@ -203,6 +209,39 @@ pub fn write_blutils_output(
 
                     stdout.write(b"\n").unwrap();
                 }
+
+                Ok(())
+            }
+        }
+        OutputFormat::Yaml => {
+            if let Some(output_file) = blutils_out_file {
+                let file = match File::create(output_file.to_owned()) {
+                    Err(err) => panic!(
+                        "Error on persist output results into {}: {err}",
+                        output_file.as_os_str().to_str().unwrap()
+                    ),
+                    Ok(res) => res,
+                };
+
+                serde_yaml::to_writer(
+                    file,
+                    &BlutilsOutput {
+                        results: consensus_type_results,
+                        config,
+                    },
+                )
+                .unwrap();
+
+                Ok(())
+            } else {
+                serde_yaml::to_writer(
+                    std::io::stdout().lock(),
+                    &BlutilsOutput {
+                        results: consensus_type_results,
+                        config,
+                    },
+                )
+                .unwrap();
 
                 Ok(())
             }

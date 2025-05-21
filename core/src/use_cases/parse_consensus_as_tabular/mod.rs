@@ -36,14 +36,15 @@ pub fn parse_consensus_as_tabular(
     // ? -----------------------------------------------------------------------
 
     let content = match result_format {
-        OutputFormat::Json => match blutils_result.json_content() {
-            Ok(res) => res,
-            Err(err) => return use_case_err(format!("{err}")).as_error(),
-        },
-        OutputFormat::Jsonl => match blutils_result.json_line_content() {
-            Ok(content) => content,
-            Err(err) => return use_case_err(format!("{err}")).as_error(),
-        },
+        OutputFormat::Json => blutils_result
+            .json_content()
+            .map_err(|e| use_case_err(format!("{e}")))?,
+        OutputFormat::Jsonl => blutils_result
+            .json_line_content()
+            .map_err(|e| use_case_err(format!("{e}")))?,
+        OutputFormat::Yaml => blutils_result
+            .yaml_content()
+            .map_err(|e| use_case_err(format!("{e}")))?,
     };
 
     // ? -----------------------------------------------------------------------

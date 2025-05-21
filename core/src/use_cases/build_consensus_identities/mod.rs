@@ -247,25 +247,29 @@ fn get_taxonomies_dataframe(
     path: &Path,
     use_taxid: Option<bool>,
 ) -> Result<DataFrame, MappedErrors> {
-    let rdr = read_to_string(path).expect("Unable to read file");
+    if !path.exists() {
+        return execution_err("Taxonomies file not found").as_error();
+    }
 
-    let taxonomy_map = match serde_json::from_str::<TaxonomiesMap>(&rdr) {
-        Err(err) => {
-            error!("Unexpected error detected on read `taxonomies`: {}", err);
-            return execution_err(String::from(
-                "Unexpected error occurred on load table.",
+    let rdr = read_to_string(path).map_err(|err| {
+        execution_err(format!(
+            "Unexpected error on read `taxonomies` file: {err}"
+        ))
+    })?;
+
+    let taxonomy_map =
+        serde_json::from_str::<TaxonomiesMap>(&rdr).map_err(|err| {
+            execution_err(format!(
+                "Unexpected error detected on parse `taxonomies` as json: {err}"
             ))
-            .as_error();
-        }
-        Ok(res) => res,
-    };
+        })?;
 
     let column_definitions = vec![
         ("taxid".to_string(), DataType::Int64),
         ("taxonomy".to_string(), DataType::String),
     ];
 
-    let mut df = match DataFrame::new(vec![
+    let mut df = DataFrame::new(vec![
         Series::new(
             "taxid",
             taxonomy_map
@@ -288,15 +292,12 @@ fn get_taxonomies_dataframe(
                 })
                 .collect::<Vec<_>>(),
         ),
-    ]) {
-        Ok(df) => df,
-        Err(err) => {
-            return use_case_err(format!(
-                "Unexpected error detected on create dataframe: {err}"
-            ))
-            .as_error()
-        }
-    };
+    ])
+    .map_err(|err| {
+        use_case_err(format!(
+            "Unexpected error detected on create dataframe: {err}"
+        ))
+    })?;
 
     let mut schema = Schema::new();
 
@@ -305,20 +306,21 @@ fn get_taxonomies_dataframe(
     }
 
     for (column, _type) in schema.iter() {
-        match df.apply(column, |s| match s.cast(_type) {
+        df.apply(column, |s| match s.cast(_type) {
             Ok(casted) => casted,
             Err(err) => {
-                panic!("Unexpected error detected on cast column: {err}")
+                let error_message =
+                    format!("Unexpected error detected on cast column: {err}");
+
+                tracing::error!(error_message);
+                panic!("{error_message}");
             }
-        }) {
-            Ok(res) => res,
-            Err(err) => {
-                return use_case_err(format!(
-                    "Unexpected error detected on apply column: {err}"
-                ))
-                .as_error()
-            }
-        };
+        })
+        .map_err(|err| {
+            use_case_err(format!(
+                "Unexpected error detected on apply column: {err}"
+            ))
+        })?;
     }
 
     Ok(df)
