@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Release
 - *(cliff)* Add individual changelog files to the workspace project
 - Release
+- Release
 
 ## [8.2.0] - 2024-03-21
 

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [8.3.1] - 2025-05-21
+
+### 🚀 Features
+
+- *(yaml output)* Implements the yaml output format parsing as an aditional option for parsing blutils results
+
 ## [8.3.0] - 2025-05-20
 
 ### 🚀 Features
@@ -57,6 +63,7 @@ All notable changes to this project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - *(cliff)* Add individual changelog files to the workspace project
+- Release
 - Release
 
 ## [6.2.0] - 2023-09-12
