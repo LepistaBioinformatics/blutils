@@ -123,11 +123,11 @@ bash run_qc.sh ./SRA/SRR25707968_1.fastq ./SRA/SRR25707968_2.fastq
 cd ..
 ```
 
-The output directory is `data/QC/qc/SRR25707968` and should contain the
+The output directory is `data/qc/SRR25707968` and should contain the
 following structure:
 
 ```bash
-tree data/QC/qc/SRR25707968
+tree data/qc/SRR25707968
 ├── 01_fastqc
 │   ├── lock.lock
 │   ├── SRR25707968_1_fastqc.html
@@ -170,17 +170,18 @@ as follows:
 ```bash
 mkdir -p output
 
-cat data/QC/qc/SRR25707968/06_chimera/SRR25707968.nonchimeras.fasta | blu \ 
-    --log-level error \ 
-    --threads 12 \ 
-    blastn run-with-consensus \ 
-    --tax-file blutils_db/blutils_db/16S_ribosomal_RNA.blutils.json \ 
-    --database blutils_db/blast_db/16S_ribosomal_RNA \ 
-    --taxon bacteria \ 
-    --strategy relaxed \ 
-    --blast-out-file output/blast.out.tsv \ 
-    --out-format json \ 
-    --word-size 11 \ 
+cat data/qc/SRR25707968/06_chimera/SRR25707968.nonchimeras.fasta | \
+    blu \
+    --log-level error \
+    --threads 12 \
+    blastn run-with-consensus \
+    --tax-file blutils_db/blutils_db/16S_ribosomal_RNA.blutils.json \
+    --database blutils_db/blast_db/16S_ribosomal_RNA \
+    --taxon bacteria \
+    --strategy relaxed \
+    --blast-out-file output/blast.out.tsv \
+    --out-format json \
+    --word-size 11 \
     -f > output/blutils.out.json
 ```
 

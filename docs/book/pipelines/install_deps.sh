@@ -17,6 +17,6 @@ mv /tmp/trimmomatic/Trimmomatic-0.39/* ${OUTPUT_DIR}
 
 rm -rf /tmp/trimmomatic
 
-# Install vsearch
+# Install vsearch and fastqc
 
-sudo apt install -y vsearch
+sudo apt install -y vsearch fastqc

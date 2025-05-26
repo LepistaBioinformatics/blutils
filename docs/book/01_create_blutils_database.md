@@ -20,31 +20,29 @@ mkdir -p blutils_db/{new_taxdump,blast_db,blutils_db}
 Then, download the NCBI taxonomy dump file and the 16S database:
 
 ```bash
-curl ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/new_taxdump/new_taxdump.tar.gz \ 
+curl ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/new_taxdump/new_taxdump.tar.gz \
     --output blutils_db/new_taxdump/new_taxdump.tar.gz
 
-curl ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/new_taxdump/new_taxdump.tar.gz.md5 \ 
+curl ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/new_taxdump/new_taxdump.tar.gz.md5 \
     --output blutils_db/new_taxdump/new_taxdump.tar.gz.md5
 
-curl ftp://ftp.ncbi.nlm.nih.gov/blast/db/16S_ribosomal_RNA.tar.gz \ 
+curl ftp://ftp.ncbi.nlm.nih.gov/blast/db/16S_ribosomal_RNA.tar.gz \
     --output blutils_db/blast_db/16S_ribosomal_RNA.tar.gz
 
-curl ftp://ftp.ncbi.nlm.nih.gov/blast/db/16S_ribosomal_RNA.tar.gz.md5 \ 
+curl ftp://ftp.ncbi.nlm.nih.gov/blast/db/16S_ribosomal_RNA.tar.gz.md5 \
     --output blutils_db/blast_db/16S_ribosomal_RNA.tar.gz.md5
-```
-
-Then decompress the files:
-
-```bash
-tar -xzf blutils_db/new_taxdump/new_taxdump.tar.gz
-tar -xzf blutils_db/blast_db/16S_ribosomal_RNA.tar.gz
 ```
 
 Verify the integrity of the downloaded files:
 
 ```bash
-md5sum -c blutils_db/new_taxdump/new_taxdump.tar.gz.md5
-md5sum -c blutils_db/blast_db/16S_ribosomal_RNA.tar.gz.md5
+cd blutils_db/new_taxdump
+md5sum -c new_taxdump.tar.gz.md5
+
+cd ../blast_db
+md5sum -c 16S_ribosomal_RNA.tar.gz.md5
+
+cd ../..
 ```
 
 If the files are corrupted, download them again.
@@ -52,7 +50,7 @@ If the files are corrupted, download them again.
 Now, decompress the 16S database:
 
 ```bash
-tar -xzf blutils_db/blast_db/16S_ribosomal_RNA.tar.gz
+tar -xzf blutils_db/blast_db/16S_ribosomal_RNA.tar.gz -C blutils_db/blast_db
 ```
 
 The output directory should contain the following files:
@@ -78,7 +76,7 @@ total 278M
 And decompress the taxdump:
 
 ```bash
-tar -xzf blutils_db/new_taxdump/new_taxdump.tar.gz
+tar -xzf blutils_db/new_taxdump/new_taxdump.tar.gz -C blutils_db/new_taxdump
 ```
 
 The output directory should contain the following files:
@@ -159,12 +157,12 @@ Options:
           Print help (see a summary with '-h')
 ```
 
-Then, we can build the database using the `blu build-db` command:
+Then, we can build the database using the `blu build-db blu` command:
 
 ```bash
-blu build-db \ 
-    blutils_db/blast_db/16S_ribosomal_RNA \ 
-    blutils_db/new_taxdump \ 
+blu build-db blu \
+    blutils_db/blast_db/16S_ribosomal_RNA \
+    blutils_db/new_taxdump \
     blutils_db/blutils_db/16S_ribosomal_RNA
 ```
 
