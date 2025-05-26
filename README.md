@@ -1,18 +1,20 @@
 # BLUTILS
 
-The `Blutils` tool allow user to run and generate consensus identities of Blast
-results. Currently the BlastN is available.
+`Blutils` (Blast Utils) is a BlastN wrapper developed to execute with hight
+performance on improve the native Blast parallelism. The main feature of
+`Blutils` is to allow users to generate consensus identities from multi-identity
+blast outputs.
 
 ## Installation
 
 `Blutils` package could be installed directly from
-[crates.io](https://crates.io/crates/blutils) using cargo:
+[crates.io](https://crates.io/crates/blutils-cli) using cargo:
 
 ```bash
 cargo install blutils-cli
 ```
 
-After installed, `Blutils` could be evoked using the `blu` command.
+After installed, `Blutils` you should evoke it using the `blu` command.
 
 ```bash
 blu --help
@@ -21,9 +23,9 @@ blu --help
 The output should be close to:
 
 ```bash
-A utility to make it easier to run and analyze Blast results
+The CLI port of the blutils library
 
-Usage: blu <COMMAND>
+Usage: blu [OPTIONS] <COMMAND>
 
 Commands:
   build-db  Build the blast database as a pre-requisite for the blastn command
@@ -32,16 +34,32 @@ Commands:
   help      Print this message or the help of the given subcommand(s)
 
 Options:
-  -h, --help     Print help information
-  -V, --version  Print version information
+      --log-level <LOG_LEVEL>
+
+      --log-file <LOG_FILE>
+
+      --log-format <LOG_FORMAT>
+          [default: ansi]
+
+          Possible values:
+          - ansi:  ANSI format
+          - jsonl: YAML format
+
+  -t, --threads <THREADS>
+          [default: 1]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
 ```
 
 ## Check dependencies
 
-Optionally you could check OS dependencies before run `Blutils`. Naturally BLutils
-depends on Ncbi-Blast+ tool to be installed on the host system to perform
-parallel blast search. To check if the host OS has these package installed run
-the `Blutils` checker for linux systems:
+Blutils depends of `Ncbi-Blast+` to be installed on the host system. To check if
+the host OS has these package installed run the `Blutils` checker for linux
+systems:
 
 ```bash
 blu check linux
@@ -63,10 +81,10 @@ After inspect available options, simple run `Blutils` with test data. First
 download test data from the project github directory:
 
 ```bash
-export INPUT_DIR=https://raw.githubusercontent.com/sgelias/blutils/main/test/mock/input
+export INPUT_DIR=https://raw.githubusercontent.com/LepistaBioinformatics/blutils/refs/heads/main/test/mock/input
 curl ${INPUT_DIR}/query/query.fna > query.fna
-curl ${INPUT_DIR}/query/ref_databases/mock-16S.fna > mock-16S.fna
-curl ${INPUT_DIR}/query/ref_databases/mock-16S_taxonomies.tsv > mock-16S_taxonomies.tsv
+curl ${INPUT_DIR}/ref_databases/mock-16S.fna > mock-16S.fna
+curl ${INPUT_DIR}/ref_databases/mock-16S_taxonomies.tsv > mock-16S_taxonomies.tsv
 ```
 
 Then run `Blutils`:
