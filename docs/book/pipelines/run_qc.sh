@@ -47,7 +47,7 @@ fi
 # Run trimming on the forward and reverse files
 
 if [ ! -f ${trimming_lock_file} ]; then
-    trimmomatic_dir=$(realpath deps/trimmomatic-0.39)
+    trimmomatic_dir=/usr/local/bin
 
     java -jar ${trimmomatic_dir}/trimmomatic-0.39.jar \
         PE \

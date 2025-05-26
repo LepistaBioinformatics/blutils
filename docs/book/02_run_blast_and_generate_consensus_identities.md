@@ -107,16 +107,20 @@ Then, execute a simple quality control pipeline using some common bioinformatics
 tools as
 [`trimmomatic`](http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/TrimmomaticManual_V0.32.pdf)
 and [`vsearch`](https://pubmed.ncbi.nlm.nih.gov/27781170/). For this, use [this
-script](./pipelines/run_qc.sh) as an example:
+script](./pipelines/run_qc.sh) as an example. To ensure that the pipeline is
+working, install the dependencies using the `install_deps.sh` script in the
+[`pipelines`](./pipelines) directory.
 
 ```bash
-mkdir -p data/QC
-cd data/QC
+mkdir -p data
+cd data
 export PIPELINE_URL="https://raw.githubusercontent.com/LepistaBioinformatics/blutils/refs/heads/main/docs/book/pipelines/run_qc.sh"
 
-curl -sSL ${PIPELINE_URL} | bash ../SRA/SRR25707968_1.fastq ../SRA/SRR25707968_2.fastq
+curl -sSL ${PIPELINE_URL} > run_qc.sh
 
-cd ../..
+bash run_qc.sh ./SRA/SRR25707968_1.fastq ./SRA/SRR25707968_2.fastq
+
+cd ..
 ```
 
 The output directory is `data/QC/qc/SRR25707968` and should contain the
