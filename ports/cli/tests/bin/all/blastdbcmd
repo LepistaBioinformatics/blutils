@@ -1,0 +1,4 @@
+#!/bin/sh
+# Fake `blastdbcmd`: prints FAKE_BLASTDBCMD_STDOUT verbatim (fields separated
+# by two spaces, as produced by the real `-outfmt` used by blutils).
+printf '%s' "$FAKE_BLASTDBCMD_STDOUT"

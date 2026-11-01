@@ -1,0 +1,107 @@
+{
+  "results": [
+    {
+      "runId": "00000000-0000-0000-0000-000000000000",
+      "query": "c1-single-strain-100",
+      "taxon": {
+        "reachedRank": "strain",
+        "maxAllowedRank": "strain",
+        "identifier": "escherichia-coli-k-12-substr-mg1655",
+        "percIdentity": 100.0,
+        "bitScore": 923.0,
+        "taxonomy": "d__bacteria;p__pseudomonadota;c__gammaproteobacteria;o__enterobacterales;f__enterobacteriaceae;g__escherichia;s__escherichia-coli;strain__escherichia-coli-k-12-substr-mg1655",
+        "mutated": false,
+        "singleMatch": true,
+        "consensusBeans": [
+          {
+            "rank": "strain",
+            "identifier": "escherichia-coli-k-12-substr-mg1655",
+            "occurrences": 1,
+            "taxonomy": "d__bacteria;p__pseudomonadota;c__gammaproteobacteria;o__enterobacterales;f__enterobacteriaceae;g__escherichia;s__escherichia-coli;strain__escherichia-coli-k-12-substr-mg1655",
+            "accessions": [
+              "ACC511145.1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "runId": "00000000-0000-0000-0000-000000000000",
+      "query": "c2-multi-lca-family",
+      "taxon": {
+        "reachedRank": "family",
+        "maxAllowedRank": "species",
+        "identifier": "bacillaceae",
+        "percIdentity": 99.5,
+        "bitScore": 868.5,
+        "taxonomy": "d__bacteria;p__bacillota;c__bacilli;o__bacillales;f__bacillaceae",
+        "mutated": false,
+        "singleMatch": false,
+        "consensusBeans": [
+          {
+            "rank": "genus",
+            "identifier": "bacillus",
+            "occurrences": 1,
+            "taxonomy": "d__bacteria;p__bacillota;c__bacilli;o__bacillales;f__bacillaceae;g__bacillus;s__bacillus-subtilis",
+            "accessions": [
+              "ACC101.1"
+            ]
+          },
+          {
+            "rank": "genus",
+            "identifier": "lysinibacillus",
+            "occurrences": 1,
+            "taxonomy": "d__bacteria;p__bacillota;c__bacilli;o__bacillales;f__bacillaceae;g__lysinibacillus;s__lysinibacillus-sphaericus",
+            "accessions": [
+              "ACC104.1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "runId": "00000000-0000-0000-0000-000000000000",
+      "query": "c3-header-only",
+      "taxon": null
+    },
+    {
+      "runId": "00000000-0000-0000-0000-000000000000",
+      "query": "c4-single-98",
+      "taxon": {
+        "reachedRank": "genus",
+        "maxAllowedRank": "genus",
+        "identifier": "bacillus",
+        "percIdentity": 98.0,
+        "bitScore": 850.0,
+        "taxonomy": "d__bacteria;p__bacillota;c__bacilli;o__bacillales;f__bacillaceae;g__bacillus",
+        "mutated": true,
+        "singleMatch": true,
+        "consensusBeans": [
+          {
+            "rank": "genus",
+            "identifier": "bacillus",
+            "occurrences": 1,
+            "taxonomy": "d__bacteria;p__bacillota;c__bacilli;o__bacillales;f__bacillaceae;g__bacillus;s__bacillus-subtilis",
+            "accessions": [
+              "ACC101.1"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "isConfig": true,
+    "runId": "00000000-0000-0000-0000-000000000000",
+    "blutilsVersion": "0.0.0-contract",
+    "subjectReads": "contract-16S.fna",
+    "taxon": "bacteria",
+    "outFormat": "6 qseqid saccver staxid pident length mismatch gapopen qstart qend sstart send evalue bitscore",
+    "maxTargetSeqs": 10,
+    "percIdentity": 80,
+    "queryCov": 80,
+    "strand": "both",
+    "eValue": 0.001,
+    "wordSize": 15
+  }
+}

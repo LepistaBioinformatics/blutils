@@ -24,3 +24,9 @@ blutils-core = { version = "8.3.1", path = "../../core" }
 name = "blul_proc"
 path = "src/lib.rs"
 crate-type = ["staticlib", "lib"]
+
+
+[dev-dependencies]
+
+serial_test = "3"
+tempfile = "3"

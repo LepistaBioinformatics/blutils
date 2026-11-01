@@ -58,6 +58,8 @@ pub(crate) struct RunBlastAndBuildConsensusArguments {
     #[arg(long)]
     pub(super) taxon: Taxon,
 
+    /// YAML (.yaml/.yml) or JSON file with custom taxon cutoffs (required
+    /// with `--taxon custom`)
     #[arg(long, short)]
     pub(super) custom_taxon_cutoff_file: Option<PathBuf>,
 
@@ -120,6 +122,8 @@ pub(crate) struct BuildConsensusArguments {
     #[arg(long)]
     pub(super) taxon: Taxon,
 
+    /// YAML (.yaml/.yml) or JSON file with custom taxon cutoffs (required
+    /// with `--taxon custom`)
     #[arg(long, short)]
     pub(super) custom_taxon_cutoff_file: Option<PathBuf>,
 

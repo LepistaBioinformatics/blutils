@@ -1,0 +1,45 @@
+{
+  "blutilsVersion": "8.3.1",
+  "ignoreTaxids": null,
+  "replaceRank": null,
+  "dropNonLinnaeanTaxonomies": null,
+  "sourceDatabase": "fixture-16S",
+  "taxonomies": [
+    {
+      "taxid": 101,
+      "rank": "species",
+      "numericLineage": "d__2;p__1239;c__91061;o__1385;f__186817;g__1386;s__1423",
+      "textLineage": "d__bacteria;p__bacillota;c__bacilli;o__bacillales;f__bacillaceae;g__bacillus;s__bacillus-subtilis",
+      "accessions": [
+        {
+          "accession": "ACC101.1",
+          "oid": "0"
+        }
+      ]
+    },
+    {
+      "taxid": 102,
+      "rank": "species",
+      "numericLineage": "d__2;p__1239;c__91061;o__1385;f__186817;g__1386;s__1396",
+      "textLineage": "d__bacteria;p__bacillota;c__bacilli;o__bacillales;f__bacillaceae;g__bacillus;s__bacillus-cereus",
+      "accessions": [
+        {
+          "accession": "ACC102.1",
+          "oid": "1"
+        }
+      ]
+    },
+    {
+      "taxid": 104,
+      "rank": "species",
+      "numericLineage": "d__2;p__1239;c__91061;o__1385;f__186817;g__400634;s__1421",
+      "textLineage": "d__bacteria;p__bacillota;c__bacilli;o__bacillales;f__bacillaceae;g__lysinibacillus;s__lysinibacillus-sphaericus",
+      "accessions": [
+        {
+          "accession": "ACC104.1",
+          "oid": "2"
+        }
+      ]
+    }
+  ]
+}

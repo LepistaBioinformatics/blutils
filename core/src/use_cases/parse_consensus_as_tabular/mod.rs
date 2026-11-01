@@ -13,7 +13,7 @@ use tracing::warn;
 use uuid::Uuid;
 
 pub fn parse_consensus_as_tabular(
-    mut blutils_result: FileOrStdin,
+    blutils_result: FileOrStdin,
     output_file: Option<PathBuf>,
     result_format: OutputFormat,
 ) -> Result<(), MappedErrors> {
@@ -21,11 +21,10 @@ pub fn parse_consensus_as_tabular(
     // ? Validate input files
     // ? -----------------------------------------------------------------------
 
-    if let Source::Arg(ref mut file) = blutils_result.source {
-        let mut path = PathBuf::from(file.to_owned());
-        path.set_extension("json");
-
-        if !path.exists() {
+    // Check the path that is actually read, whatever its extension
+    // (BUG-R11).
+    if let Source::Arg(ref file) = blutils_result.source {
+        if !PathBuf::from(file).exists() {
             return use_case_err(format!("The file `{file}` does not exist."))
                 .as_error();
         }
@@ -107,8 +106,14 @@ pub fn parse_consensus_as_tabular(
             } => match taxon {
                 Some(res) => res,
                 None => {
+                    // Keep the 12-column layout of the header (BUG-R10).
                     write_or_stdout(
-                        format!("{}\tnull\n", query),
+                        format!(
+                            "{}\t{}{}",
+                            result.run_id.as_ref().unwrap_or(&run_id),
+                            query,
+                            "\tnull".repeat(10)
+                        ),
                         file_writer,
                         file.try_clone().expect(
                             "Unexpected error detected on write tabular output",

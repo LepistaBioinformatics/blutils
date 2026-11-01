@@ -14,54 +14,28 @@ pub(super) fn load_merged_dataframe(
 
     match load_dump_file(path, column_definitions) {
         Ok(df) => {
-            let merged_nodes = match df.column("tax_id") {
-                Ok(col) => col
-                    .i64()
-                    .unwrap()
-                    .into_iter()
-                    .filter_map(|tax_id| {
-                        if tax_id.is_none() {
-                            return None;
-                        }
-
-                        Some(tax_id.unwrap())
-                    })
-                    .collect::<Vec<i64>>(),
-                Err(err) => {
-                    return use_case_err(format!(
-                        "Unexpected error detected on get merged nodes dataframe: {err}"
-                    ))
-                    .as_error()
-                }
-            };
-
-            let new_tax_ids = match df.column("new_tax_id") {
-                Ok(col) => col
-                    .i64()
-                    .unwrap()
-                    .into_iter()
-                    .filter_map(|tax_id| {
-                        if tax_id.is_none() {
-                            return None;
-                        }
-
-                        Some(tax_id.unwrap())
-                    })
-                    .collect::<Vec<i64>>(),
-                Err(err) => {
-                    return use_case_err(format!(
-                        "Unexpected error detected on get merged nodes dataframe: {err}"
-                    ))
-                    .as_error()
-                }
-            };
-
-            let mut merged_map = HashMap::new();
-            for (tax_id, new_tax_id) in
-                merged_nodes.iter().zip(new_tax_ids.iter())
-            {
-                merged_map.insert(*tax_id as u64, *new_tax_id as u64);
+            let column = |name: &str| {
+                match df.column(name) {
+                Ok(col) => Ok(col.i64().unwrap().clone()),
+                Err(err) => use_case_err(format!(
+                    "Unexpected error detected on get merged nodes dataframe: {err}"
+                ))
+                .as_error(),
             }
+            };
+
+            let merged_nodes = column("tax_id")?;
+            let new_tax_ids = column("new_tax_id")?;
+
+            // Pair the columns row by row and drop a row as a whole when
+            // either side is null (BUG-R15).
+            let merged_map = merged_nodes
+                .into_iter()
+                .zip(&new_tax_ids)
+                .filter_map(|(tax_id, new_tax_id)| {
+                    Some((tax_id? as u64, new_tax_id? as u64))
+                })
+                .collect::<HashMap<u64, u64>>();
 
             Ok(merged_map)
         }
@@ -71,5 +45,65 @@ pub(super) fn load_merged_dataframe(
         ))
             .as_error()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::write;
+
+    fn dump(dir: &tempfile::TempDir, content: &str) -> PathBuf {
+        let path = dir.path().join("merged.dmp");
+        write(&path, content).unwrap();
+        path
+    }
+
+    #[test]
+    fn load_merged_dataframe_ncbi_line_maps_old_to_new_tax_id() {
+        let dir = tempfile::tempdir().unwrap();
+
+        assert_eq!(
+            load_merged_dataframe(dump(&dir, "10\t|\t20\t|\n")).unwrap(),
+            HashMap::from([(10, 20)])
+        );
+    }
+
+    #[test]
+    fn load_merged_dataframe_multiple_lines_map_each_pair() {
+        let dir = tempfile::tempdir().unwrap();
+
+        assert_eq!(
+            load_merged_dataframe(dump(&dir, "10\t|\t20\t|\n11\t|\t21\t|\n"))
+                .unwrap(),
+            HashMap::from([(10, 20), (11, 21)])
+        );
+    }
+
+    #[test]
+    fn load_merged_dataframe_nonexistent_path_returns_err() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let err =
+            load_merged_dataframe(dir.path().join("missing.dmp")).unwrap_err();
+
+        assert!(format!("{err}").contains(
+            "Unexpected error detected on load merged nodes dataframe"
+        ));
+    }
+
+    // BUG-R15: a row with a null side is dropped without shifting the others.
+    #[test]
+    fn load_merged_dataframe_row_with_null_is_dropped_as_a_whole() {
+        let dir = tempfile::tempdir().unwrap();
+
+        assert_eq!(
+            load_merged_dataframe(dump(
+                &dir,
+                "\t|\t20\t|\n10\t|\tabc\t|\n11\t|\t21\t|\n"
+            ))
+            .unwrap(),
+            HashMap::from([(11, 21)])
+        );
     }
 }

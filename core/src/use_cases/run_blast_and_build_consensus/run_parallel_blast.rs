@@ -10,10 +10,10 @@ use crate::{
     use_cases::shared::{validate_blast_database, write_or_append_to_file},
 };
 
-use mycelium_base::utils::errors::MappedErrors;
+use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::{
-    fs::{create_dir, remove_file},
+    fs::{create_dir_all, remove_file},
     path::PathBuf,
 };
 
@@ -65,8 +65,13 @@ pub(super) fn run_parallel_blast(
     out_dir_path.set_extension("out");
     let out_dir = out_dir_path.parent().unwrap();
 
+    // Create every missing ancestor and surface failures (BUG-R33).
     if !out_dir.exists() {
-        let _ = create_dir(out_dir);
+        create_dir_all(out_dir).map_err(|err| {
+            execution_err(format!(
+                "Could not create blast output directory {out_dir:?}: {err}"
+            ))
+        })?;
     }
 
     tracing::info!("");
@@ -76,18 +81,20 @@ pub(super) fn run_parallel_blast(
 
     if out_dir_path.exists() {
         if !overwrite {
-            tracing::error!(
-                "Could not overwrite existing file {:?} when overwrite option is `false`.", 
+            return execution_err(format!(
+                "Could not overwrite existing file {:?} when overwrite option is `false`.",
                 out_dir_path
-            );
-
-            std::process::exit(1);
+            ))
+            .as_error();
         }
 
-        match remove_file(out_dir_path.clone()) {
-            Err(err) => panic!("Could not remove file given {err}"),
-            Ok(_) => tracing::warn!("Output file overwritten!"),
-        };
+        remove_file(out_dir_path.clone()).map_err(|err| {
+            execution_err(format!(
+                "Could not remove file {out_dir_path:?}: {err}"
+            ))
+        })?;
+
+        tracing::warn!("Output file overwritten!");
     };
 
     // ? ----------------------------------------------------------------------
@@ -100,7 +107,7 @@ pub(super) fn run_parallel_blast(
 
     let source_sequences =
         input_sequences.sequence_content().map_err(|err| {
-            panic!("Could not read input sequences: {err}");
+            execution_err(format!("Could not read input sequences: {err}"))
         })?;
 
     source_sequences

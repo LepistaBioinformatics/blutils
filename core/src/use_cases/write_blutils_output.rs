@@ -99,7 +99,9 @@ pub fn write_blutils_output(
                     init.push(QueryWithConsensus {
                         query: res.query.to_owned(),
                         taxon: res.taxon.to_owned(),
-                        run_id: Some(run_id),
+                        // Keep a run id already carried by the result
+                        // (BUG-R27).
+                        run_id: res.run_id.or(Some(run_id)),
                     })
                 }
             };
@@ -168,12 +170,16 @@ pub fn write_blutils_output(
                 let (writer, file) =
                     write_or_append_to_file(output_file.as_path());
 
-                writer(
-                    serde_json::to_string(&config).unwrap() + "\n",
-                    file.try_clone().expect(
-                        "Unexpected error detected on write blast result",
-                    ),
-                )?;
+                // Without config no line is written: a bare `null` line is not
+                // a valid record (BUG-R09).
+                if let Some(config) = &config {
+                    writer(
+                        serde_json::to_string(config).unwrap() + "\n",
+                        file.try_clone().expect(
+                            "Unexpected error detected on write blast result",
+                        ),
+                    )?;
+                }
 
                 for record in &consensus_type_results {
                     match writer(
@@ -193,12 +199,16 @@ pub fn write_blutils_output(
             } else {
                 let mut stdout = std::io::stdout();
 
-                if let Err(err) = serde_json::to_writer(stdout.lock(), &config)
-                {
-                    panic!("Unexpected error on write JSONL output: {err}");
-                }
+                // See the file branch above (BUG-R09).
+                if let Some(config) = &config {
+                    if let Err(err) =
+                        serde_json::to_writer(stdout.lock(), config)
+                    {
+                        panic!("Unexpected error on write JSONL output: {err}");
+                    }
 
-                stdout.write(b"\n").unwrap();
+                    stdout.write_all(b"\n").unwrap();
+                }
 
                 for record in &consensus_type_results {
                     if let Err(err) =
@@ -207,7 +217,7 @@ pub fn write_blutils_output(
                         panic!("Unexpected error on write JSONL output: {err}");
                     }
 
-                    stdout.write(b"\n").unwrap();
+                    stdout.write_all(b"\n").unwrap();
                 }
 
                 Ok(())
@@ -223,7 +233,7 @@ pub fn write_blutils_output(
                     Ok(res) => res,
                 };
 
-                serde_yaml::to_writer(
+                serde_yaml_ng::to_writer(
                     file,
                     &BlutilsOutput {
                         results: consensus_type_results,
@@ -234,7 +244,7 @@ pub fn write_blutils_output(
 
                 Ok(())
             } else {
-                serde_yaml::to_writer(
+                serde_yaml_ng::to_writer(
                     std::io::stdout().lock(),
                     &BlutilsOutput {
                         results: consensus_type_results,

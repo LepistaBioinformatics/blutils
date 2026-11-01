@@ -1,6 +1,7 @@
 mod generate_fasta_file;
 mod generate_taxonomies_file;
 
+use super::shared::validate_blast_database;
 use generate_fasta_file::*;
 use generate_taxonomies_file::*;
 
@@ -15,6 +16,12 @@ pub fn build_kraken_db_from_ncbi_files(
     blast_database_path: &PathBuf,
     output_directory: PathBuf,
 ) -> Result<(), MappedErrors> {
+    // ? -----------------------------------------------------------------------
+    // ? Validate inputs before touching the output directory
+    // ? -----------------------------------------------------------------------
+
+    validate_blast_database(blast_database_path)?;
+
     // ? -----------------------------------------------------------------------
     // ? Initialize files
     // ? -----------------------------------------------------------------------

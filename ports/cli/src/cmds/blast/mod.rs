@@ -25,12 +25,6 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
     args: RunBlastAndBuildConsensusArguments,
     threads: Option<usize>,
 ) {
-    // If blutils_out_file the output will be redirect to stdout. Than, the
-    // RUST_LOG environment variable will be set to none.
-    if let None = args.blutils_out_file {
-        std::env::set_var("RUST_LOG", "none");
-    }
-
     // Execute system checks before running the blast
     if let Err(err) = check_host_requirements(Some("debug")) {
         panic!("{err}");
@@ -73,7 +67,10 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
     };
 
     let custom_taxon = match args.custom_taxon_cutoff_file {
-        Some(file) => Some(CustomTaxon::from_file(file)),
+        Some(file) => match CustomTaxon::from_file(file) {
+            Ok(custom_taxon) => Some(custom_taxon),
+            Err(err) => panic!("{err}"),
+        },
         None => {
             if let Taxon::Custom = args.taxon {
                 panic!("Custom taxon values are required when the custom taxon option is selected.");
@@ -102,14 +99,11 @@ pub(crate) fn run_blast_and_build_consensus_cmd(
 }
 
 pub(crate) fn build_consensus_cmd(args: BuildConsensusArguments) {
-    // If blutils_out_file the output will be redirect to stdout. Than, the
-    // RUST_LOG environment variable will be set to none.
-    if let None = args.blutils_out_file {
-        std::env::set_var("RUST_LOG", "none");
-    }
-
     let custom_taxon = match args.custom_taxon_cutoff_file {
-        Some(file) => Some(CustomTaxon::from_file(file)),
+        Some(file) => match CustomTaxon::from_file(file) {
+            Ok(custom_taxon) => Some(custom_taxon),
+            Err(err) => panic!("{err}"),
+        },
         None => {
             if let Taxon::Custom = args.taxon {
                 panic!("Custom taxon values are required when the custom taxon option is selected.");
@@ -145,12 +139,6 @@ pub(crate) fn build_consensus_cmd(args: BuildConsensusArguments) {
 }
 
 pub(crate) fn build_tabular_cmd(args: BuildTabularArguments) {
-    // If output_file the output will be redirect to stdout. Than, the
-    // RUST_LOG environment variable will be set to none.
-    if let None = args.output_file {
-        std::env::set_var("RUST_LOG", "none");
-    }
-
     match parse_consensus_as_tabular(
         args.blu_result,
         match args.output_file {

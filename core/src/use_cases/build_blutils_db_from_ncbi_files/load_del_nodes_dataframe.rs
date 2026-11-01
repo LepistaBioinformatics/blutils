@@ -47,3 +47,48 @@ pub(super) fn load_del_nodes_dataframe(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::write;
+
+    fn dump(dir: &tempfile::TempDir, content: &str) -> PathBuf {
+        let path = dir.path().join("delnodes.dmp");
+        write(&path, content).unwrap();
+        path
+    }
+
+    #[test]
+    fn load_del_nodes_dataframe_ncbi_lines_return_tax_ids_in_order() {
+        let dir = tempfile::tempdir().unwrap();
+
+        assert_eq!(
+            load_del_nodes_dataframe(dump(&dir, "1\t|\n2\t|\n")).unwrap(),
+            vec![1, 2]
+        );
+    }
+
+    #[test]
+    fn load_del_nodes_dataframe_blank_and_non_numeric_lines_are_skipped() {
+        let dir = tempfile::tempdir().unwrap();
+
+        assert_eq!(
+            load_del_nodes_dataframe(dump(&dir, "7\t|\n\nabc\t|\n9\t|\n"))
+                .unwrap(),
+            vec![7, 9]
+        );
+    }
+
+    #[test]
+    fn load_del_nodes_dataframe_nonexistent_path_returns_err() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let err = load_del_nodes_dataframe(dir.path().join("missing.dmp"))
+            .unwrap_err();
+
+        assert!(format!("{err}").contains(
+            "Unexpected error detected on load deleted nodes dataframe"
+        ));
+    }
+}

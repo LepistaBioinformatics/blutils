@@ -3,7 +3,7 @@ use crate::domain::dtos::taxonomies_map::TaxonomiesMap;
 
 use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use std::{
-    fs::{read_to_string, remove_file},
+    fs::{create_dir_all, read_to_string, remove_file},
     io::{BufRead, BufReader},
     path::PathBuf,
 };
@@ -22,6 +22,19 @@ pub fn build_qiime_db_from_blutils_db(
     // ? -----------------------------------------------------------------------
 
     output_taxonomies_file.set_extension("tsv");
+    output_sequences_file.set_extension("fna");
+
+    for output_file in [&output_taxonomies_file, &output_sequences_file] {
+        if let Some(parent) = output_file.parent() {
+            if !parent.as_os_str().is_empty() {
+                create_dir_all(parent).map_err(|err| {
+                    execution_err(format!(
+                        "Could not create output directory {parent:?}: {err}"
+                    ))
+                })?;
+            }
+        }
+    }
 
     if output_taxonomies_file.exists() {
         remove_file(output_taxonomies_file.to_owned()).unwrap();
