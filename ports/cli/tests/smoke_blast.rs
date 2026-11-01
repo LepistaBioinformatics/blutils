@@ -35,8 +35,10 @@ fn mock_taxonomies() -> BTreeMap<String, String> {
         .collect()
 }
 
-fn species_taxid(lineage: &str) -> &str {
-    lineage.rsplit_once("s__").unwrap().1
+/// Taxid of the deepest rank in the lineage; some mock lineages stop above
+/// species (e.g. at `f__` or `o__`).
+fn leaf_taxid(lineage: &str) -> &str {
+    lineage.rsplit_once("__").unwrap().1
 }
 
 /// Builds `<dir>/db` with `makeblastdb` (taxids mapped from the mock TSV) and
@@ -46,7 +48,7 @@ fn make_blast_database(dir: &Path) -> PathBuf {
     let taxid_map = dir.join("taxid_map.txt");
     let map: String = mock_taxonomies()
         .iter()
-        .map(|(seqid, lineage)| format!("{seqid} {}\n", species_taxid(lineage)))
+        .map(|(seqid, lineage)| format!("{seqid} {}\n", leaf_taxid(lineage)))
         .collect();
     fs::write(&taxid_map, map).unwrap();
 
@@ -73,7 +75,7 @@ fn write_taxonomies_json(dir: &Path) -> PathBuf {
 
     for (seqid, lineage) in mock_taxonomies() {
         by_taxid
-            .entry(species_taxid(&lineage).to_string())
+            .entry(leaf_taxid(&lineage).to_string())
             .or_insert_with(|| (lineage.clone(), Vec::new()))
             .1
             .push(seqid);
