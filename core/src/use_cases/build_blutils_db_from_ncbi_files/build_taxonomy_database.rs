@@ -7,10 +7,10 @@ use crate::{
         linnaean_ranks::LinnaeanRank,
         taxonomies_map::{Accession, TaxonomiesMap, TaxonomyMapUnit},
     },
-    use_cases::shared::write_or_append_to_file,
+    use_cases::shared::{append, remove_if_exists, write_or_append_to_file},
 };
 
-use mycelium_base::utils::errors::{use_case_err, MappedErrors};
+use mycelium_base::utils::errors::{execution_err, use_case_err, MappedErrors};
 use polars_ops::{
     frame::{JoinArgs, JoinType},
     prelude::DataFrameJoinOps,
@@ -18,8 +18,8 @@ use polars_ops::{
 use slugify::slugify;
 use std::{
     collections::HashMap,
-    fs::{remove_file, File},
-    io::Write,
+    fs::File,
+    io::{BufWriter, Write},
     path::PathBuf,
     str::FromStr,
 };
@@ -178,48 +178,42 @@ pub(crate) fn build_taxonomy_database(
 
     debug!("Building fully qualified taxonomies");
 
+    // BUG-R43: unexpected taxdump content returns `Err` instead of panicking.
     let binding = reduced_df.clone();
     let mut iters = binding
         .columns(["tax_id", "rank", "text_name", "lineage"])
-        .unwrap()
+        .map_err(|err| {
+            use_case_err(format!(
+                "Unexpected error detected build taxonomies dataframe: {err}"
+            ))
+        })?
         .iter()
         .map(|s| s.iter())
         .collect::<Vec<_>>();
 
     let mut ranked_tax_ids: HashMap<u64, RankedTaxidUnit> = HashMap::new();
-    for _ in 0..binding.height() {
-        let tax_id = iters[0]
-            .next()
-            .unwrap()
-            .to_string()
-            .trim()
-            .parse::<i32>()
-            .unwrap() as u64;
+    for row in 0..binding.height() {
+        let mut cell = |column: usize| {
+            iters[column]
+                .next()
+                .map(|value| value.to_string().trim().replace("\"", ""))
+                .ok_or_else(|| {
+                    use_case_err(format!(
+                        "Missing value at row {row} of the taxonomies dataframe"
+                    ))
+                })
+        };
 
-        let rank = iters[1]
-            .next()
-            .unwrap()
-            .to_string()
-            .trim()
-            .to_string()
-            .replace("\"", "")
-            .to_lowercase();
+        let raw_tax_id = cell(0)?;
+        let tax_id = raw_tax_id.parse::<u64>().map_err(|err| {
+            use_case_err(format!(
+                "Invalid tax_id {raw_tax_id:?} in the taxdump files: {err}"
+            ))
+        })?;
 
-        let name = iters[2]
-            .next()
-            .unwrap()
-            .to_string()
-            .trim()
-            .to_string()
-            .replace("\"", "");
-
-        let lineage = iters[3]
-            .next()
-            .unwrap()
-            .to_string()
-            .trim()
-            .to_string()
-            .replace("\"", "");
+        let rank = cell(1)?.to_lowercase();
+        let name = cell(2)?;
+        let lineage = cell(3)?;
 
         ranked_tax_ids.insert(
             tax_id,
@@ -246,11 +240,17 @@ pub(crate) fn build_taxonomy_database(
     //
     // Create the main output file path
     //
+    let output_stem = output_path
+        .file_stem()
+        .map(|stem| stem.to_string_lossy().into_owned())
+        .ok_or_else(|| {
+            use_case_err(format!(
+                "Invalid output path (expected a file name): {output_path:?}"
+            ))
+        })?;
+
     let output_database_file = match output_path.parent() {
-        Some(parent) => parent.join(format!(
-            "{}.blutils.json",
-            output_path.file_stem().unwrap().to_str().unwrap()
-        )),
+        Some(parent) => parent.join(format!("{output_stem}.blutils.json")),
         None => PathBuf::from("blutils.json"),
     };
 
@@ -258,21 +258,16 @@ pub(crate) fn build_taxonomy_database(
     // Create a file to include not mapped tax_ids
     //
     let non_mapped_file = match output_path.parent() {
-        Some(parent) => parent.join(format!(
-            "{}.non-mapped.tsv",
-            output_path.file_stem().unwrap().to_str().unwrap()
-        )),
+        Some(parent) => parent.join(format!("{output_stem}.non-mapped.tsv")),
         None => PathBuf::from("non-mapped.tsv"),
     };
 
     let non_mapped_file_file_binding = non_mapped_file.as_path();
 
-    if non_mapped_file_file_binding.exists() {
-        remove_file(non_mapped_file_file_binding).unwrap();
-    }
+    remove_if_exists(non_mapped_file_file_binding)?;
 
     let (non_mapped_writer, non_mapped_file) =
-        write_or_append_to_file(&non_mapped_file_file_binding);
+        write_or_append_to_file(non_mapped_file_file_binding)?;
 
     // ? -----------------------------------------------------------------------
     // ? Hydrate lineages and Build the output taxonomies dataframe
@@ -280,7 +275,7 @@ pub(crate) fn build_taxonomy_database(
 
     let mut taxonomies = Vec::<TaxonomyMapUnit>::new();
 
-    accessions_map.into_iter().for_each(|(tax_id, accessions)| {
+    for (tax_id, accessions) in accessions_map {
         let header = format!("{tax_id}");
 
         //
@@ -296,17 +291,17 @@ pub(crate) fn build_taxonomy_database(
                 // taxdump files and is a deleted node.
                 //
                 if del_nodes_vector.contains(&tax_id) {
-                    match non_mapped_writer(
-                        format!("{}\t{}\n", header, "deleted"),
-                        non_mapped_file
-                            .try_clone()
-                            .expect("Unexpected error detected on write non-mapped file"),
-                    ) {
-                        Ok(_) => (),
-                        Err(err) => panic!("{err}")
-                    };
+                    append(
+                        non_mapped_writer,
+                        &non_mapped_file,
+                        format!(
+                            "{}	{}
+",
+                            header, "deleted"
+                        ),
+                    )?;
 
-                    return;
+                    continue;
                 }
 
                 //
@@ -317,112 +312,124 @@ pub(crate) fn build_taxonomy_database(
                     match ranked_tax_ids.get(&new_tax_id) {
                         Some(res) => (*new_tax_id, res),
                         None => {
+                            append(
+                                non_mapped_writer,
+                                &non_mapped_file,
+                                format!(
+                                    "{}	{}
+",
+                                    header, "merged"
+                                ),
+                            )?;
 
-                            match non_mapped_writer(
-                                format!("{}\t{}\n", header, "merged"),
-                                non_mapped_file
-                                    .try_clone()
-                                    .expect("Unexpected error detected on write non-mapped file"),
-                            ) {
-                                Ok(_) => (),
-                                Err(err) => panic!("{err}")
-                            };
-
-                            return;
+                            continue;
                         }
                     }
                 } else {
-                    match non_mapped_writer(
-                        format!("{}\t{}\n", header, "unknown"),
-                        non_mapped_file
-                            .try_clone()
-                            .expect("Unexpected error detected on write non-mapped file"),
-                    ) {
-                        Ok(_) => (),
-                        Err(err) => panic!("{err}")
-                    };
+                    append(
+                        non_mapped_writer,
+                        &non_mapped_file,
+                        format!(
+                            "{}	{}
+",
+                            header, "unknown"
+                        ),
+                    )?;
 
-                    return;
+                    continue;
                 }
             }
         };
 
-        let lineage = ranked_tax_id.lineage
-            .split(" ")
-            .flat_map(|lineage_tax_id| {
-                if lineage_tax_id.is_empty() || lineage_tax_id == "null" {
-                    return None;
-                }
-
-                let lineage_tax_id = lineage_tax_id.trim().parse::<u64>().unwrap();
-
-                if let Some(taxids) = ignore_taxids.to_owned() {
-                    if taxids.contains(&lineage_tax_id) {
-                        return None;
+        let mut lineage = Vec::<(String, String)>::new();
+        for lineage_tax_id in ranked_tax_id.lineage.split(" ") {
+            let entry =
+                (|| -> Result<Option<(String, String)>, MappedErrors> {
+                    if lineage_tax_id.is_empty() || lineage_tax_id == "null" {
+                        return Ok(None);
                     }
-                }
 
-                let record = match ranked_tax_ids.get(&lineage_tax_id) {
-                    Some(res) => res,
-                    None => {
-                        warn!(
+                    let lineage_tax_id =
+                    lineage_tax_id.trim().parse::<u64>().map_err(|err| {
+                        use_case_err(format!(
+                            "Invalid tax_id {lineage_tax_id:?} in the lineage of {tax_id}: {err}"
+                        ))
+                    })?;
+
+                    if let Some(taxids) = ignore_taxids.to_owned() {
+                        if taxids.contains(&lineage_tax_id) {
+                            return Ok(None);
+                        }
+                    }
+
+                    let record = match ranked_tax_ids.get(&lineage_tax_id) {
+                        Some(res) => res,
+                        None => {
+                            warn!(
                             "Unmapped tax_id detected {lineage_tax_id} in lineage: {lineage}",
                             lineage = ranked_tax_id.lineage
                         );
 
-                        return None;
-                    }
-                };
-
-                let valid_rank = match replace_rank.to_owned() {
-                    Some(replace_rank) => {
-                        if let Some(replaced_rank) = replace_rank.get(&record.rank) {
-                            replaced_rank.to_string()
-                        } else {
-                            record.rank.to_string()
+                            return Ok(None);
                         }
-                    }
-                    None => record.rank.to_string(),
-                };
+                    };
 
-                let valid_rank = match valid_rank.parse::<LinnaeanRank>() {
-                    Ok(res) => match res {
-                        //
-                        // Skip non linnaean taxonomies if the non-linnaean rank
-                        // was found and the `drop_non_linnaean_taxonomies` flag
-                        // is set to true.
-                        //
-                        LinnaeanRank::Other(rank) => {
-                            if let Some(true) = drop_non_linnaean_taxonomies {
-                                return None;
+                    let valid_rank = match replace_rank.to_owned() {
+                        Some(replace_rank) => {
+                            if let Some(replaced_rank) =
+                                replace_rank.get(&record.rank)
+                            {
+                                replaced_rank.to_string()
                             } else {
-                                slugify!(rank.clone().as_str(), separator = "-")
+                                record.rank.to_string()
                             }
                         }
-                        _ => res.to_string(),
-                    },
-                    Err(_) => {
-                        panic!(
-                            "Unexpected error detected on parse rank: {}", record.rank
-                        )
-                    },
-                };
+                        None => record.rank.to_string(),
+                    };
 
-                let ranked_name = format!(
-                    "{}__{}",
-                    valid_rank,
-                    slugify!(record.name.as_str())
-                );
+                    let valid_rank = match valid_rank.parse::<LinnaeanRank>() {
+                        Ok(res) => match res {
+                            //
+                            // Skip non linnaean taxonomies if the non-linnaean rank
+                            // was found and the `drop_non_linnaean_taxonomies` flag
+                            // is set to true.
+                            //
+                            LinnaeanRank::Other(rank) => {
+                                if let Some(true) = drop_non_linnaean_taxonomies
+                                {
+                                    return Ok(None);
+                                } else {
+                                    slugify!(
+                                        rank.clone().as_str(),
+                                        separator = "-"
+                                    )
+                                }
+                            }
+                            _ => res.to_string(),
+                        },
+                        Err(err) => {
+                            return use_case_err(format!(
+                                "Could not parse rank {:?}: {err}",
+                                record.rank
+                            ))
+                            .as_error()
+                        }
+                    };
 
-                let ranked_taxid = format!(
-                    "{}__{}",
-                    valid_rank,
-                    lineage_tax_id
-                );
+                    let ranked_name = format!(
+                        "{}__{}",
+                        valid_rank,
+                        slugify!(record.name.as_str())
+                    );
 
-                Some((ranked_taxid, ranked_name))
-            })
-            .collect::<Vec<(String, String)>>();
+                    let ranked_taxid =
+                        format!("{}__{}", valid_rank, lineage_tax_id);
+
+                    Ok(Some((ranked_taxid, ranked_name)))
+                })()?;
+
+            lineage.extend(entry);
+        }
 
         //
         // Skip non linnaean taxonomies if the non-linnaean rank was found and
@@ -439,7 +446,7 @@ pub(crate) fn build_taxonomy_database(
             Ok(res) => match res {
                 LinnaeanRank::Other(rank) => {
                     if let Some(true) = drop_non_linnaean_taxonomies {
-                        return;
+                        continue;
                     } else {
                         slugify!(rank.as_str(), separator = "-")
                     }
@@ -456,7 +463,7 @@ pub(crate) fn build_taxonomy_database(
         // yields a leading `;` (BUG-R16).
         let ranked_taxids = lineage
             .iter()
-            .map(|(ranked_taxid,_)| ranked_taxid.to_string())
+            .map(|(ranked_taxid, _)| ranked_taxid.to_string())
             .chain(std::iter::once(format!("{}__{}", slug_rank, leaf_tax_id)))
             .collect::<Vec<String>>()
             .join(";");
@@ -482,28 +489,36 @@ pub(crate) fn build_taxonomy_database(
             text_lineage: ranked_names,
             accessions: accessions.to_owned(),
         });
-    });
+    }
 
-    let mut file = match File::create(output_database_file) {
-        Err(err) => panic!("{err}"),
-        Ok(res) => res,
+    let write_err = |err: &dyn std::fmt::Display| {
+        execution_err(format!(
+            "Could not write the taxonomies database {output_database_file:?}: {err}"
+        ))
     };
 
-    match file.write_all(
-        serde_json::to_string_pretty(&TaxonomiesMap {
+    let mut file = File::create(&output_database_file)
+        .map(BufWriter::new)
+        .map_err(|err| {
+        execution_err(format!(
+            "Could not create the taxonomies database {output_database_file:?}: {err}"
+        ))
+    })?;
+
+    serde_json::to_writer_pretty(
+        &mut file,
+        &TaxonomiesMap {
             blutils_version: env!("CARGO_PKG_VERSION").to_string(),
             ignore_taxids,
             replace_rank,
             drop_non_linnaean_taxonomies,
             source_database: database,
             taxonomies,
-        })
-        .unwrap()
-        .as_bytes(),
-    ) {
-        Err(err) => panic!("{err}"),
-        Ok(_) => (),
-    };
+        },
+    )
+    .map_err(|err| write_err(&err))?;
+
+    file.flush().map_err(|err| write_err(&err))?;
 
     Ok(())
 }
@@ -986,9 +1001,9 @@ mod tests {
         ));
     }
 
+    // BUG-R43: the tax_id was parsed as `i32` and panicked above i32::MAX.
     #[test]
-    #[should_panic(expected = "PosOverflow")]
-    fn build_taxonomy_database_tax_id_above_i32_max_panics() {
+    fn build_taxonomy_database_tax_id_above_i32_max_is_accepted() {
         let taxdump = Taxdump::new();
         let append = |name: &str, line: &str| {
             let path = taxdump.path(name);
@@ -998,6 +1013,6 @@ mod tests {
         append("nodes.dmp", "3000000000\t|\t1386\t|\tspecies\t|\n");
         append("taxidlineage.dmp", "3000000000\t|\t1 131567 2 \t|\n");
 
-        let _ = taxdump.build(&[1423], None, None, None);
+        taxdump.build(&[1423], None, None, None).unwrap();
     }
 }

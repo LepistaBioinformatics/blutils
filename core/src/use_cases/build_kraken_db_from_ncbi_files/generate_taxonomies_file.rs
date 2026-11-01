@@ -1,7 +1,9 @@
-use crate::use_cases::shared::write_or_append_to_file;
+use crate::use_cases::shared::{
+    append, remove_if_exists, write_or_append_to_file,
+};
 
 use mycelium_base::utils::errors::MappedErrors;
-use std::{fs::remove_file, path::PathBuf};
+use std::path::PathBuf;
 use tracing::warn;
 
 pub(super) fn generate_taxonomies_file(
@@ -16,24 +18,24 @@ pub(super) fn generate_taxonomies_file(
 
     if output_file.exists() {
         warn!("Output file already exists. Removing it.");
-        remove_file(output_file.to_owned()).unwrap();
     }
 
-    let (file_writer, file) = write_or_append_to_file(&output_file);
+    // BUG-R43: file-system errors return `Err` instead of panicking.
+    remove_if_exists(&output_file)?;
+
+    let (file_writer, file) = write_or_append_to_file(&output_file)?;
 
     // ? -----------------------------------------------------------------------
     // ? Write the taxonomies file
     // ? -----------------------------------------------------------------------
 
-    headers.iter().for_each(|(header, taxid)| {
-        file_writer(
+    headers.iter().try_for_each(|(header, taxid)| {
+        append(
+            file_writer,
+            &file,
             format!("TAXID\tkraken:taxid|{}|{}\t{}\n", taxid, header, taxid),
-            file.try_clone().expect(
-                "Unexpected error detected on write taxonomies database",
-            ),
         )
-        .unwrap();
-    });
+    })?;
 
     // ? -----------------------------------------------------------------------
     // ? Return a positive response

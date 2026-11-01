@@ -109,16 +109,20 @@ impl Taxon {
     pub(super) fn get_taxon_cutoff(
         self,
         custom_taxon_values: Option<CustomTaxon>,
-    ) -> Vec<RankedLinnaeanIdentity> {
+    ) -> Result<Vec<RankedLinnaeanIdentity>, MappedErrors> {
         match self {
-            Fungi => Self::get_fungal_cutoffs(),
-            Bacteria => Self::get_bacterial_cutoffs(),
-            Eukaryotes => Self::get_eukaryote_cutoffs(),
+            Fungi => Ok(Self::get_fungal_cutoffs()),
+            Bacteria => Ok(Self::get_bacterial_cutoffs()),
+            Eukaryotes => Ok(Self::get_eukaryote_cutoffs()),
             Custom => match custom_taxon_values {
                 Some(custom_taxon_values) => {
-                    Self::get_custom_cutoffs(custom_taxon_values)
+                    Ok(Self::get_custom_cutoffs(custom_taxon_values))
                 }
-                None => panic!("Custom taxon values are required"),
+                // BUG-R43: returns `Err` instead of panicking.
+                None => invalid_arg_err(
+                    "Custom taxon values are required when the custom taxon is selected",
+                )
+                .as_error(),
             },
         }
     }
@@ -226,7 +230,7 @@ mod tests {
     #[test]
     fn get_taxon_cutoff_bacteria_returns_pinned_table_species_first() {
         assert_eq!(
-            Bacteria.get_taxon_cutoff(None),
+            Bacteria.get_taxon_cutoff(None).unwrap(),
             vec![
                 DefaultRank(Species, 99.0),
                 DefaultRank(Genus, 97.0),
@@ -244,7 +248,7 @@ mod tests {
     #[test]
     fn get_taxon_cutoff_fungi_returns_pinned_table_species_first() {
         assert_eq!(
-            Fungi.get_taxon_cutoff(None),
+            Fungi.get_taxon_cutoff(None).unwrap(),
             vec![
                 DefaultRank(Species, 97.0),
                 DefaultRank(Genus, 95.0),
@@ -262,16 +266,16 @@ mod tests {
     #[test]
     fn get_taxon_cutoff_eukaryotes_returns_same_table_as_fungi() {
         assert_eq!(
-            Eukaryotes.get_taxon_cutoff(None),
-            Fungi.get_taxon_cutoff(None)
+            Eukaryotes.get_taxon_cutoff(None).unwrap(),
+            Fungi.get_taxon_cutoff(None).unwrap()
         );
     }
 
     #[test]
     fn get_taxon_cutoff_builtin_ignores_custom_values() {
         assert_eq!(
-            Bacteria.get_taxon_cutoff(Some(custom(1, 2))),
-            Bacteria.get_taxon_cutoff(None)
+            Bacteria.get_taxon_cutoff(Some(custom(1, 2))).unwrap(),
+            Bacteria.get_taxon_cutoff(None).unwrap()
         );
     }
 
@@ -282,6 +286,7 @@ mod tests {
         for taxon in [Bacteria, Fungi, Eukaryotes] {
             assert!(taxon
                 .get_taxon_cutoff(None)
+                .unwrap()
                 .contains(&DefaultRank(Kingdom, 67.5)));
         }
     }
@@ -291,7 +296,7 @@ mod tests {
     #[test]
     fn get_taxon_cutoff_custom_partial_values_fills_zeros_domain_first() {
         assert_eq!(
-            Custom.get_taxon_cutoff(Some(custom(60, 99))),
+            Custom.get_taxon_cutoff(Some(custom(60, 99))).unwrap(),
             vec![
                 DefaultRank(Domain, 60.0),
                 DefaultRank(Kingdom, 0.0),
@@ -305,10 +310,15 @@ mod tests {
         );
     }
 
+    // BUG-R43: used to panic.
     #[test]
-    #[should_panic(expected = "Custom taxon values are required")]
-    fn get_taxon_cutoff_custom_without_values_panics() {
-        Custom.get_taxon_cutoff(None);
+    fn get_taxon_cutoff_custom_without_values_returns_err() {
+        let message = Custom.get_taxon_cutoff(None).unwrap_err().to_string();
+
+        assert!(
+            message.contains("Custom taxon values are required"),
+            "{message}"
+        );
     }
 
     #[test]
@@ -364,7 +374,7 @@ mod tests {
         let taxon = CustomTaxon::from_file(path).unwrap();
 
         assert_eq!(
-            Custom.get_taxon_cutoff(Some(taxon)),
+            Custom.get_taxon_cutoff(Some(taxon)).unwrap(),
             vec![
                 DefaultRank(Domain, 60.0),
                 DefaultRank(Kingdom, 0.0),
@@ -387,7 +397,7 @@ mod tests {
         let taxon = CustomTaxon::from_file(path).unwrap();
 
         assert_eq!(
-            Custom.get_taxon_cutoff(Some(taxon)),
+            Custom.get_taxon_cutoff(Some(taxon)).unwrap(),
             vec![
                 DefaultRank(Domain, 50.0),
                 DefaultRank(Kingdom, 60.0),

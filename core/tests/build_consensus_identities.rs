@@ -394,3 +394,65 @@ fn build_consensus_identities_quotes_in_query_name_are_removed() {
 
     assert_eq!(results.iter().map(query_of).collect::<Vec<_>>(), vec!["q7"]);
 }
+
+/// Taxonomies file whose lineages start with NCBI's `cellular root` node, as
+/// in taxdumps from 2025 on.
+fn write_cellular_root_taxonomies(dir: &TempDir) -> PathBuf {
+    let entry = |taxid: u64, accession: &str, species: &str| {
+        format!(
+            r#"{{"taxid": {taxid}, "rank": "species",
+                "numericLineage": "cellular-root__131567;d__2;p__1239;c__91061;o__1385;f__186817;g__1386;s__{taxid}",
+                "textLineage": "cellular-root__cellular-organisms;d__bacteria;p__bacillota;c__bacilli;o__bacillales;f__bacillaceae;g__bacillus;s__{species}",
+                "accessions": [{{"accession": "{accession}", "oid": "0"}}]}}"#
+        )
+    };
+    let path = dir.path().join("taxonomies.blutils.json");
+    fs::write(
+        &path,
+        format!(
+            r#"{{"blutilsVersion": "8.3.1", "ignoreTaxids": null, "replaceRank": null,
+                "dropNonLinnaeanTaxonomies": null, "sourceDatabase": "fixture",
+                "taxonomies": [{}, {}]}}"#,
+            entry(901, "ACC901.1", "bacillus-subtilis"),
+            entry(902, "ACC902.1", "bacillus-cereus"),
+        ),
+    )
+    .unwrap();
+    path
+}
+
+// BUG-R38/R39: below the species cutoff the leading `cellular-root` rank was
+// dropped while deeper ranks were kept, so the same taxon was reported with
+// two different `taxonomy` strings depending on the identity.
+#[test]
+fn build_consensus_identities_leading_non_linnaean_rank_is_kept_below_species_cutoff(
+) {
+    let dir = TempDir::new().unwrap();
+    let taxonomies = write_cellular_root_taxonomies(&dir);
+    let genus = "cellular-root__cellular-organisms;d__bacteria;p__bacillota;c__bacilli;o__bacillales;f__bacillaceae;g__bacillus";
+
+    for (query, identity) in [("single-98", 98.0), ("single-99", 99.5)] {
+        let tsv =
+            write_tsv(&dir, &[hit(query, "ACC901.1", 901, identity, "800.0")]);
+        let taxon = single_taxon(
+            run_with(tsv, None, taxonomies.clone(), None).unwrap(),
+        );
+
+        assert!(
+            taxon.taxonomy.as_deref().unwrap().starts_with(genus),
+            "{query}: {:?}",
+            taxon.taxonomy
+        );
+    }
+
+    let tsv = write_tsv(
+        &dir,
+        &[
+            hit("multi-98", "ACC901.1", 901, 98.0, "800.0"),
+            hit("multi-98", "ACC902.1", 902, 98.0, "800.0"),
+        ],
+    );
+    let taxon = single_taxon(run_with(tsv, None, taxonomies, None).unwrap());
+
+    assert_eq!(taxon.taxonomy.as_deref(), Some(genus));
+}

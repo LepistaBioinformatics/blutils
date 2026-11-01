@@ -16,7 +16,11 @@ pub(super) fn load_merged_dataframe(
         Ok(df) => {
             let column = |name: &str| {
                 match df.column(name) {
-                Ok(col) => Ok(col.i64().unwrap().clone()),
+                Ok(col) => col.i64().cloned().map_err(|err| {
+                    use_case_err(format!(
+                        "Unexpected error detected on get merged nodes dataframe: {err}"
+                    ))
+                }),
                 Err(err) => use_case_err(format!(
                     "Unexpected error detected on get merged nodes dataframe: {err}"
                 ))

@@ -7,7 +7,7 @@ use crate::{
     use_cases::shared::write_or_append_to_file,
 };
 
-use mycelium_base::utils::errors::{use_case_err, MappedErrors};
+use mycelium_base::utils::errors::{execution_err, use_case_err, MappedErrors};
 use std::{fs::remove_file, path::PathBuf};
 use tracing::warn;
 use uuid::Uuid;
@@ -54,14 +54,19 @@ pub fn parse_consensus_as_tabular(
         if let Some(mut out_file) = output_file.to_owned() {
             out_file.set_extension("tsv");
 
+            // BUG-R43: file-system errors return `Err` instead of panicking.
             if out_file.exists() {
                 warn!("Output file already exists. Removing it.");
-                remove_file(out_file.to_owned()).unwrap();
+                remove_file(&out_file).map_err(|err| {
+                    execution_err(format!(
+                        "Could not overwrite the output file {out_file:?}: {err}"
+                    ))
+                })?;
             }
 
-            write_or_append_to_file(&out_file)
+            write_or_append_to_file(&out_file)?
         } else {
-            write_or_append_to_file(&PathBuf::from("/dev/null"))
+            write_or_append_to_file(&PathBuf::from("/dev/null"))?
         }
     };
 
@@ -85,10 +90,9 @@ pub fn parse_consensus_as_tabular(
             .join("\t")
         ),
         file_writer,
-        file.try_clone()
-            .expect("Unexpected error detected on write tabular output"),
+        &file,
         output_file.is_none(),
-    );
+    )?;
 
     let null = "null";
 
@@ -115,11 +119,9 @@ pub fn parse_consensus_as_tabular(
                             "\tnull".repeat(10)
                         ),
                         file_writer,
-                        file.try_clone().expect(
-                            "Unexpected error detected on write tabular output",
-                        ),
+                        &file,
                         output_file.is_none(),
-                    );
+                    )?;
 
                     continue;
                 }
@@ -144,10 +146,9 @@ pub fn parse_consensus_as_tabular(
         write_or_stdout(
             main_row_content.to_owned(),
             file_writer,
-            file.try_clone()
-                .expect("Unexpected error detected on write tabular output"),
+            &file,
             output_file.is_none(),
-        );
+        )?;
 
         for consensus in bean.consensus_beans.unwrap_or_default() {
             let consensus_row_content = format!(
@@ -166,11 +167,9 @@ pub fn parse_consensus_as_tabular(
             write_or_stdout(
                 consensus_row_content,
                 file_writer,
-                file.try_clone().expect(
-                    "Unexpected error detected on write tabular output",
-                ),
+                &file,
                 output_file.is_none(),
-            );
+            )?;
         }
     }
 

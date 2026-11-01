@@ -16,15 +16,13 @@ pub(super) fn load_del_nodes_dataframe(
             let del_nodes = match df.column("tax_id") {
                 Ok(col) => col
                     .i64()
-                    .unwrap()
+                    .map_err(|err| {
+                        use_case_err(format!(
+                            "Unexpected error detected on get deleted nodes dataframe: {err}"
+                        ))
+                    })?
                     .into_iter()
-                    .filter_map(|tax_id| {
-                        if tax_id.is_none() {
-                            return None;
-                        }
-
-                        Some(tax_id.unwrap())
-                    })
+                    .flatten()
                     .collect::<Vec<i64>>(),
                 Err(err) => {
                     return use_case_err(format!(

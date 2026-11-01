@@ -208,10 +208,12 @@ impl InterpolatedIdentity {
         identity: f64,
         taxonomy: Vec<TaxonomyBean>,
     ) -> Vec<TaxonomyBean> {
+        // BUG-R39: truncate at the first unmet cutoff (`take_while`), so the
+        // result is always a contiguous prefix of the lineage.
         self.interpolation()
             .into_iter()
             .zip(taxonomy.to_owned().into_iter())
-            .filter(|(interpolated, _)| {
+            .take_while(|(interpolated, _)| {
                 let item_identity = match interpolated {
                     DefaultRank(_, perc_identity) => perc_identity,
                     NonDefaultRank(_, perc_identity) => perc_identity,
@@ -240,7 +242,7 @@ impl InterpolatedIdentity {
         // The backbone is a vector of `RankedLinnaeanIdentity` that contains
         // the identity cutoffs for the default Linnaeus taxon ranks.
         //
-        let backbone = taxon.get_taxon_cutoff(custom_taxon_values);
+        let backbone = taxon.get_taxon_cutoff(custom_taxon_values)?;
         //
         // Map taxonomies to the backbone
         //
@@ -336,12 +338,21 @@ impl InterpolatedIdentity {
         {
             let target_index = non_default_index - previous_index;
 
-            let first_window_identity = match window[0].to_owned() {
-                DefaultRank(_, identity) => identity,
-                NonDefaultRank(_, _) => match backbone[0] {
-                    DefaultRank(_, default_identity) => default_identity,
-                    _ => panic!("Unexpected error. Could not determine default identity"),
-                },
+            //
+            // BUG-R38: ranks above the first default rank (e.g. NCBI's
+            // `cellular root` or `no rank` nodes) have no previous default
+            // rank. They take the next default rank's cutoff, or the
+            // shallowest backbone cutoff when the lineage has no default rank,
+            // whatever the backbone order.
+            //
+            let shallowest_cutoff = || {
+                backbone
+                    .iter()
+                    .map(|level| match level {
+                        DefaultRank(_, identity) => *identity,
+                        NonDefaultRank(_, identity) => *identity,
+                    })
+                    .fold(f64::INFINITY, f64::min)
             };
 
             let last_window_identity = match window[window.len() - 1].to_owned()
@@ -350,14 +361,26 @@ impl InterpolatedIdentity {
                 NonDefaultRank(_, _) => 100.0,
             };
 
+            let first_window_identity = match window[0].to_owned() {
+                DefaultRank(_, identity) => identity,
+                NonDefaultRank(_, _) => match window[window.len() - 1] {
+                    DefaultRank(_, identity) => identity,
+                    NonDefaultRank(_, _) => shallowest_cutoff(),
+                },
+            };
+
             let window_weight = last_window_identity - first_window_identity;
             let window_size = (window.len() - 1) as f64;
 
-            let target_identity = round(
+            let target_identity = if window_size == 0.0 {
                 first_window_identity
-                    + (target_index as f64 * (window_weight / window_size)),
-                3,
-            );
+            } else {
+                round(
+                    first_window_identity
+                        + (target_index as f64 * (window_weight / window_size)),
+                    3,
+                )
+            };
 
             updated_identities
                 .insert(non_default_index as i32, target_identity);
@@ -723,22 +746,6 @@ mod tests {
     }
 
     #[test]
-    fn interpolate_leading_non_default_rank_built_in_uses_first_backbone_entry()
-    {
-        // Built-in backbones start at Species, so a leading non-default rank
-        // inherits the species cutoff.
-        let interpolated = interp(
-            Taxon::Bacteria,
-            &["clade", "d", "p", "c", "o", "f", "g", "s"],
-        );
-
-        assert_eq!(
-            interpolated.interpolation()[0],
-            NonDefaultRank("clade".to_string(), 99.0)
-        );
-    }
-
-    #[test]
     fn interpolate_leading_non_default_rank_custom_uses_domain_cutoff() {
         // Custom backbones start at Domain, unlike the built-in ones.
         let interpolated = InterpolatedIdentity::new(
@@ -757,12 +764,14 @@ mod tests {
         );
     }
 
+    // BUG-R38: a lineage made of one non-default rank used to get a NaN
+    // cutoff (0 / 0 window), which no identity satisfies.
     #[test]
-    fn interpolate_single_non_default_rank_yields_nan() {
+    fn interpolate_single_non_default_rank_gets_the_shallowest_cutoff() {
         let interpolated = interp(Taxon::Bacteria, &["strain"]);
 
         assert_eq!(interpolated.interpolation().len(), 1);
-        assert!(identity_of(&interpolated.interpolation()[0]).is_nan());
+        assert_close(identity_of(&interpolated.interpolation()[0]), 60.0);
     }
 
     #[test]
@@ -899,10 +908,12 @@ mod tests {
         assert!(adjusted.is_empty());
     }
 
+    // BUG-R39: the lineage is truncated at the first rank whose cutoff is not
+    // met, so it stays a contiguous prefix. A custom genus without a value
+    // (cutoff 0) used to survive below a discarded domain (60).
     #[test]
-    fn adjusted_taxonomy_non_monotonic_custom_keeps_zero_cutoff_ranks() {
-        // Custom genus is None -> cutoff 0, so genus is kept while the shallower
-        // domain (60) is discarded.
+    fn adjusted_taxonomy_non_monotonic_custom_truncates_at_first_unmet_cutoff()
+    {
         let interpolated = InterpolatedIdentity::new(
             Taxon::Custom,
             ranks(&["d", "g", "s"]),
@@ -918,7 +929,87 @@ mod tests {
         let adjusted =
             interpolated.get_adjusted_taxonomy_by_identity(50.0, lineage);
 
-        assert_eq!(ranks_of(&adjusted), vec![Genus]);
+        assert!(adjusted.is_empty(), "{:?}", ranks_of(&adjusted));
+    }
+
+    // BUG-R39: a deeper rank with a lower cutoff never survives once a
+    // shallower rank was cut.
+    #[test]
+    fn adjusted_taxonomy_keeps_prefix_up_to_first_unmet_cutoff() {
+        let interpolated = InterpolatedIdentity::new(
+            Taxon::Custom,
+            ranks(&["d", "p", "g", "s"]),
+            Some(custom(r#"{"domain":60,"phylum":75,"species":99}"#)),
+        )
+        .unwrap();
+        let lineage = vec![
+            bean(Domain, "bacteria"),
+            bean(Phylum, "bacillota"),
+            bean(Genus, "bacillus"),
+            bean(Species, "subtilis"),
+        ];
+
+        let adjusted =
+            interpolated.get_adjusted_taxonomy_by_identity(70.0, lineage);
+
+        assert_eq!(ranks_of(&adjusted), vec![Domain]);
+    }
+
+    // BUG-R38: a non-default rank above the first default rank (e.g. NCBI's
+    // `cellular root`, or `no rank` nodes) gets the shallowest cutoff, not
+    // the first backbone entry (species, 99, for the built-in backbones).
+    #[test]
+    fn interpolate_leading_non_default_rank_gets_the_domain_cutoff() {
+        for (taxon, domain) in [
+            (Taxon::Bacteria, 60.0),
+            (Taxon::Fungi, 60.0),
+            (Taxon::Eukaryotes, 60.0),
+        ] {
+            let interpolated = interp(
+                taxon.clone(),
+                &["cellular-root", "d", "k", "p", "c", "o", "f", "g", "s"],
+            );
+
+            assert_close(identities(&interpolated)[0], domain);
+        }
+    }
+
+    #[test]
+    fn interpolate_several_leading_non_default_ranks_get_the_domain_cutoff() {
+        let interpolated = interp(
+            Taxon::Bacteria,
+            &[
+                "no-rank",
+                "cellular-root",
+                "d",
+                "p",
+                "c",
+                "o",
+                "f",
+                "g",
+                "s",
+            ],
+        );
+
+        assert_all_close(&identities(&interpolated)[..3], &[60.0, 60.0, 60.0]);
+    }
+
+    // BUG-R38: with a leading `cellular-root`, identities below the species
+    // cutoff kept every rank but the root.
+    #[test]
+    fn adjusted_taxonomy_with_leading_non_default_rank_keeps_the_root() {
+        let names = ["cellular-root", "d", "p", "c", "o", "f", "g", "s"];
+        let interpolated = interp(Taxon::Bacteria, &names);
+        let lineage = ranks(&names)
+            .into_iter()
+            .enumerate()
+            .map(|(i, rank)| bean(rank, &format!("t{i}")))
+            .collect::<Vec<_>>();
+
+        let adjusted = interpolated
+            .get_adjusted_taxonomy_by_identity(98.0, lineage.clone());
+
+        assert_eq!(adjusted, lineage[..7].to_vec());
     }
 
     #[test]

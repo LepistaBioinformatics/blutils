@@ -9,6 +9,8 @@ use crate::domain::dtos::{
     taxonomy_bean::TaxonomyBean,
 };
 
+use mycelium_base::utils::errors::{use_case_err, MappedErrors};
+
 /// Build the final consensus taxon for the lineage `taxonomy` cut at
 /// `bean_index`.
 ///
@@ -22,9 +24,13 @@ pub(super) fn build_blast_consensus_identity(
     taxonomy: Vec<TaxonomyBean>,
     interpolated_taxonomy: InterpolatedIdentity,
     consensus_beans: Option<Vec<ConsensusBean>>,
-) -> ConsensusResult {
+) -> Result<ConsensusResult, MappedErrors> {
+    // BUG-R43: an out-of-range index returns `Err` instead of panicking.
     if taxonomy.get(bean_index).is_none() {
-        panic!("No taxonomy found for bean at index: {}", bean_index);
+        return use_case_err(format!(
+            "No taxonomy found for bean at index {bean_index} of query {query}"
+        ))
+        .as_error();
     }
 
     //
@@ -45,9 +51,9 @@ pub(super) fn build_blast_consensus_identity(
     let last_taxonomy = match adjusted_taxonomy.last() {
         Some(last) => last.to_owned(),
         None => {
-            return ConsensusResult::NoConsensusFound(QueryWithoutConsensus {
-                query,
-            })
+            return Ok(ConsensusResult::NoConsensusFound(
+                QueryWithoutConsensus { query },
+            ))
         }
     };
 
@@ -105,11 +111,11 @@ pub(super) fn build_blast_consensus_identity(
         bean.consensus_beans = Some(consensus_beans);
     }
 
-    ConsensusResult::ConsensusFound(QueryWithConsensus {
+    Ok(ConsensusResult::ConsensusFound(QueryWithConsensus {
         query,
         taxon: Some(bean),
         run_id: None,
-    })
+    }))
 }
 
 #[cfg(test)]
@@ -167,6 +173,7 @@ mod tests {
             interp_of(lineage),
             beans,
         )
+        .unwrap()
     }
 
     fn build(
@@ -184,11 +191,28 @@ mod tests {
         }
     }
 
+    // BUG-R43: used to panic.
     #[test]
-    #[should_panic(expected = "No taxonomy found for bean at index: 7")]
-    fn build_blast_consensus_identity_bean_index_out_of_range_panics() {
+    fn build_blast_consensus_identity_bean_index_out_of_range_returns_err() {
         let lineage = lineage_of(SUBTILIS);
-        build(&lineage, lineage[6].clone(), 100.0, 7, None);
+
+        let message = build_blast_consensus_identity(
+            "q1".to_string(),
+            lineage[6].clone(),
+            100.0,
+            7,
+            lineage.to_vec(),
+            interp_of(&lineage),
+            None,
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(
+            message
+                .contains("No taxonomy found for bean at index 7 of query q1"),
+            "{message}"
+        );
     }
 
     // FR-BEAN-02: no beans → `consensus_beans` stays None.

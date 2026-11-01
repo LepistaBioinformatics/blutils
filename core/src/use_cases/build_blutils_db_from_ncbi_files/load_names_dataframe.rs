@@ -17,28 +17,26 @@ pub(super) fn load_names_dataframe(
 
     match load_dump_file(path, column_definitions) {
         Ok(df) => {
-            match df
-                .select([
-                    "tax_id".to_string(),
-                    "text_name".to_string(),
-                    "name_class".to_string(),
-                ])
-                .unwrap()
-                .filter(
-                    &df.column("name_class")
-                        .unwrap()
-                        .str()
-                        .unwrap()
-                        .equal("scientific name"),
-                ) {
-                Ok(df) => Ok(df),
-                Err(err) => {
-                    return use_case_err(
-                        format!("Unexpected error detected on filter names dataframe: {err}")
-                    )
-                    .as_error();
-                }
-            }
+            let filter_err = |err: PolarsError| {
+                use_case_err(format!(
+                    "Unexpected error detected on filter names dataframe: {err}"
+                ))
+            };
+
+            let is_scientific_name = df
+                .column("name_class")
+                .and_then(|column| {
+                    column.str().map(|names| names.equal("scientific name"))
+                })
+                .map_err(filter_err)?;
+
+            df.select([
+                "tax_id".to_string(),
+                "text_name".to_string(),
+                "name_class".to_string(),
+            ])
+            .and_then(|names| names.filter(&is_scientific_name))
+            .map_err(filter_err)
         }
         Err(err) => {
             return use_case_err(format!(

@@ -11,7 +11,9 @@ use crate::{
 };
 
 use mycelium_base::utils::errors::{execution_err, MappedErrors};
-use rayon::iter::{ParallelBridge, ParallelIterator};
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator,
+};
 use std::{
     fs::{create_dir_all, remove_file},
     path::PathBuf,
@@ -49,25 +51,19 @@ pub(super) fn run_parallel_blast(
     ))?;
 
     // ? ----------------------------------------------------------------------
-    // ? Build thread pool
-    // ? ----------------------------------------------------------------------
-
-    let pool = rayon::ThreadPoolBuilder::new()
-        .num_threads(threads)
-        .build()
-        .unwrap();
-
-    // ? ----------------------------------------------------------------------
     // ? Build output file
     // ? ----------------------------------------------------------------------
 
     let mut out_dir_path = PathBuf::from(blast_out_file);
     out_dir_path.set_extension("out");
-    let out_dir = out_dir_path.parent().unwrap();
+    let out_dir = out_dir_path
+        .parent()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
 
     // Create every missing ancestor and surface failures (BUG-R33).
     if !out_dir.exists() {
-        create_dir_all(out_dir).map_err(|err| {
+        create_dir_all(&out_dir).map_err(|err| {
             execution_err(format!(
                 "Could not create blast output directory {out_dir:?}: {err}"
             ))
@@ -102,7 +98,7 @@ pub(super) fn run_parallel_blast(
     // ? ----------------------------------------------------------------------
 
     let chunk_size = 50;
-    let (writer, file) = write_or_append_to_file(out_dir_path.as_path());
+    let (writer, file) = write_or_append_to_file(out_dir_path.as_path())?;
     let mut headers: Vec<String> = Vec::new();
 
     let source_sequences =
@@ -110,63 +106,89 @@ pub(super) fn run_parallel_blast(
             execution_err(format!("Could not read input sequences: {err}"))
         })?;
 
-    source_sequences
+    let sequences = source_sequences
         .to_owned()
         .into_iter()
         .map(|sequence| {
             headers.push(sequence.blast_header().to_owned());
             sequence
         })
-        .collect::<Vec<Sequence>>()
-        .chunks(chunk_size)
-        .enumerate()
-        .par_bridge()
-        .for_each(|(index, chunk)| {
+        .collect::<Vec<Sequence>>();
+
+    let chunks = sequences.chunks(chunk_size).collect::<Vec<_>>();
+
+    //
+    // BUG-R40: `threads` caps the whole run. Up to `threads` chunks run at
+    // once on a dedicated pool, and the threads left over when there are fewer
+    // chunks than threads go to each `blastn` call. Chunks used to run on the
+    // global rayon pool while each `blastn` also got `-num_threads <threads>`.
+    //
+    let threads = threads.max(1);
+    let concurrency = threads.min(chunks.len()).max(1);
+    let threads_per_call = (threads / concurrency).max(1);
+
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(concurrency)
+        .build()
+        .map_err(|err| {
+            execution_err(format!(
+                "Could not build the BLAST thread pool: {err}"
+            ))
+        })?;
+
+    let total_chunks = chunks.len();
+
+    pool.install(|| {
+        chunks.par_iter().enumerate().try_for_each(|(index, chunk)| {
             tracing::debug!(
-                "Processing chunk {} of {:?}",
+                "Processing chunk {} of {}",
                 index + 1,
-                source_sequences.len() / chunk_size
+                total_chunks
             );
 
-            let response = match pool.install(|| {
-                blast_execution_repo.run(
+            let response = blast_execution_repo
+                .run(
                     chunk
-                        .into_iter()
+                        .iter()
                         .map(|i| i.to_fasta())
                         .collect::<Vec<String>>()
                         .join(""),
                     blast_config.clone(),
-                    threads,
+                    threads_per_call,
                 )
-            }) {
-                Err(err) => {
-                    panic!("Unexpected error detected on execute blast: {err}")
-                }
-                Ok(res) => res,
-            };
+                .map_err(|err| {
+                    execution_err(format!(
+                        "Could not execute blastn on chunk {} of {}: {err}",
+                        index + 1,
+                        total_chunks
+                    ))
+                })?;
 
             match response {
-                ExecutionResponse::Fail(err) => {
-                    panic!("Unexpected error on process chunk {index}: {err}");
-                }
+                ExecutionResponse::Fail(err) => execution_err(format!(
+                    "blastn failed on chunk {} of {}: {err}",
+                    index + 1,
+                    total_chunks
+                ))
+                .as_error(),
                 ExecutionResponse::Success(res) => {
-                    match writer(
-                        res,
-                        file.try_clone().expect(
-                            "Unexpected error detected on write blast result",
-                        ),
-                    ) {
-                        Err(err) => {
-                            panic!(
-                                "Unexpected error on persist chunk {}: {}",
-                                index, err
-                            )
-                        }
-                        Ok(_) => (),
-                    };
+                    let handle = file.try_clone().map_err(|err| {
+                        execution_err(format!(
+                            "Could not open the BLAST output file {out_dir_path:?}: {err}"
+                        ))
+                    })?;
+
+                    writer(res, handle).map_err(|err| {
+                        execution_err(format!(
+                            "Could not write chunk {} of {} to {out_dir_path:?}: {err}",
+                            index + 1,
+                            total_chunks
+                        ))
+                    })
                 }
-            };
-        });
+            }
+        })
+    })?;
 
     Ok(ParallelBlastOutput {
         output_file: out_dir_path.to_path_buf(),

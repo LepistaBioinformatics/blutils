@@ -5,16 +5,26 @@ use std::path::PathBuf;
 pub(crate) fn validate_blast_database(
     blast_database_path: &PathBuf,
 ) -> Result<(), MappedErrors> {
+    // BUG-R43: a path without a file name, or one that is not valid UTF-8,
+    // returns `Err` instead of panicking.
     let stem = blast_database_path
         .file_stem()
-        .unwrap()
-        .to_os_string()
-        .into_string()
-        .unwrap();
+        .and_then(|stem| stem.to_str())
+        .map(str::to_string)
+        .ok_or_else(|| {
+            execution_err(format!(
+                "Invalid BLAST database path (expected a database name): {blast_database_path:?}"
+            ))
+        })?;
 
     let database_dir = PathBuf::from(
-        tilde(&blast_database_path.parent().unwrap().to_str().unwrap())
-            .into_owned(),
+        tilde(
+            &blast_database_path
+                .parent()
+                .map(|parent| parent.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+        )
+        .into_owned(),
     );
 
     // Accept only `{stem}.nsq` or numbered volumes `{stem}.NN.nsq`, so a
@@ -56,23 +66,14 @@ pub(crate) fn validate_blast_database(
         .as_error();
     };
 
-    if let false = nsq_candidates
+    let volume_dir = nsq_candidates
         .parent()
-        .expect(
-            format!(
-                "Could not determine database directory from: {:?}",
-                nsq_candidates
-            )
-            .as_str(),
-        )
-        .join("taxdb.btd")
-        .exists()
-    {
-        return execution_err(format!(
-            "Taxdb not found: {:?}",
-            nsq_candidates.parent().unwrap()
-        ))
-        .as_error();
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
+
+    if !volume_dir.join("taxdb.btd").exists() {
+        return execution_err(format!("Taxdb not found: {volume_dir:?}"))
+            .as_error();
     };
 
     Ok(())
@@ -185,15 +186,18 @@ mod tests {
         assert!(validate_blast_database(&tilde_path).is_ok());
     }
 
+    // BUG-R43: paths without a database name used to panic.
     #[test]
-    #[should_panic(expected = "called `Option::unwrap()` on a `None` value")]
-    fn validate_blast_database_root_path_panics() {
-        let _ = validate_blast_database(&PathBuf::from("/"));
-    }
+    fn validate_blast_database_path_without_name_returns_err() {
+        for path in ["/", ".."] {
+            let message = validate_blast_database(&PathBuf::from(path))
+                .unwrap_err()
+                .to_string();
 
-    #[test]
-    #[should_panic(expected = "called `Option::unwrap()` on a `None` value")]
-    fn validate_blast_database_parent_dir_path_panics() {
-        let _ = validate_blast_database(&PathBuf::from(".."));
+            assert!(
+                message.contains("Invalid BLAST database path"),
+                "{path}: {message}"
+            );
+        }
     }
 }

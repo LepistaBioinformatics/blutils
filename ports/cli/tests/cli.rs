@@ -86,16 +86,17 @@ fn build_consensus_with_out_file_writes_json_extension_and_empty_stdout() {
 }
 
 #[test]
-fn build_consensus_custom_taxon_without_cutoff_file_panics() {
+fn build_consensus_custom_taxon_without_cutoff_file_fails_with_error() {
     let dir = tempfile::tempdir().unwrap();
 
     blu(dir.path())
         .args(build_consensus_args(&["--taxon", "custom"]))
         .assert()
-        .code(101)
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not())
         .stdout(predicate::str::is_empty())
         .stderr(predicate::str::contains(
-            "Custom taxon values are required when the custom taxon option is selected.",
+            "Custom taxon values are required when the custom taxon option is selected (use --custom-taxon-cutoff-file).",
         ));
 }
 
@@ -153,7 +154,7 @@ fn run_with_consensus_help_shows_query_defaults_to_stdin() {
 }
 
 #[test]
-fn invalid_log_level_panics_before_running_the_command() {
+fn invalid_log_level_fails_before_running_the_command() {
     let dir = tempfile::tempdir().unwrap();
 
     blu(dir.path())
@@ -165,9 +166,10 @@ fn invalid_log_level_panics_before_running_the_command() {
             "result",
         ]))
         .assert()
-        .code(101)
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not())
         .stderr(predicate::str::contains(
-            "called `Result::unwrap()` on an `Err` value: ParseError",
+            "Error: Invalid --log-level \"[[bad\"",
         ));
 
     assert!(!dir.path().join("result.json").exists());

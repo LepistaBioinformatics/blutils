@@ -78,7 +78,7 @@ pub(super) fn find_single_query_consensus(
             // is not already parsed.
             //
             let taxonomies =
-                force_parsed_taxonomy(target_blast_match.taxonomy.to_owned());
+                force_parsed_taxonomy(target_blast_match.taxonomy.to_owned())?;
             //
             // Generate interpolated identities for the taxon.
             //
@@ -133,7 +133,7 @@ pub(super) fn find_single_query_consensus(
                 taxonomies,
                 interpolated_identities,
                 Some(vec![consensus_bean]),
-            );
+            )?;
 
             if let ConsensusResult::ConsensusFound(found) = &mut consensus {
                 if let Some(taxon) = found.taxon.as_mut() {

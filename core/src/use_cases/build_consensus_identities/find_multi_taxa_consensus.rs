@@ -8,7 +8,7 @@ use crate::domain::dtos::{
     taxonomy_bean::{Taxonomy, TaxonomyBean},
 };
 
-use mycelium_base::utils::errors::MappedErrors;
+use mycelium_base::utils::errors::{use_case_err, MappedErrors};
 use std::collections::HashSet;
 
 /// Find the consensus among Blast results with multiple output.
@@ -33,11 +33,14 @@ pub(super) fn find_multi_taxa_consensus(
     //
     // ? -----------------------------------------------------------------------
 
-    let mut sorted_records = records.to_owned();
+    let mut keyed_records = records
+        .into_iter()
+        .map(|record| {
+            Ok((force_parsed_taxonomy(record.taxonomy.to_owned())?, record))
+        })
+        .collect::<Result<Vec<_>, MappedErrors>>()?;
 
-    sorted_records.sort_by(|a, b| {
-        let a_taxonomy = force_parsed_taxonomy(a.taxonomy.to_owned());
-        let b_taxonomy = force_parsed_taxonomy(b.taxonomy.to_owned());
+    keyed_records.sort_by(|(a_taxonomy, a), (b_taxonomy, b)| {
         a_taxonomy
             .len()
             .cmp(&b_taxonomy.len())
@@ -50,15 +53,20 @@ pub(super) fn find_multi_taxa_consensus(
             .then(a.subject_accession.cmp(&b.subject_accession))
     });
 
+    let (sorted_taxonomies, sorted_records): (
+        Vec<Vec<TaxonomyBean>>,
+        Vec<BlastResultRow>,
+    ) = keyed_records.into_iter().unzip();
+
     //
     // The reference taxonomy is the longest or shortest taxonomy vector, given
     // the selected strategy.
     //
     let reference_taxonomy = match match strategy {
-        ConsensusStrategy::Cautious => sorted_records.first(),
-        ConsensusStrategy::Relaxed => sorted_records.last(),
+        ConsensusStrategy::Cautious => sorted_taxonomies.first(),
+        ConsensusStrategy::Relaxed => sorted_taxonomies.last(),
     } {
-        Some(reference) => force_parsed_taxonomy(reference.taxonomy.to_owned()),
+        Some(reference) => reference.to_owned(),
         None => {
             return Ok(ConsensusResult::NoConsensusFound(no_consensus_option))
         }
@@ -71,11 +79,6 @@ pub(super) fn find_multi_taxa_consensus(
     // type.
     //
     // ? -----------------------------------------------------------------------
-
-    let sorted_taxonomies = sorted_records
-        .iter()
-        .map(|i| force_parsed_taxonomy(i.taxonomy.to_owned()))
-        .collect::<Vec<Vec<TaxonomyBean>>>();
 
     // ? -----------------------------------------------------------------------
     // ? Initialize the final response
@@ -108,9 +111,10 @@ pub(super) fn find_multi_taxa_consensus(
 
     if interpolated_identities.interpolation().len() != reference_taxonomy.len()
     {
-        panic!(
-            "Interpolated identities length is not equal to reference taxonomy length"
-        );
+        return use_case_err(
+            "Interpolated identities length is not equal to reference taxonomy length",
+        )
+        .as_error();
     }
 
     // ? -----------------------------------------------------------------------
@@ -196,7 +200,7 @@ pub(super) fn find_multi_taxa_consensus(
                 reference_taxonomy.to_owned(),
                 interpolated_identities.to_owned(),
                 Some(consensus_beans),
-            );
+            )?;
 
             break;
         }
@@ -209,7 +213,7 @@ pub(super) fn find_multi_taxa_consensus(
             reference_taxonomy.to_owned(),
             interpolated_identities.to_owned(),
             Some(consensus_beans),
-        )
+        )?
     }
 
     Ok(final_result)
@@ -490,11 +494,12 @@ mod tests {
             ConsensusStrategy::Cautious,
         ));
 
-        let reference = force_parsed_taxonomy(a.taxonomy.clone());
+        let reference = force_parsed_taxonomy(a.taxonomy.clone()).unwrap();
         let beans = [&a, &b]
             .iter()
             .map(|record| {
-                let lineage = force_parsed_taxonomy(record.taxonomy.clone());
+                let lineage =
+                    force_parsed_taxonomy(record.taxonomy.clone()).unwrap();
                 ConsensusBean::from_taxonomy_bean(
                     lineage[5].clone(),
                     Some(record.subject_accession.clone()),
@@ -515,7 +520,8 @@ mod tests {
             )
             .unwrap(),
             Some(beans),
-        );
+        )
+        .unwrap();
 
         match expected {
             ConsensusResult::ConsensusFound(found) => {
@@ -525,16 +531,25 @@ mod tests {
         }
     }
 
+    // BUG-R43: used to panic with "Invalid format taxonomic field.".
     #[test]
-    #[should_panic(expected = "Invalid format taxonomic field.")]
-    fn find_multi_taxa_consensus_literal_taxonomy_panics() {
-        run(
+    fn find_multi_taxa_consensus_literal_taxonomy_returns_err() {
+        let message = find_multi_taxa_consensus(
             vec![
                 row("a", 1, 100.0, 500, FAMILY),
                 row("b", 1, 100.0, 500, FAMILY),
             ],
+            Taxon::Bacteria,
+            QueryWithoutConsensus {
+                query: "q1".to_string(),
+            },
             ConsensusStrategy::Cautious,
-        );
+            None,
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(message.contains("Lineage was not parsed"), "{message}");
     }
 
     // NaN identity satisfies no cutoff, so no consensus is found (the

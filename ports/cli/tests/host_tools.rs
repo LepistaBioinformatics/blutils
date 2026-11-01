@@ -31,19 +31,20 @@ fn check_linux_with_blastn_and_blastdbcmd_on_path_succeeds() {
 }
 
 #[test]
-fn check_linux_with_blastdbcmd_missing_panics_with_missing_dependencies() {
+fn check_linux_with_blastdbcmd_missing_fails_with_missing_dependencies() {
     let dir = tempfile::tempdir().unwrap();
 
     blu(dir.path())
         .env("PATH", fake_path("no_blastdbcmd"))
         .args(["check", "linux"])
         .assert()
-        .code(101)
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not())
         .stderr(predicate::str::contains(MISSING_DEPENDENCIES));
 }
 
 #[test]
-fn check_linux_without_which_panics_with_unexpected_error() {
+fn check_linux_without_which_fails_with_unexpected_error() {
     let dir = tempfile::tempdir().unwrap();
     // An existing but empty directory: an empty/unset PATH would make execvp
     // fall back to a default search path containing the real `which`.
@@ -53,7 +54,8 @@ fn check_linux_without_which_panics_with_unexpected_error() {
         .env("PATH", empty.path())
         .args(["check", "linux"])
         .assert()
-        .code(101)
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not())
         .stderr(predicate::str::contains(
             "Unexpected error detected on check host system",
         ));
@@ -72,7 +74,8 @@ fn build_db_kraken2_with_missing_host_dependency_fails_before_touching_output()
         .args(["build-db", "kraken2", "db", "-o"])
         .arg(&out)
         .assert()
-        .code(101)
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not())
         .stderr(predicate::str::contains(MISSING_DEPENDENCIES));
 
     assert!(out.join("sentinel").is_file());
@@ -203,7 +206,7 @@ fn run_with_consensus_existing_out_file_with_force_is_overwritten() {
 }
 
 #[test]
-fn run_with_consensus_custom_taxon_without_cutoff_file_panics_after_host_check()
+fn run_with_consensus_custom_taxon_without_cutoff_file_fails_after_host_check()
 {
     let dir = tempfile::tempdir().unwrap();
     let db = fake_blast_database(dir.path());
@@ -219,9 +222,10 @@ fn run_with_consensus_custom_taxon_without_cutoff_file_panics_after_host_check()
         .args(["--blast-out-file", "blast/run"])
         .args(["--taxon", "custom", "--strategy", "cautious"])
         .assert()
-        .code(101)
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not())
         .stderr(predicate::str::contains(
-            "Custom taxon values are required when the custom taxon option is selected.",
+            "Custom taxon values are required when the custom taxon option is selected (use --custom-taxon-cutoff-file).",
         ));
 
     assert!(!dir.path().join("blast").exists());
@@ -244,7 +248,8 @@ fn build_db_qiime2_writes_taxonomies_tsv_before_validating_the_database() {
         .arg(core_fixture("taxonomies/basic.blutils.json"))
         .args(["tax", "missing-db", "seqs"])
         .assert()
-        .code(101)
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not())
         .stderr(predicate::str::contains("Blast database not found"));
 
     let tsv = fs::read_to_string(dir.path().join("tax.tsv")).unwrap();
@@ -262,7 +267,8 @@ fn build_db_qiime2_use_taxid_writes_numeric_lineage() {
         .arg(core_fixture("taxonomies/basic.blutils.json"))
         .args(["tax", "missing-db", "seqs", "-u"])
         .assert()
-        .code(101);
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not());
 
     let tsv = fs::read_to_string(dir.path().join("tax.tsv")).unwrap();
     assert!(
@@ -303,7 +309,8 @@ fn build_db_qiime2_with_fake_blastdbcmd_writes_fna_records() {
 }
 
 #[test]
-fn build_db_qiime2_blastdbcmd_line_with_less_than_four_fields_panics() {
+fn build_db_qiime2_blastdbcmd_line_with_less_than_four_fields_fails_with_error()
+{
     let dir = tempfile::tempdir().unwrap();
     let db = fake_blast_database(dir.path());
 
@@ -316,7 +323,8 @@ fn build_db_qiime2_blastdbcmd_line_with_less_than_four_fields_panics() {
         .arg(&db)
         .args(["seqs"])
         .assert()
-        .code(101)
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not())
         .stderr(predicate::str::contains(
             "Invalid line detected on blastdbcmd response",
         ));
@@ -333,7 +341,8 @@ fn build_db_qiime2_missing_output_parent_directory_is_created() {
         .arg(core_fixture("taxonomies/basic.blutils.json"))
         .args(["missing/tax", "missing-db", "seqs"])
         .assert()
-        .code(101)
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not())
         .stderr(predicate::str::contains("Blast database not found"));
 
     assert!(dir.path().join("missing/tax.tsv").is_file());
@@ -349,7 +358,8 @@ fn kraken2_with_missing_database(dir: &Path, out: &Path) {
         .args(["build-db", "kraken2", "missing-db", "-o"])
         .arg(out)
         .assert()
-        .code(101)
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not())
         .stderr(predicate::str::contains("Blast database not found"));
 }
 
@@ -416,7 +426,8 @@ fn build_db_kraken2_with_fake_blastdbcmd_writes_library_and_prelim_map() {
 }
 
 #[test]
-fn build_db_kraken2_blastdbcmd_line_with_less_than_three_fields_panics() {
+fn build_db_kraken2_blastdbcmd_line_with_less_than_three_fields_fails_with_error(
+) {
     let dir = tempfile::tempdir().unwrap();
     let db = fake_blast_database(dir.path());
 
@@ -427,7 +438,8 @@ fn build_db_kraken2_blastdbcmd_line_with_less_than_three_fields_panics() {
         .arg(&db)
         .args(["-o", "kraken"])
         .assert()
-        .code(101)
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not())
         .stderr(predicate::str::contains(
             "Invalid line detected on blastdbcmd response",
         ));
@@ -457,28 +469,31 @@ fn build_db_blu_valid_accessions_reach_the_taxdump_validation() {
     let dir = tempfile::tempdir().unwrap();
 
     build_db_blu(dir.path(), "ACC1.1  101  0\nACC2.1  101  1\n")
-        .code(101)
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not())
         .stderr(predicate::str::contains("Invalid taxdump directory path"));
 }
 
 #[test]
-fn build_db_blu_non_integer_taxid_panics() {
+fn build_db_blu_non_integer_taxid_fails_with_error() {
     let dir = tempfile::tempdir().unwrap();
 
     build_db_blu(dir.path(), "ACC1.1  abc  0\n")
-        .code(101)
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not())
         .stderr(predicate::str::contains(
-            "Invalid taxid detected on blastdbcmd response for abc",
+            "Invalid taxid detected on blastdbcmd response for ACC1.1: \"abc\"",
         ));
 }
 
 #[test]
-fn build_db_blu_line_with_less_than_three_fields_panics() {
+fn build_db_blu_line_with_less_than_three_fields_fails_with_error() {
     let dir = tempfile::tempdir().unwrap();
 
-    build_db_blu(dir.path(), "ACC1.1  101\n").code(101).stderr(
-        predicate::str::contains(
+    build_db_blu(dir.path(), "ACC1.1  101\n")
+        .code(1)
+        .stderr(predicate::str::contains("panicked").not())
+        .stderr(predicate::str::contains(
             "Invalid line detected on blastdbcmd response",
-        ),
-    );
+        ));
 }

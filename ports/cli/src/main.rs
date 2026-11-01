@@ -1,7 +1,7 @@
 mod cmds;
 mod models;
 
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use clap::Subcommand;
 use cmds::{blast, check, db_builder};
 use models::{cli_launcher::CliLauncher, log_format::LogFormat};
@@ -49,9 +49,11 @@ fn main() -> Result<()> {
             let mut log_file = PathBuf::from(file);
 
             let binding = log_file.to_owned();
-            let parent_dir = binding
-                .parent()
-                .expect("Log file parent directory not found");
+            let parent_dir = binding.parent().with_context(|| {
+                format!(
+                    "Invalid log file path (no parent directory): {binding:?}"
+                )
+            })?;
 
             match args.log_format {
                 LogFormat::Jsonl => {
@@ -66,8 +68,9 @@ fn main() -> Result<()> {
                 std::fs::remove_file(&log_file)?;
             }
 
-            let file_name =
-                log_file.file_name().expect("Log file name not found");
+            let file_name = log_file.file_name().with_context(|| {
+                format!("Invalid log file path (no file name): {log_file:?}")
+            })?;
 
             let file_appender =
                 tracing_appender::rolling::never(parent_dir, file_name);
@@ -86,7 +89,9 @@ fn main() -> Result<()> {
                 .with_line_number(false),
         )
         .with_writer(non_blocking)
-        .with_env_filter(EnvFilter::from_str(log_level.as_str()).unwrap());
+        .with_env_filter(EnvFilter::from_str(log_level.as_str()).map_err(
+            |err| anyhow!("Invalid --log-level {log_level:?}: {err}"),
+        )?);
 
     match args.log_format {
         LogFormat::Ansi => tracing_config.pretty().init(),
@@ -103,6 +108,13 @@ fn main() -> Result<()> {
     // ? Fire up the command
     // ? -----------------------------------------------------------------------
 
+    // `--threads` caps the whole process, not only the BLAST step (BUG-R40).
+    blul_core::use_cases::limit_threads(args.threads.unwrap_or(1))
+        .map_err(|err| anyhow!("{err}"))?;
+
+    // BUG-R42: commands return errors instead of panicking. Returning from
+    // `main` prints `Error: <message>`, exits with code 1 and drops the log
+    // guard, so buffered log lines are flushed.
     match args.opts {
         Opts::BuildDb(sub_args) => match sub_args.build {
             db_builder::Commands::Blu(args) => {
@@ -115,30 +127,21 @@ fn main() -> Result<()> {
                 db_builder::build_kraken_db_from_ncbi_files_cmd(args)
             }
         },
-        Opts::Blastn(blast_args) => {
-            match blast_args.run_blast {
-                blast::Commands::RunWithConsensus(sub_args) => {
-                    blast::run_blast_and_build_consensus_cmd(
-                        sub_args,
-                        args.threads,
-                    )
-                }
-                blast::Commands::BuildConsensus(args) => {
-                    blast::build_consensus_cmd(args)
-                }
-                blast::Commands::BuildTabular(args) => {
-                    blast::build_tabular_cmd(args)
-                }
-            };
-        }
-        Opts::Check(check_args) => {
-            match check_args.check_host {
-                check::Commands::Linux => check::check_host_requirements_cmd(),
-            };
-        }
-    };
-
-    Ok(())
+        Opts::Blastn(blast_args) => match blast_args.run_blast {
+            blast::Commands::RunWithConsensus(sub_args) => {
+                blast::run_blast_and_build_consensus_cmd(sub_args, args.threads)
+            }
+            blast::Commands::BuildConsensus(args) => {
+                blast::build_consensus_cmd(args)
+            }
+            blast::Commands::BuildTabular(args) => {
+                blast::build_tabular_cmd(args)
+            }
+        },
+        Opts::Check(check_args) => match check_args.check_host {
+            check::Commands::Linux => check::check_host_requirements_cmd(),
+        },
+    }
 }
 
 #[cfg(test)]

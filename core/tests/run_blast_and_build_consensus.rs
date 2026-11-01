@@ -14,6 +14,7 @@ use std::{
     fs::{read_to_string, write},
     path::PathBuf,
     str::FromStr,
+    time::Duration,
 };
 use tempfile::TempDir;
 
@@ -75,6 +76,14 @@ impl Run {
     }
 
     fn execute(&self, mock: &MockBlastn) -> Result<bool, MappedErrors> {
+        self.execute_with_threads(mock, 2)
+    }
+
+    fn execute_with_threads(
+        &self,
+        mock: &MockBlastn,
+        threads: usize,
+    ) -> Result<bool, MappedErrors> {
         run_blast_and_build_consensus(
             FileOrStdin::from_str(self.query.to_str().unwrap()).unwrap(),
             fixture("taxonomies/basic.blutils.json").to_str().unwrap(),
@@ -86,7 +95,7 @@ impl Run {
             ),
             mock,
             &self.overwrite,
-            2,
+            threads,
             ConsensusStrategy::Cautious,
             None,
             OutputFormat::Json,
@@ -300,23 +309,35 @@ fn run_blast_and_build_consensus_empty_blast_output_reports_every_query_without_
     }
 }
 
+// BUG-R43: a `blastn` failure used to `panic!` inside the worker pool.
 #[test]
-#[should_panic(expected = "Unexpected error on process chunk")]
-fn run_blast_and_build_consensus_blast_fail_panics() {
+fn run_blast_and_build_consensus_blast_fail_returns_err_with_blastn_message() {
     let run = Run::new(&basic_queries());
     let mock = MockBlastn::new(MockOutcome::Fail("blastn: bad db".to_string()));
 
-    let _ = run.execute(&mock);
+    let message = error_message(run.execute(&mock));
+
+    assert!(
+        message.contains("blastn failed on chunk 1 of 1"),
+        "{message}"
+    );
+    assert!(message.contains("blastn: bad db"), "{message}");
 }
 
+// BUG-R43: an error launching `blastn` used to `panic!` inside the pool.
 #[test]
-#[should_panic(expected = "Unexpected error detected on execute blast")]
-fn run_blast_and_build_consensus_blast_error_panics() {
+fn run_blast_and_build_consensus_blast_error_returns_err_with_cause() {
     let run = Run::new(&basic_queries());
     let mock =
         MockBlastn::new(MockOutcome::Error("blastn not found".to_string()));
 
-    let _ = run.execute(&mock);
+    let message = error_message(run.execute(&mock));
+
+    assert!(
+        message.contains("Could not execute blastn on chunk 1 of 1"),
+        "{message}"
+    );
+    assert!(message.contains("blastn not found"), "{message}");
 }
 
 #[test]
@@ -456,4 +477,48 @@ fn run_blast_and_build_consensus_whitespace_only_header_returns_err() {
         "{message}"
     );
     assert_eq!(mock.call_count(), 0);
+}
+
+// BUG-R40: `threads` is the ceiling for the whole run. Chunks used to run on
+// the global rayon pool, each `blastn` also getting `-num_threads <threads>`,
+// so up to threads x threads host threads were requested.
+#[test]
+fn run_blast_and_build_consensus_threads_is_a_ceiling_across_parallel_chunks() {
+    let run = Run::new(&numbered_headers(400));
+    let mock =
+        MockBlastn::succeeding_with("").with_delay(Duration::from_millis(50));
+
+    assert!(run.execute_with_threads(&mock, 4).unwrap());
+
+    assert_eq!(mock.call_count(), 8);
+    assert!(
+        mock.peak_threads() <= 4,
+        "peak {} threads (threads per call {:?}, peak concurrent calls {})",
+        mock.peak_threads(),
+        mock.threads.lock().unwrap(),
+        mock.max_in_flight.load(std::sync::atomic::Ordering::SeqCst),
+    );
+}
+
+// BUG-R40: chunks still run in parallel up to `threads`.
+#[test]
+fn run_blast_and_build_consensus_runs_chunks_in_parallel_up_to_threads() {
+    let run = Run::new(&numbered_headers(400));
+    let mock =
+        MockBlastn::succeeding_with("").with_delay(Duration::from_millis(50));
+
+    assert!(run.execute_with_threads(&mock, 4).unwrap());
+
+    assert!(mock.max_in_flight.load(std::sync::atomic::Ordering::SeqCst) > 1);
+}
+
+// BUG-R40: with fewer chunks than threads, the spare threads go to `blastn`.
+#[test]
+fn run_blast_and_build_consensus_single_chunk_gets_every_thread() {
+    let run = Run::new(&numbered_headers(10));
+    let mock = MockBlastn::succeeding_with("");
+
+    assert!(run.execute_with_threads(&mock, 4).unwrap());
+
+    assert_eq!(*mock.threads.lock().unwrap(), vec![4]);
 }

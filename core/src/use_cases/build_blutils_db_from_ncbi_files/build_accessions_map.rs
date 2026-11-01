@@ -48,20 +48,25 @@ pub(super) fn build_accessions_map(
                     break;
                 }
 
-                let mut line = buf_line.split("  ");
-
-                let (accession, taxid, sequence_oid) = (
-                    line.next().expect(er_msg).trim(),
-                    line.next().expect(er_msg).trim(),
-                    line.next().expect(er_msg).trim(),
-                );
-
-                let taxid = match taxid.parse::<i64>() {
-                    Ok(res) => res,
-                    Err(err) => {
-                        panic!("Invalid taxid detected on blastdbcmd response for {taxid}: {err}");
-                    }
+                let invalid_line = || {
+                    execution_err(format!(
+                        "{er_msg}: {:?}",
+                        buf_line.trim_end()
+                    ))
                 };
+                let mut line = buf_line.split("  ");
+                let mut field =
+                    || line.next().map(str::trim).ok_or_else(invalid_line);
+
+                // BUG-R43: a malformed `blastdbcmd` line returns `Err`.
+                let (accession, taxid, sequence_oid) =
+                    (field()?, field()?, field()?);
+
+                let taxid = taxid.parse::<i64>().map_err(|err| {
+                    execution_err(format!(
+                        "Invalid taxid detected on blastdbcmd response for {accession}: {taxid:?}: {err}"
+                    ))
+                })?;
 
                 taxids_map
                     .entry(taxid as u64)

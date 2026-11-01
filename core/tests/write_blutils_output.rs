@@ -296,32 +296,24 @@ fn write_blutils_output_subject_reads_reduced_to_file_name() {
     assert_eq!(json["config"]["subjectReads"], "ref.fna");
 }
 
-fn write_with_subject_reads(subject_reads: &str) {
-    let dir = tempfile::tempdir().unwrap();
-    write(
-        vec![],
-        Some(config(subject_reads)),
-        &dir.path().join("out"),
-        OutputFormat::Json,
-    );
-}
-
+// BUG-R43: a `subject_reads` without a file name used to panic; it is now
+// written verbatim.
 #[test]
-#[should_panic(expected = "called `Option::unwrap()` on a `None` value")]
-fn write_blutils_output_empty_subject_reads_panics() {
-    write_with_subject_reads("");
-}
+fn write_blutils_output_subject_reads_without_file_name_is_kept_verbatim() {
+    for subject_reads in ["", "/", ".."] {
+        let dir = tempfile::tempdir().unwrap();
+        let out = dir.path().join("out");
 
-#[test]
-#[should_panic(expected = "called `Option::unwrap()` on a `None` value")]
-fn write_blutils_output_root_subject_reads_panics() {
-    write_with_subject_reads("/");
-}
+        write(
+            vec![],
+            Some(config(subject_reads)),
+            &out,
+            OutputFormat::Json,
+        );
 
-#[test]
-#[should_panic(expected = "called `Option::unwrap()` on a `None` value")]
-fn write_blutils_output_parent_dir_subject_reads_panics() {
-    write_with_subject_reads("..");
+        let json = read_json(&dir.path().join("out.json"));
+        assert_eq!(json["config"]["subjectReads"], subject_reads);
+    }
 }
 
 // ---------------------------------------------------------------------------

@@ -40,23 +40,35 @@ pub(super) fn load_dump_file(
     let mut column_maps = HashMap::<String, Vec<_>>::new();
     match File::open(path.to_owned()) {
         Ok(file) => {
-            BufReader::new(file)
+            for (line_index, line) in BufReader::new(file)
                 .lines()
                 .flat_map(Result::ok)
-                .for_each(|line| {
-                    for (i, column) in columns.iter().enumerate() {
-                        column_maps
-                            .entry(column.to_string())
-                            .or_insert_with(Vec::new)
-                            .push(
-                                line.split('|')
-                                    .map(|value| value.trim().replace("\t", ""))
-                                    .nth(i)
-                                    .unwrap()
-                                    .to_string(),
-                            );
-                    }
-                })
+                .enumerate()
+            {
+                let values = line
+                    .split('|')
+                    .map(|value| value.trim().replace("\t", ""))
+                    .collect::<Vec<_>>();
+
+                // BUG-R43: a line with fewer fields than expected returns
+                // `Err` instead of panicking.
+                if values.len() < columns.len() {
+                    return use_case_err(format!(
+                        "Invalid line {} in {path:?}: expected at least {} `|`-separated fields, found {}",
+                        line_index + 1,
+                        columns.len(),
+                        values.len()
+                    ))
+                    .as_error();
+                }
+
+                for (column, value) in columns.iter().zip(values) {
+                    column_maps
+                        .entry(column.to_string())
+                        .or_insert_with(Vec::new)
+                        .push(value);
+                }
+            }
         }
         Err(err) => {
             return use_case_err(format!(
@@ -76,9 +88,11 @@ pub(super) fn load_dump_file(
         column_definitions
             .par_iter()
             .map(|(name, _type)| {
+                // An empty dump file has no rows for any column (BUG-R43).
                 let series = column_maps
                     .get(name)
-                    .unwrap()
+                    .map(Vec::as_slice)
+                    .unwrap_or_default()
                     .par_iter()
                     .map(|value| value.to_string())
                     .collect::<Vec<_>>();
@@ -324,21 +338,28 @@ mod tests {
         assert!(format!("{err}").contains("Unexpected error detected on open"));
     }
 
+    // BUG-R43: used to panic on `Option::unwrap()`.
     #[test]
-    #[should_panic(expected = "called `Option::unwrap()` on a `None` value")]
-    fn load_dump_file_line_with_fewer_fields_than_columns_panics() {
+    fn load_dump_file_line_with_fewer_fields_than_columns_returns_err() {
         let dir = tempfile::tempdir().unwrap();
         let path = dump(&dir, "2\t|\tBacteria\t|\n3\n");
 
-        let _ = load_dump_file(path, two_columns());
+        let message =
+            load_dump_file(path, two_columns()).unwrap_err().to_string();
+
+        assert!(message.contains("Invalid line 2"), "{message}");
+        assert!(message.contains("file.dmp"), "{message}");
     }
 
+    // BUG-R43: used to panic on `Option::unwrap()`.
     #[test]
-    #[should_panic(expected = "called `Option::unwrap()` on a `None` value")]
-    fn load_dump_file_empty_file_panics() {
+    fn load_dump_file_empty_file_returns_empty_dataframe() {
         let dir = tempfile::tempdir().unwrap();
         let path = dump(&dir, "");
 
-        let _ = load_dump_file(path, two_columns());
+        let df = load_dump_file(path, two_columns()).unwrap();
+
+        assert_eq!(df.height(), 0);
+        assert_eq!(df.get_column_names(), vec!["tax_id", "name"]);
     }
 }

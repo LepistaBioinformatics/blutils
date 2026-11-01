@@ -7,9 +7,7 @@ use build_blast_consensus_identity::*;
 use find_multi_taxa_consensus::*;
 use find_single_query_consensus::*;
 use force_parsed_taxonomy::*;
-use polars_core::{
-    export::num::ToPrimitive, prelude::NamedFrom, series::Series,
-};
+use polars_core::{prelude::NamedFrom, series::Series};
 
 use crate::domain::dtos::{
     blast_result::{BlastQueryResult, BlastResultRow},
@@ -104,17 +102,17 @@ pub fn build_consensus_identities(
     query_results
         .into_par_iter()
         .map(|result| {
-            if result.results.to_owned().is_none() {
+            let Some(results) = result.results else {
                 return Ok(ConsensusResult::NoConsensusFound(
                     QueryWithoutConsensus {
                         query: result.query,
                     },
                 ));
-            }
+            };
 
             find_single_query_consensus(
                 result.query,
-                result.results.unwrap(),
+                results,
                 taxon.to_owned(),
                 strategy.to_owned(),
                 custom_taxon_values.to_owned(),
@@ -294,7 +292,7 @@ fn get_taxonomies_dataframe(
             taxonomy_map
                 .taxonomies
                 .iter()
-                .map(|item| item.taxid.to_f64().unwrap())
+                .map(|item| item.taxid as f64)
                 .collect::<Vec<_>>(),
         ),
         Series::new(
@@ -324,18 +322,18 @@ fn get_taxonomies_dataframe(
         schema.with_column(name.to_owned().into(), column_type.to_owned());
     }
 
+    // BUG-R43: a cast error returns `Err` instead of panicking.
     for (column, _type) in schema.iter() {
-        df.apply(column, |s| match s.cast(_type) {
-            Ok(casted) => casted,
-            Err(err) => {
-                let error_message =
-                    format!("Unexpected error detected on cast column: {err}");
+        let casted = df
+            .column(column)
+            .and_then(|series| series.cast(_type))
+            .map_err(|err| {
+                use_case_err(format!(
+                    "Unexpected error detected on cast column {column}: {err}"
+                ))
+            })?;
 
-                tracing::error!(error_message);
-                panic!("{error_message}");
-            }
-        })
-        .map_err(|err| {
+        df.with_column(casted).map_err(|err| {
             use_case_err(format!(
                 "Unexpected error detected on apply column: {err}"
             ))

@@ -17,6 +17,9 @@ pub struct CliLauncher<T: FromArgMatches + Subcommand> {
     #[clap(long, default_value = "ansi")]
     pub log_format: LogFormat,
 
+    /// Maximum number of threads for the whole run. BLAST chunks, the
+    /// consensus step and the database builders run within this limit.
+    // BUG-R40: previously only sized each `blastn` call.
     #[clap(short, long, default_value = "1")]
     pub threads: Option<usize>,
 }

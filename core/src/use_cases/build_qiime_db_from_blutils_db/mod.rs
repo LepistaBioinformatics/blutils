@@ -1,9 +1,11 @@
-use super::shared::{validate_blast_database, write_or_append_to_file};
+use super::shared::{
+    append, remove_if_exists, validate_blast_database, write_or_append_to_file,
+};
 use crate::domain::dtos::taxonomies_map::TaxonomiesMap;
 
 use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use std::{
-    fs::{create_dir_all, read_to_string, remove_file},
+    fs::{create_dir_all, read_to_string},
     io::{BufRead, BufReader},
     path::PathBuf,
 };
@@ -36,12 +38,15 @@ pub fn build_qiime_db_from_blutils_db(
         }
     }
 
-    if output_taxonomies_file.exists() {
-        remove_file(output_taxonomies_file.to_owned()).unwrap();
-    }
+    // BUG-R43: file-system errors return `Err` instead of panicking.
+    remove_if_exists(&output_taxonomies_file)?;
 
-    let taxonomies_database_content =
-        read_to_string(taxonomies_database_path).expect("Unable to read file");
+    let taxonomies_database_content = read_to_string(taxonomies_database_path)
+        .map_err(|err| {
+            execution_err(format!(
+                "Could not read the taxonomies database {taxonomies_database_path:?}: {err}"
+            ))
+        })?;
 
     let taxonomy_map = match serde_json::from_str::<TaxonomiesMap>(
         &taxonomies_database_content,
@@ -57,14 +62,9 @@ pub fn build_qiime_db_from_blutils_db(
     };
 
     let (tax_writer, tax_file) =
-        write_or_append_to_file(&output_taxonomies_file);
+        write_or_append_to_file(&output_taxonomies_file)?;
 
-    tax_writer(
-        format!("Feature ID\tTaxon\n"),
-        tax_file
-            .try_clone()
-            .expect("Unexpected error detected on write taxonomies database"),
-    )?;
+    append(tax_writer, &tax_file, format!("Feature ID\tTaxon\n"))?;
 
     //
     // Write the output file
@@ -87,14 +87,7 @@ pub fn build_qiime_db_from_blutils_db(
                 )
             })
         })
-        .for_each(|line| {
-            if let Err(err) = tax_writer(line, tax_file
-                .try_clone()
-                .expect("Unexpected error detected on write taxonomies database"))
-            {
-                panic!("Unexpected error detected on write taxonomies database: {err}");
-            };
-        });
+        .try_for_each(|line| append(tax_writer, &tax_file, line))?;
 
     // ? -----------------------------------------------------------------------
     // ? Validate and parse the blast database
@@ -106,12 +99,10 @@ pub fn build_qiime_db_from_blutils_db(
 
     output_sequences_file.set_extension("fna");
 
-    if output_sequences_file.exists() {
-        remove_file(output_sequences_file.to_owned()).unwrap();
-    }
+    remove_if_exists(&output_sequences_file)?;
 
     let (fna_writer, fna_file) =
-        write_or_append_to_file(&output_sequences_file);
+        write_or_append_to_file(&output_sequences_file)?;
 
     match Exec::cmd("blastdbcmd")
         .arg("-entry")
@@ -138,24 +129,26 @@ pub fn build_qiime_db_from_blutils_db(
                 }
 
                 let mut line = buf_line.split("  ");
+                let mut field = || {
+                    line.next().map(str::trim).ok_or_else(|| {
+                        execution_err(format!(
+                            "{er_msg}: {:?}",
+                            buf_line.trim_end()
+                        ))
+                    })
+                };
 
-                let (accession, taxid, sequence_hash, sequence) = (
-                    line.next().expect(er_msg).trim(),
-                    line.next().expect(er_msg).trim(),
-                    line.next().expect(er_msg).trim(),
-                    line.next().expect(er_msg).trim(),
-                );
+                // BUG-R43: a short `blastdbcmd` line returns `Err`.
+                let (accession, taxid, sequence_hash, sequence) =
+                    (field()?, field()?, field()?, field()?);
 
-                if let Err(err) = fna_writer(
+                append(
+                    fna_writer,
+                    &fna_file,
                     format!(
                         ">{taxid}-{sequence_hash}-{accession}\n{sequence}\n"
                     ),
-                    fna_file.try_clone().expect(
-                        "Unexpected error detected on write sequences database",
-                    ),
-                ) {
-                    panic!("Unexpected error detected on write sequences database: {err}");
-                };
+                )?;
 
                 buf_line.clear();
             }

@@ -7,11 +7,11 @@ use crate::{
     use_cases::shared::write_or_append_to_file,
 };
 
-use mycelium_base::utils::errors::MappedErrors;
+use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{remove_file, File},
-    io::Write,
+    io::{BufWriter, Write},
     path::PathBuf,
 };
 use tracing::{info, warn};
@@ -56,21 +56,23 @@ pub fn write_blutils_output(
             info!("\t{:?}", path);
             info!("");
 
+            // BUG-R43: file-system errors return `Err` instead of panicking.
             if path.exists() {
-                match remove_file(path.clone()) {
-                    Err(err) => panic!("Could not remove file given {err}"),
-                    Ok(_) => warn!("Output file overwritten!"),
-                };
+                remove_file(&path).map_err(|err| {
+                    execution_err(format!(
+                        "Could not overwrite the output file {path:?}: {err}"
+                    ))
+                })?;
+                warn!("Output file overwritten!");
             };
 
             if let Some(parent) = path.parent() {
-                if !parent.exists() {
-                    match std::fs::create_dir_all(parent) {
-                        Err(err) => {
-                            panic!("Could not create directory given {err}")
-                        }
-                        Ok(_) => (),
-                    };
+                if !parent.as_os_str().is_empty() && !parent.exists() {
+                    std::fs::create_dir_all(parent).map_err(|err| {
+                        execution_err(format!(
+                            "Could not create the output directory {parent:?}: {err}"
+                        ))
+                    })?;
                 }
             }
 
@@ -114,147 +116,95 @@ pub fn write_blutils_output(
 
     let config = match config {
         Some(config) => Some(BlastBuilder {
-            subject_reads: PathBuf::from(config.subject_reads)
+            subject_reads: PathBuf::from(&config.subject_reads)
                 .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string(),
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_else(|| config.subject_reads.to_owned()),
             ..config
         }),
         None => None,
     };
 
+    let output = BlutilsOutput {
+        results: consensus_type_results,
+        config,
+    };
+
+    let create = |path: &PathBuf| {
+        File::create(path).map(BufWriter::new).map_err(|err| {
+            execution_err(format!(
+                "Could not create the output file {path:?}: {err}"
+            ))
+        })
+    };
+    let write_err = |target: &str, err: &dyn std::fmt::Display| {
+        execution_err(format!("Could not write the {target} output: {err}"))
+    };
+
     match out_format {
-        OutputFormat::Json => {
-            if let Some(output_file) = blutils_out_file {
-                let mut file = match File::create(output_file.to_owned()) {
-                    Err(err) => panic!(
-                        "Error on persist output results into {}: {err}",
-                        output_file.as_os_str().to_str().unwrap()
-                    ),
-                    Ok(res) => res,
-                };
+        OutputFormat::Json => match blutils_out_file {
+            Some(output_file) => {
+                let mut file = create(&output_file)?;
+                serde_json::to_writer_pretty(&mut file, &output)
+                    .map_err(|err| write_err("JSON", &err))?;
+                file.flush().map_err(|err| write_err("JSON", &err))
+            }
+            None => serde_json::to_writer(std::io::stdout().lock(), &output)
+                .map_err(|err| write_err("JSON", &err)),
+        },
+        OutputFormat::Jsonl => {
+            // Without config no line is written: a bare `null` line is not a
+            // valid record (BUG-R09).
+            let mut lines = Vec::new();
+            if let Some(config) = &output.config {
+                lines.push(
+                    serde_json::to_string(config)
+                        .map_err(|err| write_err("JSONL", &err))?,
+                );
+            }
+            for record in &output.results {
+                lines.push(
+                    serde_json::to_string(record)
+                        .map_err(|err| write_err("JSONL", &err))?,
+                );
+            }
 
-                match file.write_all(
-                    serde_json::to_string_pretty(&BlutilsOutput {
-                        results: consensus_type_results,
-                        config,
-                    })
-                    .unwrap()
-                    .as_bytes(),
-                ) {
-                    Err(err) => panic!(
-                        "Unexpected error on write config to output file: {err}"
-                    ),
-                    Ok(_) => (),
-                };
+            match blutils_out_file {
+                Some(output_file) => {
+                    let (writer, file) =
+                        write_or_append_to_file(output_file.as_path())?;
 
-                Ok(())
-            } else {
-                if let Err(err) = serde_json::to_writer(
-                    std::io::stdout().lock(),
-                    &BlutilsOutput {
-                        results: consensus_type_results,
-                        config,
-                    },
-                ) {
-                    panic!("Unexpected error on write JSON output: {err}");
-                } else {
+                    for line in lines {
+                        let handle = file
+                            .try_clone()
+                            .map_err(|err| write_err("JSONL", &err))?;
+                        writer(line + "\n", handle)?;
+                    }
+
+                    Ok(())
+                }
+                None => {
+                    let mut stdout = std::io::stdout().lock();
+
+                    for line in lines {
+                        stdout
+                            .write_all((line + "\n").as_bytes())
+                            .map_err(|err| write_err("JSONL", &err))?;
+                    }
+
                     Ok(())
                 }
             }
         }
-        OutputFormat::Jsonl => {
-            if let Some(output_file) = blutils_out_file {
-                let (writer, file) =
-                    write_or_append_to_file(output_file.as_path());
-
-                // Without config no line is written: a bare `null` line is not
-                // a valid record (BUG-R09).
-                if let Some(config) = &config {
-                    writer(
-                        serde_json::to_string(config).unwrap() + "\n",
-                        file.try_clone().expect(
-                            "Unexpected error detected on write blast result",
-                        ),
-                    )?;
-                }
-
-                for record in &consensus_type_results {
-                    match writer(
-                        serde_json::to_string(&record).unwrap() + "\n",
-                        file.try_clone().expect(
-                            "Unexpected error detected on write blast result",
-                        ),
-                    ) {
-                        Err(err) => {
-                            panic!("Unexpected error on write JSONL output file: {err}",)
-                        }
-                        Ok(_) => (),
-                    }
-                }
-
-                Ok(())
-            } else {
-                let mut stdout = std::io::stdout();
-
-                // See the file branch above (BUG-R09).
-                if let Some(config) = &config {
-                    if let Err(err) =
-                        serde_json::to_writer(stdout.lock(), config)
-                    {
-                        panic!("Unexpected error on write JSONL output: {err}");
-                    }
-
-                    stdout.write_all(b"\n").unwrap();
-                }
-
-                for record in &consensus_type_results {
-                    if let Err(err) =
-                        serde_json::to_writer(stdout.lock(), &record)
-                    {
-                        panic!("Unexpected error on write JSONL output: {err}");
-                    }
-
-                    stdout.write_all(b"\n").unwrap();
-                }
-
-                Ok(())
+        OutputFormat::Yaml => match blutils_out_file {
+            Some(output_file) => {
+                let mut file = create(&output_file)?;
+                serde_yaml_ng::to_writer(&mut file, &output)
+                    .map_err(|err| write_err("YAML", &err))?;
+                file.flush().map_err(|err| write_err("YAML", &err))
             }
-        }
-        OutputFormat::Yaml => {
-            if let Some(output_file) = blutils_out_file {
-                let file = match File::create(output_file.to_owned()) {
-                    Err(err) => panic!(
-                        "Error on persist output results into {}: {err}",
-                        output_file.as_os_str().to_str().unwrap()
-                    ),
-                    Ok(res) => res,
-                };
-
-                serde_yaml_ng::to_writer(
-                    file,
-                    &BlutilsOutput {
-                        results: consensus_type_results,
-                        config,
-                    },
-                )
-                .unwrap();
-
-                Ok(())
-            } else {
-                serde_yaml_ng::to_writer(
-                    std::io::stdout().lock(),
-                    &BlutilsOutput {
-                        results: consensus_type_results,
-                        config,
-                    },
-                )
-                .unwrap();
-
-                Ok(())
-            }
-        }
+            None => serde_yaml_ng::to_writer(std::io::stdout().lock(), &output)
+                .map_err(|err| write_err("YAML", &err)),
+        },
     }
 }
