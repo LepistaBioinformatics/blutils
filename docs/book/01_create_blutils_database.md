@@ -149,7 +149,7 @@ Options:
           The specified taxid will be skipped in the taxonomy building process. It should be used to skip multiple taxids. Example: --skip-taxid 131567 --skip-taxid 2
 
   -r, --replace-rank <REPLACE_RANK>
-          Replace a rank by another Example: --replace-rank 'superkingdom=d'. It is common to use this option to replace the superkingdom rank by domain in bacterial taxonomy.
+          Replace a rank by another Example: --replace-rank 'clade=cl'. Taxdumps released before 2025 name the bacterial domain `superkingdom`; use --replace-rank 'superkingdom=d' with them. Current taxdumps already use `domain`.
           
           Multiple ranks can be replaced by using the option multiple times. Example: --replace-rank 'superkingdom=d' --replace-rank 'clade=cl'
 
@@ -166,6 +166,14 @@ blu build-db blu \
     blutils_db/blutils_db/16S_ribosomal_RNA
 ```
 
+> **NCBI taxonomy changes (2025).** Current taxdumps no longer have the
+> `superkingdom` rank: Bacteria and Archaea use `domain`, a `kingdom` rank was
+> added (e.g. `k__pseudomonadati`), and the `cellular organisms` node (taxid
+> 131567) has the rank `cellular root`. `--replace-rank 'superkingdom=d'` has
+> no effect on these taxdumps and is only needed for older ones. Leading
+> non-Linnaean ranks such as `cellular-root` are kept in every lineage; use
+> `--skip-taxid 131567` or `--drop-non-linnaean-taxonomies` to remove them.
+
 `Blutils` will create two files at the `blutils_db/blutils_db` directory:
 
 - `16S_ribosomal_RNA.blutils.json`: a JSON file containing the taxonomies
@@ -178,7 +186,7 @@ the following:
 
 ```json
 {
-  "blutilsVersion": "8.3.0",
+  "blutilsVersion": "8.3.1",
   "ignoreTaxids": null,
   "replaceRank": null,
   "dropNonLinnaeanTaxonomies": false,
@@ -187,24 +195,24 @@ the following:
     {
       "taxid": 259354,
       "rank": "s",
-      "numericLineage": "no-rank__131567;superkingdom__2;p__200940;c__3024418;o__213118;f__3031627;g__218207;s__259354",
-      "textLineage": "no-rank__cellular-organisms;superkingdom__bacteria;p__thermodesulfobacteriota;c__desulfobacteria;o__desulfobacterales;f__desulfatibacillaceae;g__desulfatibacillum;s__desulfatibacillum-alkenivorans",
+      "numericLineage": "cellular-root__131567;d__2;k__3379134;p__200940;c__3024418;o__213118;f__3031627;g__218207;s__259354",
+      "textLineage": "cellular-root__cellular-organisms;d__bacteria;k__pseudomonadati;p__thermodesulfobacteriota;c__desulfobacteria;o__desulfobacterales;f__desulfatibacillaceae;g__desulfatibacillum;s__desulfatibacillum-alkenivorans",
       "accessions": [
         {
           "accession": "NR_025795.1",
-          "oid": "1878"
+          "oid": "7093"
         }
       ]
     },
     {
       "taxid": 1006576,
       "rank": "s",
-      "numericLineage": "no-rank__131567;superkingdom__2;p__200918;c__188708;o__1643947;f__1643949;g__1511648;s__1006576",
-      "textLineage": "no-rank__cellular-organisms;superkingdom__bacteria;p__thermotogota;c__thermotogae;o__petrotogales;f__petrotogaceae;g__defluviitoga;s__defluviitoga-tunisiensis",
+      "numericLineage": "cellular-root__131567;d__2;k__3384194;p__200918;c__188708;o__1643947;f__1643949;g__1511648;s__1006576",
+      "textLineage": "cellular-root__cellular-organisms;d__bacteria;k__thermotogati;p__thermotogota;c__thermotogae;o__petrotogales;f__petrotogaceae;g__defluviitoga;s__defluviitoga-tunisiensis",
       "accessions": [
         {
           "accession": "NR_122085.1",
-          "oid": "13670"
+          "oid": "13344"
         }
       ]
     },

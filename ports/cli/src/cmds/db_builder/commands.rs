@@ -65,8 +65,10 @@ pub(crate) struct BuildBlutilsDatabaseArguments {
     pub(super) skip_taxid: Option<Vec<u64>>,
 
     /// Replace a rank by another
-    /// Example: --replace-rank 'superkingdom=d'. It is common to use this
-    /// option to replace the superkingdom rank by domain in bacterial taxonomy.
+    /// Example: --replace-rank 'clade=cl'. Taxdumps released before 2025
+    /// name the bacterial domain `superkingdom`; use
+    /// --replace-rank 'superkingdom=d' with them. Current taxdumps already use
+    /// `domain`.
     ///
     /// Multiple ranks can be replaced by using the option multiple times.
     /// Example: --replace-rank 'superkingdom=d' --replace-rank 'clade=cl'
