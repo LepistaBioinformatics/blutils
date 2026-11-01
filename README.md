@@ -43,7 +43,7 @@ Options:
 
           Possible values:
           - ansi:  ANSI format
-          - jsonl: YAML format
+          - jsonl: JSON Lines format
 
   -t, --threads <THREADS>
           [default: 1]
