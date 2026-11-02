@@ -40,3 +40,5 @@ jobs:
       run: cargo test --verbose
     - name: Publish crate
       run: ./publish-all.sh
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
