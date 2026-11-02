@@ -1,10 +1,9 @@
 use crate::use_cases::shared::{
-    validate_blast_database, write_or_append_to_file,
+    append, remove_if_exists, validate_blast_database, write_or_append_to_file,
 };
 
 use mycelium_base::utils::errors::{execution_err, MappedErrors};
 use std::{
-    fs::remove_file,
     io::{BufRead, BufReader},
     path::PathBuf,
 };
@@ -37,10 +36,12 @@ pub(super) fn generate_fasta_file(
 
     if output_file.exists() {
         warn!("Output file already exists. Removing it.");
-        remove_file(output_file.to_owned()).unwrap();
     }
 
-    let (file_writer, file) = write_or_append_to_file(&output_file);
+    // BUG-R43: file-system errors return `Err` instead of panicking.
+    remove_if_exists(&output_file)?;
+
+    let (file_writer, file) = write_or_append_to_file(&output_file)?;
 
     match Exec::cmd("blastdbcmd")
         .arg("-entry")
@@ -66,15 +67,28 @@ pub(super) fn generate_fasta_file(
                     break;
                 }
 
+                let invalid_line = || {
+                    execution_err(format!(
+                        "{er_msg}: {:?}",
+                        buf_line.trim_end()
+                    ))
+                };
                 let mut line = buf_line.split("  ");
+                let mut field =
+                    || line.next().map(str::trim).ok_or_else(invalid_line);
 
-                let (accession, taxid, sequence) = (
-                    line.next().expect(er_msg).trim(),
-                    line.next().expect(er_msg).trim(),
-                    line.next().expect(er_msg).trim(),
-                );
+                // BUG-R43: a malformed `blastdbcmd` line returns `Err`.
+                let (accession, taxid, sequence) =
+                    (field()?, field()?, field()?);
+                let parsed_taxid = taxid.parse::<usize>().map_err(|err| {
+                    execution_err(format!(
+                        "{er_msg}: invalid taxid {taxid:?}: {err}"
+                    ))
+                })?;
 
-                if let Err(err) = file_writer(
+                append(
+                    file_writer,
+                    &file,
                     format!(
                         ">kraken:taxid|{taxid}|{accession}\n{sequence}\n",
                         sequence = sequence
@@ -88,14 +102,9 @@ pub(super) fn generate_fasta_file(
                             .collect::<Vec<String>>()
                             .join("\n")
                     ),
-                    file.try_clone().expect(
-                        "Unexpected error detected on write sequences database",
-                    ),
-                ) {
-                    panic!("Unexpected error detected on write sequences database: {err}");
-                };
+                )?;
 
-                headers.push((accession.to_owned(), taxid.parse().unwrap()));
+                headers.push((accession.to_owned(), parsed_taxid));
 
                 buf_line.clear();
             }

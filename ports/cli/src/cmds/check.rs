@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use blul_core::use_cases::check_host_requirements;
 use clap::Parser;
 
@@ -12,8 +13,6 @@ pub(crate) enum Commands {
     Linux,
 }
 
-pub(crate) fn check_host_requirements_cmd() {
-    if let Err(err) = check_host_requirements(None) {
-        panic!("{err}");
-    }
+pub(crate) fn check_host_requirements_cmd() -> Result<()> {
+    check_host_requirements(None).map_err(|err| anyhow!("{err}"))
 }

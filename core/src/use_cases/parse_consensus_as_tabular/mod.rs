@@ -7,13 +7,13 @@ use crate::{
     use_cases::shared::write_or_append_to_file,
 };
 
-use mycelium_base::utils::errors::{use_case_err, MappedErrors};
+use mycelium_base::utils::errors::{execution_err, use_case_err, MappedErrors};
 use std::{fs::remove_file, path::PathBuf};
 use tracing::warn;
 use uuid::Uuid;
 
 pub fn parse_consensus_as_tabular(
-    mut blutils_result: FileOrStdin,
+    blutils_result: FileOrStdin,
     output_file: Option<PathBuf>,
     result_format: OutputFormat,
 ) -> Result<(), MappedErrors> {
@@ -21,11 +21,10 @@ pub fn parse_consensus_as_tabular(
     // ? Validate input files
     // ? -----------------------------------------------------------------------
 
-    if let Source::Arg(ref mut file) = blutils_result.source {
-        let mut path = PathBuf::from(file.to_owned());
-        path.set_extension("json");
-
-        if !path.exists() {
+    // Check the path that is actually read, whatever its extension
+    // (BUG-R11).
+    if let Source::Arg(ref file) = blutils_result.source {
+        if !PathBuf::from(file).exists() {
             return use_case_err(format!("The file `{file}` does not exist."))
                 .as_error();
         }
@@ -55,14 +54,19 @@ pub fn parse_consensus_as_tabular(
         if let Some(mut out_file) = output_file.to_owned() {
             out_file.set_extension("tsv");
 
+            // BUG-R43: file-system errors return `Err` instead of panicking.
             if out_file.exists() {
                 warn!("Output file already exists. Removing it.");
-                remove_file(out_file.to_owned()).unwrap();
+                remove_file(&out_file).map_err(|err| {
+                    execution_err(format!(
+                        "Could not overwrite the output file {out_file:?}: {err}"
+                    ))
+                })?;
             }
 
-            write_or_append_to_file(&out_file)
+            write_or_append_to_file(&out_file)?
         } else {
-            write_or_append_to_file(&PathBuf::from("/dev/null"))
+            write_or_append_to_file(&PathBuf::from("/dev/null"))?
         }
     };
 
@@ -86,10 +90,9 @@ pub fn parse_consensus_as_tabular(
             .join("\t")
         ),
         file_writer,
-        file.try_clone()
-            .expect("Unexpected error detected on write tabular output"),
+        &file,
         output_file.is_none(),
-    );
+    )?;
 
     let null = "null";
 
@@ -107,14 +110,18 @@ pub fn parse_consensus_as_tabular(
             } => match taxon {
                 Some(res) => res,
                 None => {
+                    // Keep the 12-column layout of the header (BUG-R10).
                     write_or_stdout(
-                        format!("{}\tnull\n", query),
-                        file_writer,
-                        file.try_clone().expect(
-                            "Unexpected error detected on write tabular output",
+                        format!(
+                            "{}\t{}{}",
+                            result.run_id.as_ref().unwrap_or(&run_id),
+                            query,
+                            "\tnull".repeat(10)
                         ),
+                        file_writer,
+                        &file,
                         output_file.is_none(),
-                    );
+                    )?;
 
                     continue;
                 }
@@ -139,10 +146,9 @@ pub fn parse_consensus_as_tabular(
         write_or_stdout(
             main_row_content.to_owned(),
             file_writer,
-            file.try_clone()
-                .expect("Unexpected error detected on write tabular output"),
+            &file,
             output_file.is_none(),
-        );
+        )?;
 
         for consensus in bean.consensus_beans.unwrap_or_default() {
             let consensus_row_content = format!(
@@ -161,11 +167,9 @@ pub fn parse_consensus_as_tabular(
             write_or_stdout(
                 consensus_row_content,
                 file_writer,
-                file.try_clone().expect(
-                    "Unexpected error detected on write tabular output",
-                ),
+                &file,
                 output_file.is_none(),
-            );
+            )?;
         }
     }
 

@@ -1,0 +1,45 @@
+{
+  "blutilsVersion": "8.3.1",
+  "ignoreTaxids": null,
+  "replaceRank": null,
+  "dropNonLinnaeanTaxonomies": null,
+  "sourceDatabase": "contract-16S",
+  "taxonomies": [
+    {
+      "taxid": 101,
+      "rank": "species",
+      "numericLineage": "d__2;p__1239;c__91061;o__1385;f__186817;g__1386;s__1423",
+      "textLineage": "d__bacteria;p__bacillota;c__bacilli;o__bacillales;f__bacillaceae;g__bacillus;s__bacillus-subtilis",
+      "accessions": [
+        {
+          "accession": "ACC101.1",
+          "oid": "0"
+        }
+      ]
+    },
+    {
+      "taxid": 104,
+      "rank": "species",
+      "numericLineage": "d__2;p__1239;c__91061;o__1385;f__186817;g__400634;s__1421",
+      "textLineage": "d__bacteria;p__bacillota;c__bacilli;o__bacillales;f__bacillaceae;g__lysinibacillus;s__lysinibacillus-sphaericus",
+      "accessions": [
+        {
+          "accession": "ACC104.1",
+          "oid": "1"
+        }
+      ]
+    },
+    {
+      "taxid": 511145,
+      "rank": "strain",
+      "numericLineage": "d__2;p__1224;c__1236;o__91347;f__543;g__561;s__562;strain__511145",
+      "textLineage": "d__bacteria;p__pseudomonadota;c__gammaproteobacteria;o__enterobacterales;f__enterobacteriaceae;g__escherichia;s__escherichia-coli;strain__escherichia-coli-k-12-substr-mg1655",
+      "accessions": [
+        {
+          "accession": "ACC511145.1",
+          "oid": "2"
+        }
+      ]
+    }
+  ]
+}

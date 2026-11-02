@@ -9,7 +9,7 @@ pub enum LogFormat {
     /// This format is human-readable and colorful.
     Ansi,
 
-    /// YAML format
+    /// JSON Lines format
     ///
     /// This format is machine-readable and can be used for log analysis.
     Jsonl,

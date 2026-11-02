@@ -1,0 +1,7 @@
+#!/bin/sh
+# Fake `blastn`: drains the query from stdin and prints the tabular file named
+# by FAKE_BLASTN_STDOUT_FILE (nothing when unset).
+cat >/dev/null
+if [ -n "$FAKE_BLASTN_STDOUT_FILE" ]; then
+    cat "$FAKE_BLASTN_STDOUT_FILE"
+fi

@@ -5,13 +5,13 @@ use crate::domain::utils::round;
 
 use core::fmt;
 use mycelium_base::utils::errors::MappedErrors;
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Deserializer, Serialize};
 use slugify::slugify;
 use std::collections::HashMap;
 use std::slice::Iter;
 use std::str::FromStr;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum LinnaeanRank {
     Undefined,
@@ -68,6 +68,18 @@ impl FromStr for LinnaeanRank {
             "s" | "species" => Ok(Species),
             other => Ok(Other(slugify!(other))),
         }
+    }
+}
+
+/// BUG-R18: deserialization goes through `FromStr`, so short rank codes
+/// (`"s"`, `"g"`, ...) yield the same variant as parsing them.
+impl<'de> Deserialize<'de> for LinnaeanRank {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        LinnaeanRank::from_str(&value).map_err(de::Error::custom)
     }
 }
 
@@ -175,20 +187,20 @@ impl InterpolatedIdentity {
         &self,
         identity: f64,
     ) -> Option<RankedLinnaeanIdentity> {
-        let mut result =
-            self.interpolation
-                .to_owned()
-                .into_iter()
-                .skip_while(|rank| {
-                    let rank_identity = match rank {
-                        DefaultRank(_, rank_identity) => *rank_identity,
-                        NonDefaultRank(_, rank_identity) => *rank_identity,
-                    };
+        // BUG-R01: the deepest rank whose cutoff is satisfied (cutoff <=
+        // identity) is the maximum allowed rank (FR-IDENT-03).
+        self.interpolation
+            .iter()
+            .rev()
+            .find(|rank| {
+                let rank_identity = match rank {
+                    DefaultRank(_, rank_identity) => *rank_identity,
+                    NonDefaultRank(_, rank_identity) => *rank_identity,
+                };
 
-                    identity > rank_identity
-                });
-
-        result.find_map(|rank| Some(rank))
+                rank_identity <= identity
+            })
+            .cloned()
     }
 
     pub(crate) fn get_adjusted_taxonomy_by_identity(
@@ -196,10 +208,12 @@ impl InterpolatedIdentity {
         identity: f64,
         taxonomy: Vec<TaxonomyBean>,
     ) -> Vec<TaxonomyBean> {
+        // BUG-R39: truncate at the first unmet cutoff (`take_while`), so the
+        // result is always a contiguous prefix of the lineage.
         self.interpolation()
             .into_iter()
             .zip(taxonomy.to_owned().into_iter())
-            .filter(|(interpolated, _)| {
+            .take_while(|(interpolated, _)| {
                 let item_identity = match interpolated {
                     DefaultRank(_, perc_identity) => perc_identity,
                     NonDefaultRank(_, perc_identity) => perc_identity,
@@ -228,7 +242,7 @@ impl InterpolatedIdentity {
         // The backbone is a vector of `RankedLinnaeanIdentity` that contains
         // the identity cutoffs for the default Linnaeus taxon ranks.
         //
-        let backbone = taxon.get_taxon_cutoff(custom_taxon_values);
+        let backbone = taxon.get_taxon_cutoff(custom_taxon_values)?;
         //
         // Map taxonomies to the backbone
         //
@@ -289,44 +303,30 @@ impl InterpolatedIdentity {
         let non_default_ranks_windows = non_default_ranks
             .into_iter()
             .map(|(non_default_index, _)| {
-                let previous = backbone_mapped_taxonomies
-                    .iter()
-                    .take(non_default_index)
-                    .rev()
-                    .find(|&level| match level {
-                        NonDefaultRank(_, _) => false,
-                        _ => true,
-                    })
-                    .unwrap_or(&backbone_mapped_taxonomies[0]);
+                let is_default = |level: &RankedLinnaeanIdentity| {
+                    matches!(level, DefaultRank(_, _))
+                };
 
-                let previous_index = backbone_mapped_taxonomies
-                    .iter()
-                    .position(|level| level == previous)
+                let previous_index = (0..non_default_index)
+                    .rev()
+                    .find(|&index| {
+                        is_default(&backbone_mapped_taxonomies[index])
+                    })
                     .unwrap_or(0);
 
-                let next = backbone_mapped_taxonomies
-                    .iter()
-                    .skip(non_default_index)
-                    .find(|&level| match level {
-                        NonDefaultRank(_, _) => false,
-                        _ => true,
+                let next_index = (non_default_index
+                    ..backbone_mapped_taxonomies.len())
+                    .find(|&index| {
+                        is_default(&backbone_mapped_taxonomies[index])
                     })
-                    .unwrap_or(
-                        &backbone_mapped_taxonomies
-                            [backbone_mapped_taxonomies.len() - 1],
-                    );
-
-                let next_index = backbone_mapped_taxonomies
-                    .iter()
-                    .position(|level| level == next)
                     .unwrap_or(backbone_mapped_taxonomies.len() - 1);
-
+                //
+                // BUG-R05: the window spans exactly from the previous to the
+                // next default rank.
+                //
                 let window = backbone_mapped_taxonomies
-                    .iter()
-                    .skip_while(|&level| level != previous)
-                    .take(next_index + 1)
-                    .cloned()
-                    .collect::<Vec<_>>();
+                    [previous_index..=next_index]
+                    .to_vec();
 
                 (non_default_index, (previous_index, next_index), window)
             })
@@ -338,12 +338,21 @@ impl InterpolatedIdentity {
         {
             let target_index = non_default_index - previous_index;
 
-            let first_window_identity = match window[0].to_owned() {
-                DefaultRank(_, identity) => identity,
-                NonDefaultRank(_, _) => match backbone[0] {
-                    DefaultRank(_, default_identity) => default_identity,
-                    _ => panic!("Unexpected error. Could not determine default identity"),
-                },
+            //
+            // BUG-R38: ranks above the first default rank (e.g. NCBI's
+            // `cellular root` or `no rank` nodes) have no previous default
+            // rank. They take the next default rank's cutoff, or the
+            // shallowest backbone cutoff when the lineage has no default rank,
+            // whatever the backbone order.
+            //
+            let shallowest_cutoff = || {
+                backbone
+                    .iter()
+                    .map(|level| match level {
+                        DefaultRank(_, identity) => *identity,
+                        NonDefaultRank(_, identity) => *identity,
+                    })
+                    .fold(f64::INFINITY, f64::min)
             };
 
             let last_window_identity = match window[window.len() - 1].to_owned()
@@ -352,14 +361,26 @@ impl InterpolatedIdentity {
                 NonDefaultRank(_, _) => 100.0,
             };
 
+            let first_window_identity = match window[0].to_owned() {
+                DefaultRank(_, identity) => identity,
+                NonDefaultRank(_, _) => match window[window.len() - 1] {
+                    DefaultRank(_, identity) => identity,
+                    NonDefaultRank(_, _) => shallowest_cutoff(),
+                },
+            };
+
             let window_weight = last_window_identity - first_window_identity;
             let window_size = (window.len() - 1) as f64;
 
-            let target_identity = round(
-                first_window_identity +
-                    (target_index as f64 * (window_weight / window_size)),
-                3,
-            );
+            let target_identity = if window_size == 0.0 {
+                first_window_identity
+            } else {
+                round(
+                    first_window_identity
+                        + (target_index as f64 * (window_weight / window_size)),
+                    3,
+                )
+            };
 
             updated_identities
                 .insert(non_default_index as i32, target_identity);
@@ -380,5 +401,636 @@ impl InterpolatedIdentity {
                 _ => item,
             })
             .collect::<Vec<_>>())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::*;
+
+    const TOL: f64 = 1e-9;
+
+    const BACTERIA_RANKS: [&str; 7] = ["d", "p", "c", "o", "f", "g", "s"];
+
+    fn identity_of(rank: &RankedLinnaeanIdentity) -> f64 {
+        match rank {
+            DefaultRank(_, identity) => *identity,
+            NonDefaultRank(_, identity) => *identity,
+        }
+    }
+
+    fn identities(interpolated: &InterpolatedIdentity) -> Vec<f64> {
+        interpolated
+            .interpolation()
+            .iter()
+            .map(identity_of)
+            .collect()
+    }
+
+    fn assert_close(actual: f64, expected: f64) {
+        assert!(
+            (actual - expected).abs() < TOL,
+            "expected {expected}, got {actual}"
+        );
+    }
+
+    fn assert_all_close(actual: &[f64], expected: &[f64]) {
+        assert_eq!(actual.len(), expected.len(), "{actual:?} vs {expected:?}");
+        for (a, e) in actual.iter().zip(expected) {
+            assert_close(*a, *e);
+        }
+    }
+
+    fn custom(json: &str) -> CustomTaxon {
+        serde_json::from_str(json).unwrap()
+    }
+
+    fn bean(rank: LinnaeanRank, identifier: &str) -> TaxonomyBean {
+        TaxonomyBean {
+            reached_rank: rank,
+            max_allowed_rank: None,
+            identifier: identifier.to_string(),
+            perc_identity: 0.0,
+            bit_score: 0.0,
+            taxonomy: None,
+            mutated: false,
+            single_match: false,
+            consensus_beans: None,
+        }
+    }
+
+    fn bacteria_lineage() -> Vec<TaxonomyBean> {
+        ranks(&BACTERIA_RANKS)
+            .into_iter()
+            .enumerate()
+            .map(|(i, rank)| bean(rank, &format!("t{i}")))
+            .collect()
+    }
+
+    fn ranks_of(beans: &[TaxonomyBean]) -> Vec<LinnaeanRank> {
+        beans.iter().map(|b| b.reached_rank.clone()).collect()
+    }
+
+    // ---------------------------------------------------------------------
+    // LinnaeanRank: FromStr / Display / as_full_rank_string
+    // ---------------------------------------------------------------------
+
+    #[test]
+    fn from_str_short_and_long_names_map_to_default_ranks() {
+        let cases = [
+            ("u", Undefined),
+            ("undefined", Undefined),
+            ("d", Domain),
+            ("domain", Domain),
+            ("k", Kingdom),
+            ("kingdom", Kingdom),
+            ("p", Phylum),
+            ("phylum", Phylum),
+            ("c", Class),
+            ("class", Class),
+            ("o", Order),
+            ("order", Order),
+            ("f", Family),
+            ("family", Family),
+            ("g", Genus),
+            ("genus", Genus),
+            ("s", Species),
+            ("species", Species),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(LinnaeanRank::from_str(input), Ok(expected), "{input}");
+        }
+    }
+
+    #[test]
+    fn from_str_mixed_case_and_whitespace_is_normalized() {
+        assert_eq!(LinnaeanRank::from_str(" Species "), Ok(Species));
+        assert_eq!(LinnaeanRank::from_str("GENUS"), Ok(Genus));
+        assert_eq!(LinnaeanRank::from_str("\tD\n"), Ok(Domain));
+    }
+
+    #[test]
+    fn from_str_unknown_rank_is_slugified_other() {
+        assert_eq!(
+            LinnaeanRank::from_str("Species Group"),
+            Ok(Other("species-group".to_string()))
+        );
+        assert_eq!(
+            LinnaeanRank::from_str("no rank"),
+            Ok(Other("no-rank".to_string()))
+        );
+        assert_eq!(
+            LinnaeanRank::from_str("strain"),
+            Ok(Other("strain".to_string()))
+        );
+    }
+
+    #[test]
+    fn from_str_any_input_never_errors() {
+        for input in ["", "   ", "__", "çã", "123", "a;b"] {
+            assert!(LinnaeanRank::from_str(input).is_ok(), "{input:?}");
+        }
+    }
+
+    #[test]
+    fn display_default_ranks_use_short_names() {
+        assert_eq!(Species.to_string(), "s");
+        assert_eq!(Domain.to_string(), "d");
+        assert_eq!(Undefined.to_string(), "u");
+        assert_eq!(Other("strain".to_string()).to_string(), "strain");
+    }
+
+    #[test]
+    fn as_full_rank_string_default_ranks_use_long_names() {
+        assert_eq!(Species.as_full_rank_string(), "species");
+        assert_eq!(Kingdom.as_full_rank_string(), "kingdom");
+        assert_eq!(Undefined.as_full_rank_string(), "undefined");
+        assert_eq!(Other("strain".to_string()).as_full_rank_string(), "strain");
+    }
+
+    #[test]
+    fn from_str_of_display_all_variants_round_trips() {
+        let variants = [
+            Undefined,
+            Domain,
+            Kingdom,
+            Phylum,
+            Class,
+            Order,
+            Family,
+            Genus,
+            Species,
+            Other("strain".to_string()),
+            Other("species-group".to_string()),
+        ];
+
+        for variant in variants {
+            assert_eq!(
+                LinnaeanRank::from_str(&variant.to_string()),
+                Ok(variant.clone())
+            );
+            assert_eq!(
+                LinnaeanRank::from_str(&variant.as_full_rank_string()),
+                Ok(variant)
+            );
+        }
+    }
+
+    #[test]
+    fn ordered_iter_default_and_reversed_orders() {
+        let forward: Vec<_> =
+            LinnaeanRank::ordered_iter(None).cloned().collect();
+        assert_eq!(
+            forward,
+            vec![
+                Species, Genus, Family, Order, Class, Phylum, Kingdom, Domain,
+                Undefined
+            ]
+        );
+
+        let reversed: Vec<_> =
+            LinnaeanRank::ordered_iter(Some(true)).cloned().collect();
+        assert_eq!(
+            reversed,
+            vec![Domain, Kingdom, Phylum, Class, Order, Family, Genus, Species]
+        );
+    }
+
+    // ---------------------------------------------------------------------
+    // LinnaeanRank: serde
+    // ---------------------------------------------------------------------
+
+    #[test]
+    fn serde_default_rank_serializes_as_camel_case_full_name() {
+        assert_eq!(serde_json::to_string(&Species).unwrap(), "\"species\"");
+        assert_eq!(
+            serde_json::from_str::<LinnaeanRank>("\"species\"").unwrap(),
+            Species
+        );
+    }
+
+    #[test]
+    fn serde_other_rank_is_untagged_string() {
+        let strain = Other("strain".to_string());
+        assert_eq!(serde_json::to_string(&strain).unwrap(), "\"strain\"");
+        assert_eq!(
+            serde_json::from_str::<LinnaeanRank>("\"strain\"").unwrap(),
+            strain
+        );
+    }
+
+    // BUG-R18: deserializing short rank names matches FromStr.
+    #[test]
+    fn serde_short_name_deserializes_as_default_rank() {
+        assert_eq!(
+            serde_json::from_str::<LinnaeanRank>("\"s\"").unwrap(),
+            Species
+        );
+    }
+
+    // BUG-R18: deserialization goes through FromStr, which is
+    // case-insensitive, so a capitalized name is no longer `Other`.
+    #[test]
+    fn serde_capitalized_name_deserializes_as_default_rank() {
+        assert_eq!(
+            serde_json::from_str::<LinnaeanRank>("\"Species\"").unwrap(),
+            Species
+        );
+    }
+
+    // ---------------------------------------------------------------------
+    // InterpolatedIdentity::new (interpolate_identities)
+    // ---------------------------------------------------------------------
+
+    #[test]
+    fn interpolate_bacteria_default_ranks_returns_backbone() {
+        let interpolated = interp(Taxon::Bacteria, &BACTERIA_RANKS);
+
+        assert_all_close(
+            &identities(&interpolated),
+            &[60.0, 75.0, 80.0, 85.0, 92.0, 97.0, 99.0],
+        );
+        assert!(interpolated
+            .interpolation()
+            .iter()
+            .all(|r| matches!(r, DefaultRank(_, _))));
+    }
+
+    #[test]
+    fn interpolate_fungi_and_eukaryotes_default_ranks_returns_backbone() {
+        let expected = [60.0, 75.0, 80.0, 85.0, 90.0, 95.0, 97.0];
+
+        assert_all_close(
+            &identities(&interp(Taxon::Fungi, &BACTERIA_RANKS)),
+            &expected,
+        );
+        assert_all_close(
+            &identities(&interp(Taxon::Eukaryotes, &BACTERIA_RANKS)),
+            &expected,
+        );
+    }
+
+    #[test]
+    fn interpolate_default_ranks_keeps_taxonomy_order() {
+        let interpolated = interp(Taxon::Bacteria, &["s", "g", "d"]);
+
+        assert_eq!(
+            interpolated.interpolation(),
+            &vec![
+                DefaultRank(Species, 99.0),
+                DefaultRank(Genus, 97.0),
+                DefaultRank(Domain, 60.0),
+            ]
+        );
+    }
+
+    #[test]
+    fn interpolate_empty_taxonomy_returns_empty() {
+        let interpolated =
+            InterpolatedIdentity::new(Taxon::Bacteria, vec![], None).unwrap();
+
+        assert!(interpolated.interpolation().is_empty());
+    }
+
+    #[test]
+    fn interpolate_intermediate_non_default_rank_is_linear_between_neighbors() {
+        let interpolated = interp(
+            Taxon::Bacteria,
+            &["d", "p", "c", "o", "f", "g", "species-group", "s"],
+        );
+
+        assert_eq!(
+            interpolated.interpolation()[6],
+            NonDefaultRank("species-group".to_string(), 98.0)
+        );
+        assert_all_close(
+            &identities(&interpolated),
+            &[60.0, 75.0, 80.0, 85.0, 92.0, 97.0, 98.0, 99.0],
+        );
+    }
+
+    // BUG-R05: the interpolation window stops at the next default rank.
+    #[test]
+    fn interpolate_window_with_offset_is_bounded_by_next_default_rank() {
+        let interpolated = interp(
+            Taxon::Bacteria,
+            &["d", "p", "c", "subclass", "o", "f", "g", "s"],
+        );
+
+        assert_close(identity_of(&interpolated.interpolation()[3]), 82.5);
+    }
+
+    #[test]
+    fn interpolate_trailing_non_default_rank_gets_100() {
+        let interpolated = interp(
+            Taxon::Bacteria,
+            &["d", "p", "c", "o", "f", "g", "s", "strain"],
+        );
+
+        assert_eq!(
+            interpolated.interpolation()[7],
+            NonDefaultRank("strain".to_string(), 100.0)
+        );
+    }
+
+    #[test]
+    fn interpolate_two_trailing_non_default_ranks_ramp_up_to_100() {
+        let interpolated = interp(
+            Taxon::Bacteria,
+            &["d", "p", "c", "o", "f", "g", "s", "subspecies", "strain"],
+        );
+
+        assert_all_close(&identities(&interpolated)[7..], &[99.5, 100.0]);
+    }
+
+    #[test]
+    fn interpolate_leading_non_default_rank_custom_uses_domain_cutoff() {
+        // Custom backbones start at Domain, unlike the built-in ones.
+        let interpolated = InterpolatedIdentity::new(
+            Taxon::Custom,
+            ranks(&["clade", "d", "p", "c", "o", "f", "g", "s"]),
+            Some(custom(
+                r#"{"domain":61,"phylum":75,"class":80,"order":85,
+                    "family":92,"genus":97,"species":99}"#,
+            )),
+        )
+        .unwrap();
+
+        assert_eq!(
+            interpolated.interpolation()[0],
+            NonDefaultRank("clade".to_string(), 61.0)
+        );
+    }
+
+    // BUG-R38: a lineage made of one non-default rank used to get a NaN
+    // cutoff (0 / 0 window), which no identity satisfies.
+    #[test]
+    fn interpolate_single_non_default_rank_gets_the_shallowest_cutoff() {
+        let interpolated = interp(Taxon::Bacteria, &["strain"]);
+
+        assert_eq!(interpolated.interpolation().len(), 1);
+        assert_close(identity_of(&interpolated.interpolation()[0]), 60.0);
+    }
+
+    #[test]
+    fn interpolate_duplicated_non_default_names_get_independent_windows() {
+        let interpolated =
+            interp(Taxon::Bacteria, &["d", "clade", "p", "clade", "c"]);
+
+        assert_all_close(
+            &identities(&interpolated),
+            &[60.0, 67.5, 75.0, 77.5, 80.0],
+        );
+    }
+
+    // BUG-R17: Kingdom is a default rank of the built-in backbones.
+    #[test]
+    fn interpolate_kingdom_built_in_is_default_rank() {
+        let interpolated = interp(Taxon::Bacteria, &["d", "k", "p"]);
+
+        assert!(matches!(
+            interpolated.interpolation()[1],
+            DefaultRank(Kingdom, _)
+        ));
+    }
+
+    #[test]
+    fn interpolate_custom_missing_ranks_default_to_zero() {
+        let interpolated = InterpolatedIdentity::new(
+            Taxon::Custom,
+            ranks(&["d", "k", "g", "s"]),
+            Some(custom(r#"{"domain":60,"species":99}"#)),
+        )
+        .unwrap();
+
+        assert_eq!(
+            interpolated.interpolation(),
+            &vec![
+                DefaultRank(Domain, 60.0),
+                DefaultRank(Kingdom, 0.0),
+                DefaultRank(Genus, 0.0),
+                DefaultRank(Species, 99.0),
+            ]
+        );
+    }
+
+    #[test]
+    fn display_interpolated_identity_joins_rank_and_cutoff() {
+        assert_eq!(
+            interp(Taxon::Bacteria, &BACTERIA_RANKS).to_string(),
+            "d:60,p:75,c:80,o:85,f:92,g:97,s:99"
+        );
+        assert_eq!(
+            interp(Taxon::Bacteria, &["g", "species-group", "s"]).to_string(),
+            "g:97,species-group:98,s:99"
+        );
+    }
+
+    // ---------------------------------------------------------------------
+    // get_rank_adjusted_by_identity
+    // ---------------------------------------------------------------------
+
+    #[test]
+    fn rank_adjusted_exact_cutoff_returns_that_rank() {
+        let interpolated = interp(Taxon::Bacteria, &BACTERIA_RANKS);
+
+        assert_eq!(
+            interpolated.get_rank_adjusted_by_identity(99.0),
+            Some(DefaultRank(Species, 99.0))
+        );
+    }
+
+    // BUG-R01: returns the deepest rank whose cutoff <= identity (FR-IDENT-03).
+    #[test]
+    fn rank_adjusted_by_identity_returns_deepest_satisfied_rank() {
+        let interpolated = interp(Taxon::Bacteria, &BACTERIA_RANKS);
+
+        assert_eq!(
+            interpolated.get_rank_adjusted_by_identity(98.0),
+            Some(DefaultRank(Genus, 97.0))
+        );
+        assert_eq!(
+            interpolated.get_rank_adjusted_by_identity(99.0),
+            Some(DefaultRank(Species, 99.0))
+        );
+        assert_eq!(
+            interpolated.get_rank_adjusted_by_identity(99.5),
+            Some(DefaultRank(Species, 99.0))
+        );
+        assert_eq!(interpolated.get_rank_adjusted_by_identity(50.0), None);
+    }
+
+    #[test]
+    fn rank_adjusted_empty_interpolation_returns_none() {
+        let interpolated =
+            InterpolatedIdentity::new(Taxon::Bacteria, vec![], None).unwrap();
+
+        assert_eq!(interpolated.get_rank_adjusted_by_identity(99.0), None);
+    }
+
+    // ---------------------------------------------------------------------
+    // get_adjusted_taxonomy_by_identity
+    // ---------------------------------------------------------------------
+
+    #[test]
+    fn adjusted_taxonomy_between_cutoffs_truncates_to_satisfied_ranks() {
+        let interpolated = interp(Taxon::Bacteria, &BACTERIA_RANKS);
+
+        let adjusted = interpolated
+            .get_adjusted_taxonomy_by_identity(98.0, bacteria_lineage());
+
+        assert_eq!(adjusted.len(), 6);
+        assert_eq!(
+            ranks_of(&adjusted),
+            vec![Domain, Phylum, Class, Order, Family, Genus]
+        );
+    }
+
+    #[test]
+    fn adjusted_taxonomy_full_identity_keeps_all_ranks() {
+        let interpolated = interp(Taxon::Bacteria, &BACTERIA_RANKS);
+
+        let adjusted = interpolated
+            .get_adjusted_taxonomy_by_identity(100.0, bacteria_lineage());
+
+        assert_eq!(adjusted, bacteria_lineage());
+    }
+
+    #[test]
+    fn adjusted_taxonomy_below_domain_cutoff_is_empty() {
+        let interpolated = interp(Taxon::Bacteria, &BACTERIA_RANKS);
+
+        let adjusted = interpolated
+            .get_adjusted_taxonomy_by_identity(59.0, bacteria_lineage());
+
+        assert!(adjusted.is_empty());
+    }
+
+    // BUG-R39: the lineage is truncated at the first rank whose cutoff is not
+    // met, so it stays a contiguous prefix. A custom genus without a value
+    // (cutoff 0) used to survive below a discarded domain (60).
+    #[test]
+    fn adjusted_taxonomy_non_monotonic_custom_truncates_at_first_unmet_cutoff()
+    {
+        let interpolated = InterpolatedIdentity::new(
+            Taxon::Custom,
+            ranks(&["d", "g", "s"]),
+            Some(custom(r#"{"domain":60,"species":99}"#)),
+        )
+        .unwrap();
+        let lineage = vec![
+            bean(Domain, "bacteria"),
+            bean(Genus, "bacillus"),
+            bean(Species, "subtilis"),
+        ];
+
+        let adjusted =
+            interpolated.get_adjusted_taxonomy_by_identity(50.0, lineage);
+
+        assert!(adjusted.is_empty(), "{:?}", ranks_of(&adjusted));
+    }
+
+    // BUG-R39: a deeper rank with a lower cutoff never survives once a
+    // shallower rank was cut.
+    #[test]
+    fn adjusted_taxonomy_keeps_prefix_up_to_first_unmet_cutoff() {
+        let interpolated = InterpolatedIdentity::new(
+            Taxon::Custom,
+            ranks(&["d", "p", "g", "s"]),
+            Some(custom(r#"{"domain":60,"phylum":75,"species":99}"#)),
+        )
+        .unwrap();
+        let lineage = vec![
+            bean(Domain, "bacteria"),
+            bean(Phylum, "bacillota"),
+            bean(Genus, "bacillus"),
+            bean(Species, "subtilis"),
+        ];
+
+        let adjusted =
+            interpolated.get_adjusted_taxonomy_by_identity(70.0, lineage);
+
+        assert_eq!(ranks_of(&adjusted), vec![Domain]);
+    }
+
+    // BUG-R38: a non-default rank above the first default rank (e.g. NCBI's
+    // `cellular root`, or `no rank` nodes) gets the shallowest cutoff, not
+    // the first backbone entry (species, 99, for the built-in backbones).
+    #[test]
+    fn interpolate_leading_non_default_rank_gets_the_domain_cutoff() {
+        for (taxon, domain) in [
+            (Taxon::Bacteria, 60.0),
+            (Taxon::Fungi, 60.0),
+            (Taxon::Eukaryotes, 60.0),
+        ] {
+            let interpolated = interp(
+                taxon.clone(),
+                &["cellular-root", "d", "k", "p", "c", "o", "f", "g", "s"],
+            );
+
+            assert_close(identities(&interpolated)[0], domain);
+        }
+    }
+
+    #[test]
+    fn interpolate_several_leading_non_default_ranks_get_the_domain_cutoff() {
+        let interpolated = interp(
+            Taxon::Bacteria,
+            &[
+                "no-rank",
+                "cellular-root",
+                "d",
+                "p",
+                "c",
+                "o",
+                "f",
+                "g",
+                "s",
+            ],
+        );
+
+        assert_all_close(&identities(&interpolated)[..3], &[60.0, 60.0, 60.0]);
+    }
+
+    // BUG-R38: with a leading `cellular-root`, identities below the species
+    // cutoff kept every rank but the root.
+    #[test]
+    fn adjusted_taxonomy_with_leading_non_default_rank_keeps_the_root() {
+        let names = ["cellular-root", "d", "p", "c", "o", "f", "g", "s"];
+        let interpolated = interp(Taxon::Bacteria, &names);
+        let lineage = ranks(&names)
+            .into_iter()
+            .enumerate()
+            .map(|(i, rank)| bean(rank, &format!("t{i}")))
+            .collect::<Vec<_>>();
+
+        let adjusted = interpolated
+            .get_adjusted_taxonomy_by_identity(98.0, lineage.clone());
+
+        assert_eq!(adjusted, lineage[..7].to_vec());
+    }
+
+    #[test]
+    fn adjusted_taxonomy_shorter_lineage_is_truncated_by_zip() {
+        let interpolated = interp(Taxon::Bacteria, &BACTERIA_RANKS);
+        let lineage =
+            bacteria_lineage().into_iter().take(3).collect::<Vec<_>>();
+
+        let adjusted = interpolated
+            .get_adjusted_taxonomy_by_identity(100.0, lineage.clone());
+
+        assert_eq!(adjusted, lineage);
+    }
+
+    #[test]
+    fn adjusted_taxonomy_shorter_interpolation_is_truncated_by_zip() {
+        let interpolated = interp(Taxon::Bacteria, &["d", "p"]);
+
+        let adjusted = interpolated
+            .get_adjusted_taxonomy_by_identity(100.0, bacteria_lineage());
+
+        assert_eq!(ranks_of(&adjusted), vec![Domain, Phylum]);
     }
 }

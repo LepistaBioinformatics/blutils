@@ -7,9 +7,7 @@ use build_blast_consensus_identity::*;
 use find_multi_taxa_consensus::*;
 use find_single_query_consensus::*;
 use force_parsed_taxonomy::*;
-use polars_core::{
-    export::num::ToPrimitive, prelude::NamedFrom, series::Series,
-};
+use polars_core::{prelude::NamedFrom, series::Series};
 
 use crate::domain::dtos::{
     blast_result::{BlastQueryResult, BlastResultRow},
@@ -104,26 +102,21 @@ pub fn build_consensus_identities(
     query_results
         .into_par_iter()
         .map(|result| {
-            if result.results.to_owned().is_none() {
+            let Some(results) = result.results else {
                 return Ok(ConsensusResult::NoConsensusFound(
                     QueryWithoutConsensus {
                         query: result.query,
                     },
                 ));
-            }
+            };
 
-            match find_single_query_consensus(
+            find_single_query_consensus(
                 result.query,
-                result.results.unwrap(),
+                results,
                 taxon.to_owned(),
                 strategy.to_owned(),
                 custom_taxon_values.to_owned(),
-            ) {
-                Err(err) => {
-                    panic!("Unexpected error on parse blast results: {err}")
-                }
-                Ok(res) => Ok(res),
-            }
+            )
         })
         .collect()
 }
@@ -134,7 +127,14 @@ pub fn build_consensus_identities(
 fn fold_results_by_query(
     joined_df: LazyFrame,
 ) -> Result<Vec<BlastQueryResult>, MappedErrors> {
-    let mut binding = joined_df.collect().unwrap();
+    //
+    // BUG-R24: malformed values are reported as errors instead of panics.
+    //
+    let mut binding = joined_df.collect().map_err(|err| {
+        execution_err(format!(
+            "Unexpected error on collect blast results: {err}"
+        ))
+    })?;
     let joined_df_chunked = binding.as_single_chunk_par();
 
     let mut iters = joined_df_chunked
@@ -159,11 +159,17 @@ fn fold_results_by_query(
         let mut s_start: i64 = 0;
         let mut s_end: i64 = 0;
         let mut e_value: f64 = 0.0;
-        let mut bit_score: i64 = 0;
+        let mut bit_score: f64 = 0.0;
         let mut taxonomy: String = String::new();
 
         for iter in &mut iters {
-            let value = iter.next().expect("Not enough rows to iterate.");
+            let value = match iter.next() {
+                Some(value) => value,
+                None => {
+                    return execution_err("Not enough rows to iterate.")
+                        .as_error()
+                }
+            };
 
             match counter {
                 0 => query = value.to_owned().to_string().replace("\"", ""),
@@ -171,17 +177,17 @@ fn fold_results_by_query(
                     subject_accession =
                         value.to_owned().to_string().replace("\"", "")
                 }
-                2 => subject_taxid = value.try_extract().unwrap(),
-                3 => perc_identity = value.try_extract().unwrap(),
-                4 => align_length = value.try_extract().unwrap(),
-                5 => mismatches = value.try_extract().unwrap(),
-                6 => gap_openings = value.try_extract().unwrap(),
-                7 => q_start = value.try_extract().unwrap(),
-                8 => q_end = value.try_extract().unwrap(),
-                9 => s_start = value.try_extract().unwrap(),
-                10 => s_end = value.try_extract().unwrap(),
-                11 => e_value = value.try_extract().unwrap(),
-                12 => bit_score = value.try_extract().unwrap(),
+                2 => subject_taxid = extract(&value)?,
+                3 => perc_identity = extract(&value)?,
+                4 => align_length = extract(&value)?,
+                5 => mismatches = extract(&value)?,
+                6 => gap_openings = extract(&value)?,
+                7 => q_start = extract(&value)?,
+                8 => q_end = extract(&value)?,
+                9 => s_start = extract(&value)?,
+                10 => s_end = extract(&value)?,
+                11 => e_value = extract(&value)?,
+                12 => bit_score = extract(&value)?,
                 13 => taxonomy = value.to_owned().to_string().replace("\"", ""),
                 _ => warn!("Unmapped value: {:?}", value),
             };
@@ -218,6 +224,17 @@ fn fold_results_by_query(
             },
         })
         .collect::<Vec<BlastQueryResult>>())
+}
+
+/// Extract a typed value from a BLAST result cell.
+fn extract<T: polars_core::export::num::NumCast>(
+    value: &polars::prelude::AnyValue,
+) -> Result<T, MappedErrors> {
+    value.try_extract().map_err(|err| {
+        execution_err(format!(
+            "Unexpected error on read blast result value `{value}`: {err}"
+        ))
+    })
 }
 
 /// Load BlastN output dataframe.
@@ -275,7 +292,7 @@ fn get_taxonomies_dataframe(
             taxonomy_map
                 .taxonomies
                 .iter()
-                .map(|item| item.taxid.to_f64().unwrap())
+                .map(|item| item.taxid as f64)
                 .collect::<Vec<_>>(),
         ),
         Series::new(
@@ -305,18 +322,18 @@ fn get_taxonomies_dataframe(
         schema.with_column(name.to_owned().into(), column_type.to_owned());
     }
 
+    // BUG-R43: a cast error returns `Err` instead of panicking.
     for (column, _type) in schema.iter() {
-        df.apply(column, |s| match s.cast(_type) {
-            Ok(casted) => casted,
-            Err(err) => {
-                let error_message =
-                    format!("Unexpected error detected on cast column: {err}");
+        let casted = df
+            .column(column)
+            .and_then(|series| series.cast(_type))
+            .map_err(|err| {
+                use_case_err(format!(
+                    "Unexpected error detected on cast column {column}: {err}"
+                ))
+            })?;
 
-                tracing::error!(error_message);
-                panic!("{error_message}");
-            }
-        })
-        .map_err(|err| {
+        df.with_column(casted).map_err(|err| {
             use_case_err(format!(
                 "Unexpected error detected on apply column: {err}"
             ))
@@ -362,12 +379,19 @@ fn load_named_dataframe(
             ))
             .as_error()
         }
-        Ok(res) => Ok(res
+        Ok(res) => res
             .with_separator(b'\t')
             .has_header(false)
             .with_schema(Some(Arc::new(schema)))
             .with_columns(Some(columns_names))
             .finish()
-            .unwrap()),
+            //
+            // BUG-R24: a malformed BLAST table is an error, not a panic.
+            //
+            .map_err(|err| {
+                execution_err(format!(
+                    "Unexpected error on parse `blast_output`: {err}"
+                ))
+            }),
     }
 }

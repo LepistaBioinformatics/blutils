@@ -30,3 +30,11 @@ tracing-appender = "0.2"
 [[bin]]
 name = "blu"
 path = "src/main.rs"
+
+
+[dev-dependencies]
+
+assert_cmd = "2"
+predicates = "3"
+serial_test = "3"
+tempfile = "3"

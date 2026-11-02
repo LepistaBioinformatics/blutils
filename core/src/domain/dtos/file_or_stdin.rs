@@ -80,7 +80,8 @@ impl Sequence {
     }
 
     pub fn blast_header(&self) -> &str {
-        &self.header.split_whitespace().next().unwrap()
+        // `sequence_content` rejects whitespace-only headers (BUG-R29).
+        self.header.split_whitespace().next().unwrap_or_default()
     }
 
     pub fn sequence(&self) -> &str {
@@ -120,7 +121,7 @@ impl FileOrStdin {
 
         reader.read_to_string(&mut buf)?;
 
-        match serde_yaml::from_str(&buf) {
+        match serde_yaml_ng::from_str(&buf) {
             Ok(value) => Ok(value),
             Err(err) => Err(StdinError::FromStr(format!(
                 "unable to parse content as YAML: {}",
@@ -138,6 +139,13 @@ impl FileOrStdin {
             config: None,
         };
 
+        let parse_error = |err: serde_json::Error| {
+            StdinError::FromStr(format!(
+                "unable to parse line as JSON: {}",
+                err
+            ))
+        };
+
         for line in reader.lines() {
             let line = line?;
 
@@ -145,31 +153,29 @@ impl FileOrStdin {
                 continue;
             }
 
-            if line.contains("isConfig") {
-                let config = match serde_json::from_str(&line) {
-                    Ok(value) => value,
-                    Err(err) => {
-                        return Err(StdinError::FromStr(format!(
-                            "unable to parse line as JSON: {}",
-                            err
-                        )));
-                    }
-                };
+            let value: serde_json::Value =
+                serde_json::from_str(&line).map_err(parse_error)?;
 
-                output.config = Some(config);
+            // A `null` line stands for a missing config (BUG-R09).
+            if value.is_null() {
+                continue;
+            }
+
+            // Route by the top-level `isConfig` key instead of a substring
+            // match, so a result mentioning `isConfig` stays a result
+            // (BUG-R09).
+            let is_config = value
+                .as_object()
+                .is_some_and(|object| object.contains_key("isConfig"));
+
+            if is_config {
+                output.config =
+                    Some(serde_json::from_value(value).map_err(parse_error)?);
             } else {
-                let value = match serde_json::from_str(&line) {
-                    Ok(value) => value,
-                    Err(err) => {
-                        return Err(StdinError::FromStr(format!(
-                            "unable to parse line as JSON: {}",
-                            err
-                        )));
-                    }
-                };
-
-                output.results.push(value);
-            };
+                output
+                    .results
+                    .push(serde_json::from_value(value).map_err(parse_error)?);
+            }
         }
 
         Ok(output)
@@ -208,6 +214,13 @@ impl FileOrStdin {
                 }
 
                 header = line.replace(">", "");
+
+                // A whitespace-only header has no BLAST identifier (BUG-R29).
+                if header.trim().is_empty() {
+                    return Err(StdinError::FromStr(
+                        "unexpected empty sequence header".to_owned(),
+                    ));
+                }
             } else {
                 sequence.push_str(&line);
             }

@@ -18,3 +18,36 @@ pub trait ExecuteBlastn: Sync + Send + Debug {
         threads: usize,
     ) -> Result<ExecutionResponse, MappedErrors>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn execution_response_serde_is_externally_tagged() {
+        assert_eq!(
+            serde_json::to_string(&ExecutionResponse::Success(
+                "out".to_string()
+            ))
+            .unwrap(),
+            r#"{"Success":"out"}"#
+        );
+        assert_eq!(
+            serde_json::to_string(&ExecutionResponse::Fail("err".to_string()))
+                .unwrap(),
+            r#"{"Fail":"err"}"#
+        );
+    }
+
+    #[test]
+    fn execution_response_deserialize_tagged_object_returns_variant() {
+        assert!(matches!(
+            serde_json::from_str::<ExecutionResponse>(r#"{"Success":"out"}"#),
+            Ok(ExecutionResponse::Success(value)) if value == "out"
+        ));
+        assert!(matches!(
+            serde_json::from_str::<ExecutionResponse>(r#"{"Fail":"err"}"#),
+            Ok(ExecutionResponse::Fail(value)) if value == "err"
+        ));
+    }
+}

@@ -43,9 +43,11 @@ Options:
 
           Possible values:
           - ansi:  ANSI format
-          - jsonl: YAML format
+          - jsonl: JSON Lines format
 
   -t, --threads <THREADS>
+          Maximum number of threads for the whole run. BLAST chunks, the consensus step and the database builders run within this limit
+
           [default: 1]
 
   -h, --help
